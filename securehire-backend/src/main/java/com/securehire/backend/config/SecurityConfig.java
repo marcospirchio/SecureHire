@@ -33,15 +33,19 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // Público: autenticación, documentación
+                // Público: autenticación y documentación
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/api-docs/**").permitAll()
 
-                // Público: creación de candidato y postulaciones desde la web (sin token)
+                // Público: creación de candidatos y postulaciones desde la web
                 .requestMatchers(HttpMethod.POST, "/api/candidatos").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/asociar-candidato").permitAll()
 
-                // Todo lo demás requiere autenticación (reclutador)
+                // ✅ Público: confirmación o reprogramación de entrevista por link
+                .requestMatchers(HttpMethod.PATCH, "/api/entrevistas/confirmar/**").permitAll()
+                .requestMatchers(HttpMethod.PATCH, "/api/entrevistas/reprogramar/**").permitAll()
+
+                // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
