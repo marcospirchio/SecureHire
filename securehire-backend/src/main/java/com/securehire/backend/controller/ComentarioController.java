@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,7 +62,33 @@ public class ComentarioController {
         return ResponseEntity.ok(comentarioService.obtenerComentariosPorCandidato(candidatoId));
     }
 
-
+    @PutMapping("/{id}")
+    public ResponseEntity<Comentario> actualizarComentario(
+            @PathVariable String id,
+            @RequestBody Comentario actualizado,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Comentario> comentarioOpt = comentarioService.obtenerComentarioPorId(id);
+    
+        if (comentarioOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+    
+        Comentario existente = comentarioOpt.get();
+    
+        if (!existente.getUsuarioId().equals(usuario.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+    
+        existente.setTexto(actualizado.getTexto());
+        existente.setPuntaje(actualizado.getPuntaje());
+        existente.setFecha(new Date()); // 🔄 actualiza fecha al momento de edición
+    
+        return ResponseEntity.ok(comentarioService.actualizarComentario(existente));
+    }
+    
+    
+    
     // ✅ Eliminar un comentario por su ID.
     // Solo se puede eliminar si el usuario es el propietario del comentario.
     @DeleteMapping("/{id}")
