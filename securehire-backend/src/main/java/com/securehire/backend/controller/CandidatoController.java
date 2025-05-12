@@ -20,13 +20,14 @@ import java.util.Optional;
 public class CandidatoController {
     @Autowired private CandidatoService candidatoService;
 
-    @PostMapping
-    public ResponseEntity<Candidato> crearCandidato(@Valid @RequestBody CandidatoDTO dto) {
-        Candidato creadoOActualizado = candidatoService.crearCandidato(dto);
-        return ResponseEntity.ok(creadoOActualizado);
-    }
+    //(FUNCIONA) el candidato se crea en postulacion controller (crear postulacion) 
+    // @PostMapping
+    // public ResponseEntity<Candidato> crearCandidato(@Valid @RequestBody CandidatoDTO dto) {
+    //     Candidato creadoOActualizado = candidatoService.crearCandidato(dto);
+    //     return ResponseEntity.ok(creadoOActualizado);
+    // }
     
-
+    //(FUNCIONA)
     @GetMapping
     public ResponseEntity<Page<Candidato>> obtenerCandidatosPaginadosFiltrados(
             @RequestParam(defaultValue = "0") int page,
@@ -37,6 +38,7 @@ public class CandidatoController {
         return ResponseEntity.ok(candidatoService.obtenerCandidatosFiltradosPorReclutador(usuario.getId(), page, size, nombre));
     }
 
+    //(FUNCIONA)
     @GetMapping("/{id}")
     public ResponseEntity<Candidato> obtenerCandidato(
             @PathVariable String id,
@@ -45,7 +47,7 @@ public class CandidatoController {
         Optional<Candidato> candidato = candidatoService.obtenerCandidatoPorIdParaReclutador(id, usuario.getId());
         return candidato.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
-
+    //(FUNCIONA)
     @GetMapping("/nombre")
     public ResponseEntity<List<Candidato>> buscarPorNombre(
             @RequestParam String nombre,
@@ -69,27 +71,29 @@ public class CandidatoController {
         return candidato.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    //no deberia usarse 
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Candidato> actualizarCandidato(
-            @PathVariable String id,
-            @RequestBody Candidato candidato,
-            @AuthenticationPrincipal Usuario usuario
-    ) {
-        Optional<Candidato> existente = candidatoService.obtenerCandidatoPorIdParaReclutador(id, usuario.getId());
-        if (existente.isEmpty()) return ResponseEntity.notFound().build();
 
-        candidato.setId(id);
-        return ResponseEntity.ok(candidatoService.actualizarCandidato(candidato));
-    }
+    // @PutMapping("/{id}")
+    // public ResponseEntity<Candidato> actualizarCandidato(
+    //         @PathVariable String id,
+    //         @RequestBody Candidato candidato,
+    //         @AuthenticationPrincipal Usuario usuario
+    // ) {
+    //     Optional<Candidato> existente = candidatoService.obtenerCandidatoPorIdParaReclutador(id, usuario.getId());
+    //     if (existente.isEmpty()) return ResponseEntity.notFound().build();
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarCandidato(
-            @PathVariable String id,
-            @AuthenticationPrincipal Usuario usuario
-    ) {
-        boolean eliminado = candidatoService.eliminarCandidatoParaReclutador(id, usuario.getId());
-        if (!eliminado) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok().build();
-    }
+    //     candidato.setId(id);
+    //     return ResponseEntity.ok(candidatoService.actualizarCandidato(candidato));
+    // }
+
+    // @DeleteMapping("/{id}")
+    // public ResponseEntity<Void> eliminarCandidato(
+    //         @PathVariable String id,
+    //         @AuthenticationPrincipal Usuario usuario
+    // ) {
+    //     boolean eliminado = candidatoService.eliminarCandidatoParaReclutador(id, usuario.getId());
+    //     if (!eliminado) return ResponseEntity.notFound().build();
+    //     return ResponseEntity.ok().build();
+    // }
 }

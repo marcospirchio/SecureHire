@@ -9,7 +9,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageImpl;
-import java.util.List;
+import java.util.List;  
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Date;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,9 +29,39 @@ public class BusquedaService {
     public Busqueda crearBusqueda(Busqueda busqueda) {
         busqueda.setFechaCreacion(new Date());
         busqueda.setArchivada(false);
-        System.out.println("Fecha asignada: " + busqueda.getFechaCreacion());
-        return busquedaRepository.save(busqueda);
+    
+        // 1. Guardar la búsqueda
+        Busqueda guardada = busquedaRepository.save(busqueda);
+    
+        // 2. Buscar el usuario
+        Optional<Usuario> optUsuario = usuarioRepository.findById(guardada.getUsuarioId());
+        if (optUsuario.isPresent()) {
+            Usuario usuario = optUsuario.get();
+    
+            // DEBUG extra
+            System.out.println("🟢 Usuario encontrado: " + usuario.getEmail());
+            System.out.println("🔹 ID de búsqueda: " + guardada.getId());
+    
+            if (usuario.getPuestosPublicados() == null) {
+                usuario.setPuestosPublicados(new ArrayList<>());
+            }
+    
+            usuario.getPuestosPublicados().add(guardada.getId().toString());
+    
+            // DEBUG extra
+            System.out.println("📌 Nuevo array puestosPublicados: " + usuario.getPuestosPublicados());
+    
+            usuarioRepository.save(usuario); // 🔥 Esto DEBE ejecutar un save visible en el log
+            System.out.println("✅ Usuario actualizado y guardado.");
+        } else {
+            System.out.println("❌ Usuario no encontrado con ID: " + guardada.getUsuarioId());
+        }
+    
+        return guardada;
     }
+    
+    
+    
 
     public Optional<Busqueda> obtenerBusquedaPorId(String id) {
         return busquedaRepository.findById(id);

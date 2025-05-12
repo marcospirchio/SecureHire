@@ -23,6 +23,7 @@ public class CandidatoService {
     @Autowired private ComentarioRepository comentarioRepository;
     @Autowired private PostulacionRepository postulacionRepository;
     @Autowired private BusquedaRepository busquedaRepository;
+    
     public Candidato crearCandidato(CandidatoDTO dto) {
         Optional<Candidato> porEmail = candidatoRepository.findByEmail(dto.getEmail());
         Optional<Candidato> porDni = candidatoRepository.findByDni(dto.getDni());

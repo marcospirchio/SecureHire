@@ -40,26 +40,27 @@ public class PostulacionController {
         }
     }
     //FUNCIONA  
-    @PostMapping("/asociar-candidato")
-    public ResponseEntity<?> asociarCandidatoAPostulacion(@RequestBody Map<String, String> datos) {
-        String candidatoId = datos.get("candidatoId");
-        String busquedaId = datos.get("busquedaId");
+    // para asociar manual, pero no hace falta
+    // @PostMapping("/asociar-candidato")
+    // public ResponseEntity<?> asociarCandidatoAPostulacion(@RequestBody Map<String, String> datos) {
+    //     String candidatoId = datos.get("candidatoId");
+    //     String busquedaId = datos.get("busquedaId");
     
-        System.out.println("🟡 Recibido candidatoId: " + candidatoId + ", busquedaId: " + busquedaId);
+    //     System.out.println("🟡 Recibido candidatoId: " + candidatoId + ", busquedaId: " + busquedaId);
     
-        if (candidatoId == null || busquedaId == null) {
-            return ResponseEntity.badRequest().body("Faltan parámetros obligatorios.");
-        }
+    //     if (candidatoId == null || busquedaId == null) {
+    //         return ResponseEntity.badRequest().body("Faltan parámetros obligatorios.");
+    //     }
     
-        try {
-            return ResponseEntity.ok(postulacionService.asociarCandidatoABusqueda(candidatoId, busquedaId));
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace(); // 👈 imprimí el error completo
-            return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
-        }
-    }
+    //     try {
+    //         return ResponseEntity.ok(postulacionService.asociarCandidatoABusqueda(candidatoId, busquedaId));
+    //     } catch (IllegalStateException | IllegalArgumentException e) {
+    //         return ResponseEntity.badRequest().body(e.getMessage());
+    //     } catch (Exception ex) {
+    //         ex.printStackTrace(); // 👈 imprimí el error completo
+    //         return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
+    //     }
+    // }
     
     
 
@@ -78,11 +79,14 @@ public class PostulacionController {
     }
     //FUNCIONA
     @GetMapping("/{id}")
-    public ResponseEntity<Postulacion> obtenerPostulacion(@PathVariable String id) {
-        Optional<Postulacion> postulacion = postulacionService.obtenerPostulacionPorId(id);
-        return postulacion.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Postulacion> obtenerPostulacion(
+            @PathVariable String id,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Postulacion> postulacion = postulacionService.obtenerPostulacionSiPerteneceAUsuario(id, usuario.getId());
+        return postulacion.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(403).build());
     }
+
 
     //FUNCIONA
     @GetMapping("/candidato/{candidatoId}")
@@ -112,7 +116,7 @@ public class PostulacionController {
         if (opt.isEmpty()) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(postulacionService.actualizarFase(id, nuevaFase));
     }
-
+    //ACTUALIZA EL ESTADO DE LA POSTULACION
     @PatchMapping("/{id}/estado")
     public ResponseEntity<Postulacion> actualizarEstadoPostulacion(
             @PathVariable String id,
@@ -124,7 +128,7 @@ public class PostulacionController {
         if (opt.isEmpty()) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(postulacionService.actualizarEstado(id, nuevoEstado, motivo));
     }
-
+    //AGREGA UNA ANOTACION PRIVADA A LA POSTULACION
     @PostMapping("/{id}/anotacion")
     public ResponseEntity<Postulacion> agregarAnotacionPrivada(
             @PathVariable String id,
@@ -141,6 +145,19 @@ public class PostulacionController {
         return ResponseEntity.ok(postulacionService.agregarAnotacionPrivada(id, anotacion));
     }
 
+    // RECHAZA AL CANDIDATO PERO NO ELIMINA LA POSTULACION
+    @PatchMapping("/{id}/rechazar")
+    public ResponseEntity<Postulacion> rechazarPostulacion(
+            @PathVariable String id,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Postulacion> opt = postulacionService.obtenerPostulacionSiPerteneceAUsuario(id, usuario.getId());
+        if (opt.isEmpty()) return ResponseEntity.status(403).build();
+
+        return ResponseEntity.ok(postulacionService.actualizarEstado(id, "RECHAZADA", "Rechazado por el reclutador"));
+    }
+
+    // ELIMINA LA POSTULACION   
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarPostulacion(
             @PathVariable String id,
