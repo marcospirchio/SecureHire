@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidad - SecureHire</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <style>
+    :root {
+      --primary: 222.2 47.4% 11.2%;
+      --primary-foreground: 210 40% 98%;
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 222.2 84% 4.9%;
+      --border: 214.3 31.8% 91.4%;
+    }
+    
+    .dark {
+      --primary: 210 40% 98%;
+      --primary-foreground: 222.2 47.4% 11.2%;
+      --background: 222.2 84% 4.9%;
+      --foreground: 210 40% 98%;
+      --card: 222.2 84% 4.9%;
+      --card-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    
+    .theme-toggle {
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 9999px;
+    }
+    
+    .card {
+      background-color: hsl(var(--card));
+      color: hsl(var(--card-foreground));
+      border: 1px solid hsl(var(--border));
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="flex min-h-screen flex-col">
+    <!-- Header -->
+    <header class="flex h-16 items-center border-b px-6 bg-white dark:bg-gray-900 dark:border-gray-800">
+      <div class="flex items-center gap-2 font-semibold">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6">
+          <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
+          <path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"></path>
+          <path d="M12 3v6"></path>
+        </svg>
+        <span>SecureHire</span>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sun hidden">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="moon">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+    
+    <!-- Main content -->
+    <main class="flex-1 p-6 md:p-10">
+      <div class="mx-auto max-w-4xl">
+        <div class="card p-8 shadow-sm">
+          <h1 class="text-3xl font-bold mb-6">Política de Privacidad</h1>
+          
+          <div class="space-y-6 text-base">
+            <p>SecureHire no comparte información con terceros. Solo se utiliza para el correcto funcionamiento de la aplicación y la comunicación entre reclutadores y candidatos.</p>
+            
+            <h2 class="text-xl font-semibold mt-8">Información que recopilamos</h2>
+            <p>En SecureHire, recopilamos la siguiente información:</p>
+            <ul class="list-disc pl-6 space-y-2 mt-2">
+              <li>Información de perfil proporcionada por los usuarios (reclutadores y candidatos)</li>
+              <li>Datos de contacto como correo electrónico y número de teléfono</li>
+              <li>Información profesional como experiencia laboral, habilidades y formación académica</li>
+              <li>Interacciones dentro de la plataforma entre reclutadores y candidatos</li>
+            </ul>
+            
+            <h2 class="text-xl font-semibold mt-8">Cómo utilizamos su información</h2>
+            <p>La información recopilada se utiliza exclusivamente para:</p>
+            <ul class="list-disc pl-6 space-y-2 mt-2">
+              <li>Facilitar el proceso de reclutamiento y selección</li>
+              <li>Mejorar la experiencia del usuario en nuestra plataforma</li>
+              <li>Comunicación entre reclutadores y candidatos</li>
+              <li>Envío de notificaciones relevantes sobre procesos de selección</li>
+            </ul>
+            
+            <h2 class="text-xl font-semibold mt-8">Seguridad de los datos</h2>
+            <p>En SecureHire nos tomamos muy en serio la seguridad de los datos. Implementamos medidas técnicas y organizativas adecuadas para proteger su información personal contra accesos no autorizados, pérdida o alteración.</p>
+            
+            <h2 class="text-xl font-semibold mt-8">Contacto</h2>
+            <p>Si tiene alguna pregunta sobre nuestra política de privacidad, no dude en contactarnos a través de <a href="mailto:privacy@securehire.com" class="text-blue-600 dark:text-blue-400 hover:underline">privacy@securehire.com</a>.</p>
+          </div>
+          
+          <div class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">© 2025 SecureHire. Todos los derechos reservados.</p>
+            <div class="flex gap-4 mt-2">
+              <a href="/" class="text-sm text-gray-500 dark:text-gray-400 hover:underline">Inicio</a>
+              <a href="/privacy.html" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Política de Privacidad</a>
+              <a href="/terms.html" class="text-sm text-gray-500 dark:text-gray-400 hover:underline">Términos de Servicio</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const sunIcon = document.querySelector('.sun');
+    const moonIcon = document.querySelector('.moon');
+    
+    // Check for saved theme preference or use system preference
+    const savedTheme = localStorage.getItem('theme') || 
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    
+    // Apply the theme
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      sunIcon.classList.remove('hidden');
+      moonIcon.classList.add('hidden');
+    } else {
+      sunIcon.classList.add('hidden');
+      moonIcon.classList.remove('hidden');
+    }
+    
+    // Toggle theme
+    themeToggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      
+      sunIcon.classList.toggle('hidden');
+      moonIcon.classList.toggle('hidden');
+      
+      const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+      localStorage.setItem('theme', currentTheme);
+    });
+  </script>
+</body>
+</html>
