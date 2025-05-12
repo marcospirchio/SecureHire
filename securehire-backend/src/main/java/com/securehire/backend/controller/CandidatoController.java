@@ -27,6 +27,16 @@ public class CandidatoController {
     }
     
 
+    @GetMapping
+    public ResponseEntity<Page<Candidato>> obtenerCandidatosPaginadosFiltrados(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String nombre,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        return ResponseEntity.ok(candidatoService.obtenerCandidatosFiltradosPorReclutador(usuario.getId(), page, size, nombre));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Candidato> obtenerCandidato(
             @PathVariable String id,
@@ -59,15 +69,6 @@ public class CandidatoController {
         return candidato.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping
-    public ResponseEntity<Page<Candidato>> obtenerCandidatosPaginadosFiltrados(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String nombre,
-            @AuthenticationPrincipal Usuario usuario
-    ) {
-        return ResponseEntity.ok(candidatoService.obtenerCandidatosFiltradosPorReclutador(usuario.getId(), page, size, nombre));
-    }
 
     @PutMapping("/{id}")
     public ResponseEntity<Candidato> actualizarCandidato(
