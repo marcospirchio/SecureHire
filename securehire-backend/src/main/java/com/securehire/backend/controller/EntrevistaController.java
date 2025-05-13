@@ -123,18 +123,28 @@ public class EntrevistaController {
                 dto.setEstado(e.getEstado());
                 dto.setLinkEntrevista(e.getLinkEntrevista());
 
+                // Nombre y apellido del candidato
                 var candidato = candidatoService.obtenerCandidatoPorId(e.getCandidatoId());
                 candidato.ifPresent(c -> {
                     dto.setNombreCandidato(c.getNombre());
                     dto.setApellidoCandidato(c.getApellido());
                 });
 
+                // Título de la búsqueda (puesto)
+                if (e.getPostulacionId() != null) {
+                    postulacionService.obtenerPostulacionPorId(e.getPostulacionId())
+                        .flatMap(p -> busquedaRepository.findById(p.getBusquedaId()))
+                        .ifPresent(busqueda -> dto.setTituloPuesto(busqueda.getTitulo()));
+                }
+
                 return dto;
             })
             .toList();
 
         return ResponseEntity.ok(dtos);
-    }
+}
+
+    
 
     @GetMapping("/{id}")
     public ResponseEntity<Entrevista> obtenerEntrevista(

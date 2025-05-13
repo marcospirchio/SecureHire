@@ -12,4 +12,6 @@ public class EntrevistaConCandidatoDTO {
     private String linkEntrevista;
     private String nombreCandidato;
     private String apellidoCandidato;
+    private String tituloPuesto; // agregalo con su getter/setter
+
 }

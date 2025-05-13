@@ -94,7 +94,12 @@ export default function BusquedasPage() {
       <DashboardLayout>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full h-7 w-7 p-0"
+              onClick={() => router.back()}
+            >
               <ArrowLeft className="h-3 w-3" />
             </Button>
             <div className="relative flex-1 sm:w-[250px]">

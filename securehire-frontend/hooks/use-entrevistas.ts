@@ -3,12 +3,14 @@ import { useState, useEffect } from "react"
 interface Entrevista {
   id: string
   fechaProgramada: string
-  horaProgramada: string
+  horaProgramada: string | null
   estado: string
-  linkEntrevista: string
+  linkEntrevista: string | null
   nombreCandidato: string
   apellidoCandidato: string
+  tituloPuesto: string // nuevo campo
 }
+
 
 export function useEntrevistas() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([])
@@ -40,3 +42,4 @@ export function useEntrevistas() {
 
   return { entrevistas, loading, error }
 }
+

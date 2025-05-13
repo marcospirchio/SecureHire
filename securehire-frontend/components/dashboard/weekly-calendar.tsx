@@ -6,8 +6,8 @@ import { addDays, format, startOfWeek, endOfWeek, isSameDay } from "date-fns"
 import { es } from "date-fns/locale"
 
 interface CalendarEvent {
-  date: string // formato ISO: "2025-05-15"
-  time: string
+  date: string
+  time: string | null // ← permite null para validación previa
   title: string
   person?: string
   link?: string
@@ -20,30 +20,22 @@ interface WeeklyCalendarProps {
 export function WeeklyCalendar({ events }: WeeklyCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
 
-  // Calcular el inicio y fin de la semana actual
-  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 }) // Lunes como inicio de semana
-  const endDate = endOfWeek(currentDate, { weekStartsOn: 1 }) // Domingo como fin de semana
+  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 })
+  const endDate = endOfWeek(currentDate, { weekStartsOn: 1 })
 
-  // Generar los días de la semana (lunes a viernes)
   const weekDays = []
   for (let i = 0; i < 5; i++) {
     weekDays.push(addDays(startDate, i))
   }
 
-  // Navegación de semanas
   const goToPreviousWeek = () => setCurrentDate(prev => addDays(prev, -7))
   const goToNextWeek = () => setCurrentDate(prev => addDays(prev, 7))
 
-  // Obtener eventos del día
   const getEventsForDay = (date: Date) => {
     const dateString = format(date, "yyyy-MM-dd")
-    return events.filter(event => {
-      const eventDate = event.date.split("T")[0]
-      return eventDate === dateString
-    })
+    return events.filter(event => event.date === dateString)
   }
 
-  // Fechas para mostrar en el header
   const formattedStartDate = format(startDate, "d MMM", { locale: es })
   const formattedEndDate = format(endDate, "d MMM", { locale: es })
 
@@ -85,7 +77,7 @@ export function WeeklyCalendar({ events }: WeeklyCalendarProps) {
                   >
                     <div className="font-medium truncate">{event.title}</div>
                     {event.person && <div className="text-xs truncate">{event.person}</div>}
-                    {event.time && <div className="text-[11px]">{event.time}</div>}
+                    <div className="text-[11px]">{event.time ?? "Por confirmar"}</div>
                   </div>
                 ))}
               </div>
