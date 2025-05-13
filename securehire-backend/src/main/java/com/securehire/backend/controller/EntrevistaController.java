@@ -1,6 +1,7 @@
 package com.securehire.backend.controller;
 
 import com.securehire.backend.dto.CandidatoConComentariosDTO;
+import com.securehire.backend.dto.EntrevistaConCandidatoDTO;
 import com.securehire.backend.model.Entrevista;
 import com.securehire.backend.model.Usuario;
 import com.securehire.backend.model.Busqueda;
@@ -37,7 +38,6 @@ public class EntrevistaController {
     @Autowired
     private BusquedaRepository busquedaRepository;
 
-    // ✅ Ver entrevistas del usuario con filtros y paginado
     @GetMapping("/mis-entrevistas")
     public ResponseEntity<Page<Entrevista>> obtenerMisEntrevistas(
             @AuthenticationPrincipal Usuario usuario,
@@ -56,7 +56,6 @@ public class EntrevistaController {
         return ResponseEntity.ok(entrevistas);
     }
 
-    // ✅ Crear entrevista (solo reclutador autenticado)
     @PostMapping
     public ResponseEntity<?> crearEntrevista(
             @RequestBody Entrevista entrevista,
@@ -82,13 +81,16 @@ public class EntrevistaController {
             return ResponseEntity.status(403).body("La postulación no pertenece a la búsqueda indicada");
         }
 
+        if (entrevista.getHoraProgramada() == null || entrevista.getHoraProgramada().isBlank()) {
+            return ResponseEntity.badRequest().body("Falta la hora programada de la entrevista");
+        }
+
         entrevista.setUsuarioId(usuarioId);
         entrevista.setCandidatoId(postulacion.getCandidatoId());
 
         return ResponseEntity.ok(entrevistaService.crearEntrevista(entrevista));
     }
 
-    // ✅ Confirmar entrevista (sin token, desde link)
     @PatchMapping("/confirmar/{id}")
     public ResponseEntity<?> confirmarEntrevista(@PathVariable String id) {
         Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
@@ -103,7 +105,37 @@ public class EntrevistaController {
         return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
     }
 
-    // ✅ Ver detalles de una entrevista (solo dueño)
+    @GetMapping("/mis-entrevistas-con-candidato")
+    public ResponseEntity<List<EntrevistaConCandidatoDTO>> obtenerEntrevistasConDatosCandidato(
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        List<Entrevista> entrevistas = entrevistaService.filtrarEntrevistas(
+            null, usuario.getId(), null, null, null, null
+        );
+
+        List<EntrevistaConCandidatoDTO> dtos = entrevistas.stream()
+            .filter(e -> "confirmada".equalsIgnoreCase(e.getEstado()))
+            .map(e -> {
+                var dto = new EntrevistaConCandidatoDTO();
+                dto.setId(e.getId());
+                dto.setFechaProgramada(e.getFechaProgramada());
+                dto.setHoraProgramada(e.getHoraProgramada());
+                dto.setEstado(e.getEstado());
+                dto.setLinkEntrevista(e.getLinkEntrevista());
+
+                var candidato = candidatoService.obtenerCandidatoPorId(e.getCandidatoId());
+                candidato.ifPresent(c -> {
+                    dto.setNombreCandidato(c.getNombre());
+                    dto.setApellidoCandidato(c.getApellido());
+                });
+
+                return dto;
+            })
+            .toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Entrevista> obtenerEntrevista(
             @PathVariable String id,
@@ -120,7 +152,6 @@ public class EntrevistaController {
         return ResponseEntity.ok(entrevista);
     }
 
-    // ✅ Ver historial del candidato (desde entrevista)
     @GetMapping("/{id}/candidato-comentarios")
     public ResponseEntity<CandidatoConComentariosDTO> obtenerCandidatoConComentarios(
             @PathVariable String id,
@@ -138,7 +169,6 @@ public class EntrevistaController {
         return resultado.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // ✅ Reprogramar o cancelar entrevista (solo reclutador dueño)
     @PatchMapping("/{id}")
     public ResponseEntity<Entrevista> reprogramarOActualizarEstado(
             @PathVariable String id,
@@ -156,6 +186,7 @@ public class EntrevistaController {
 
         if (seReprogramo) {
             existente.setFechaProgramada(cambios.getFechaProgramada());
+            existente.setHoraProgramada(cambios.getHoraProgramada());
             existente.setEstado("reprogramada");
             String nuevoLink = "https://securehire.com/confirmar/" + existente.getId() + "?token=" + System.currentTimeMillis();
             existente.setLinkEntrevista(nuevoLink);
@@ -173,7 +204,6 @@ public class EntrevistaController {
         return ResponseEntity.ok(entrevistaService.actualizarEntrevista(existente));
     }
 
-    // ✅ Eliminar entrevista (solo dueño)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarEntrevista(
             @PathVariable String id,
@@ -189,4 +219,7 @@ public class EntrevistaController {
         entrevistaService.eliminarEntrevista(id);
         return ResponseEntity.ok().build();
     }
+
+ 
+
 }

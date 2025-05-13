@@ -20,11 +20,12 @@ public class Entrevista {
     private String id;
     private String usuarioId;
     private String candidatoId;
-    private String busquedaId; // Corregido: antes era puestoId
+    private String busquedaId;
     private String postulacionId;
-    private Date fechaProgramada;
-    private String estado; // "pendiente", "confirmada", "cancelada", "reprogramada", "finalizada", "ausente"
-    private String linkEntrevista; // Agregado
+    private Date fechaProgramada;           // Fecha (ej. 2025-05-15)
+    private String horaProgramada;          // Hora (ej. "10:00")
+    private String estado;                  // "confirmada", etc.
+    private String linkEntrevista;
     private List<String> comentarios;
-    private String motivoCancelacion; // Agregado
+    private String motivoCancelacion;
 }

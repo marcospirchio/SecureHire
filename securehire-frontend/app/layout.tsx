@@ -1,31 +1,20 @@
-import type React from "react"
-import "@/app/globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import type { Metadata } from 'next'
+import './globals.css'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const metadata: Metadata = {
+  title: 'v0 App',
+  description: 'Created with v0',
+  generator: 'v0.dev',
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <head>
-        <title>Dashboard de Reclutamiento</title>
-        <meta name="description" content="Dashboard de reclutamiento para gestionar candidatos" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <style>
-          {`
-            :root {
-              --sidebar-width: 280px;
-            }
-          `}
-        </style>
-      </head>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-        </ThemeProvider>
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   )
 }
-
-export const metadata = {
-      generator: 'v0.dev'
-    };

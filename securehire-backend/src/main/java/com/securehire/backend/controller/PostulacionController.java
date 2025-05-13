@@ -41,26 +41,26 @@ public class PostulacionController {
     }
     //FUNCIONA  
     // para asociar manual, pero no hace falta
-    // @PostMapping("/asociar-candidato")
-    // public ResponseEntity<?> asociarCandidatoAPostulacion(@RequestBody Map<String, String> datos) {
-    //     String candidatoId = datos.get("candidatoId");
-    //     String busquedaId = datos.get("busquedaId");
+    @PostMapping("/asociar-candidato")
+    public ResponseEntity<?> asociarCandidatoAPostulacion(@RequestBody Map<String, String> datos) {
+        String candidatoId = datos.get("candidatoId");
+        String busquedaId = datos.get("busquedaId");
     
-    //     System.out.println("🟡 Recibido candidatoId: " + candidatoId + ", busquedaId: " + busquedaId);
+        System.out.println("🟡 Recibido candidatoId: " + candidatoId + ", busquedaId: " + busquedaId);
     
-    //     if (candidatoId == null || busquedaId == null) {
-    //         return ResponseEntity.badRequest().body("Faltan parámetros obligatorios.");
-    //     }
+        if (candidatoId == null || busquedaId == null) {
+            return ResponseEntity.badRequest().body("Faltan parámetros obligatorios.");
+        }
     
-    //     try {
-    //         return ResponseEntity.ok(postulacionService.asociarCandidatoABusqueda(candidatoId, busquedaId));
-    //     } catch (IllegalStateException | IllegalArgumentException e) {
-    //         return ResponseEntity.badRequest().body(e.getMessage());
-    //     } catch (Exception ex) {
-    //         ex.printStackTrace(); // 👈 imprimí el error completo
-    //         return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
-    //     }
-    // }
+        try {
+            return ResponseEntity.ok(postulacionService.asociarCandidatoABusqueda(candidatoId, busquedaId));
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception ex) {
+            ex.printStackTrace(); // 👈 imprimí el error completo
+            return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
+        }
+    }
     
     
 
