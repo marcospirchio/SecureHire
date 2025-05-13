@@ -16,10 +16,10 @@ interface Evento {
 }
 
 interface CalendarioSemanalProps {
-  eventos: Evento[]
+  eventos?: Evento[] // Hacemos que eventos sea opcional
 }
 
-export function CalendarioSemanal({ eventos }: CalendarioSemanalProps) {
+export function CalendarioSemanal({ eventos = [] }: CalendarioSemanalProps) {
   const [semanaActual, setSemanaActual] = useState(new Date())
 
   const inicioSemana = startOfWeek(semanaActual, { weekStartsOn: 1 }) // Lunes como inicio de semana
@@ -34,7 +34,8 @@ export function CalendarioSemanal({ eventos }: CalendarioSemanalProps) {
   }
 
   const getEventosDia = (dia: Date) => {
-    return eventos.filter((evento) => isSameDay(evento.fecha, dia))
+    // Aseguramos que eventos sea un array antes de llamar a filter
+    return (eventos || []).filter((evento) => isSameDay(evento.fecha, dia))
   }
 
   return (

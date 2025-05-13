@@ -2,11 +2,11 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Package2Icon, Moon, Sun, CheckCircle, Calendar } from "lucide-react"
+import { Package2Icon, Moon, Sun, CheckCircle, Calendar, Upload, X, FileText, ScrollText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +17,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
 // Lista de países para los selectores
@@ -70,6 +78,81 @@ const codigosPais = [
   { pais: "Uruguay", codigo: "+598" },
   { pais: "Venezuela", codigo: "+58" },
 ]
+
+// Texto de términos y condiciones
+const terminosYCondiciones = `TÉRMINOS Y CONDICIONES DE USO
+
+Al acceder y utilizar esta plataforma, el usuario acepta quedar obligado por los presentes Términos y Condiciones, así como por todas las leyes y regulaciones aplicables en la República Argentina.
+
+1. DEFINICIONES
+
+Usuario: Persona física o jurídica que utiliza la plataforma, ya sea como candidato o reclutador.
+
+Candidato: Persona que se postula a ofertas laborales a través de la plataforma.
+
+Reclutador: Empresa o individuo que publica ofertas laborales y gestiona postulaciones.
+
+Plataforma: Sitio web, sistema y servicios digitales ofrecidos por la empresa proveedora del servicio.
+
+2. USO DE LA PLATAFORMA
+
+La plataforma tiene como finalidad facilitar procesos de selección de personal, permitiendo a los candidatos completar formularios, postularse a búsquedas laborales y recibir comunicaciones, y a los reclutadores gestionar postulaciones, registrar evaluaciones, y consultar historial de comportamiento laboral de los candidatos.
+
+3. PROTECCIÓN DE DATOS PERSONALES
+
+Conforme a la Ley N.º 25.326 de Protección de los Datos Personales, el usuario declara conocer y aceptar que:
+
+Sus datos personales serán tratados con confidencialidad y utilizados exclusivamente para los fines de reclutamiento y selección.
+
+Podrá ejercer en cualquier momento sus derechos de acceso, rectificación, actualización y supresión de sus datos.
+
+La plataforma implementará las medidas de seguridad adecuadas para evitar el acceso no autorizado, pérdida o alteración de la información almacenada.
+
+En caso de compartir información sensible (como CVs, identificaciones u opiniones sobre terceros), el usuario asume la responsabilidad del contenido y garantiza contar con el consentimiento correspondiente cuando aplique.
+
+4. DERECHOS DEL USUARIO
+
+De acuerdo con la Ley N.º 24.240 de Defensa del Consumidor, el usuario tiene derecho a:
+
+Recibir información clara, veraz y detallada sobre los servicios ofrecidos.
+
+Presentar consultas y reclamos ante los canales habilitados por la plataforma.
+
+Rescindir voluntariamente el uso de la plataforma, solicitar la baja de su cuenta y la eliminación de sus datos.
+
+5. RESPONSABILIDADES DEL USUARIO
+
+El usuario se compromete a:
+
+Proporcionar información veraz, completa y actualizada.
+
+Abstenerse de utilizar la plataforma para fines ilícitos, fraudulentos o que infrinjan derechos de terceros.
+
+No realizar conductas discriminatorias, ofensivas, falsas o que atenten contra la integridad de otras personas usuarias.
+
+No extraer, reutilizar ni redistribuir datos del sistema sin autorización expresa.
+
+6. RESPONSABILIDADES DE LA PLATAFORMA
+
+La plataforma:
+
+No garantiza que los candidatos resulten contratados, ni que las evaluaciones sean infalibles.
+
+No se responsabiliza por la veracidad de los datos ingresados por terceros.
+
+Se reserva el derecho de suspender o eliminar cuentas que incumplan con estos términos o infrinjan normativas vigentes.
+
+7. MODIFICACIONES
+
+La plataforma podrá modificar estos Términos y Condiciones en cualquier momento, notificando a los usuarios a través de sus medios habituales. La continuidad en el uso implicará la aceptación de las nuevas condiciones.
+
+8. JURISDICCIÓN
+
+Estos Términos se regirán e interpretarán conforme a las leyes de la República Argentina. Toda controversia será resuelta ante los tribunales ordinarios del domicilio legal de la empresa.
+
+9. CONSENTIMIENTO EXPRESO
+
+Al aceptar estos Términos y Condiciones, el usuario declara haber leído, entendido y aceptado todas las cláusulas aquí expuestas, autorizando expresamente el tratamiento de sus datos personales según la normativa vigente.`
 
 // Datos de ejemplo para una oferta
 const ofertaEjemplo = {
@@ -135,6 +218,11 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState("datos-personales")
   const [fechaNacimiento, setFechaNacimiento] = useState<Date | undefined>(undefined)
+  const [curriculum, setCurriculum] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [terminosDialogOpen, setTerminosDialogOpen] = useState(false)
+  const [scrolledToBottom, setScrolledToBottom] = useState(false)
+  const terminosContentRef = useRef<HTMLDivElement>(null)
 
   const handleInputChange = (id: string, value: any) => {
     setFormData((prev) => ({ ...prev, [id]: value }))
@@ -146,6 +234,66 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
         return newErrors
       })
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      // Validar tipo de archivo
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ]
+      if (!allowedTypes.includes(file.type)) {
+        setErrores((prev) => ({
+          ...prev,
+          curriculum: "El archivo debe ser PDF, DOC o DOCX",
+        }))
+        return
+      }
+
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrores((prev) => ({
+          ...prev,
+          curriculum: "El archivo no debe superar los 5MB",
+        }))
+        return
+      }
+
+      setCurriculum(file)
+      // Limpiar error si existía
+      if (errores.curriculum) {
+        setErrores((prev) => {
+          const newErrors = { ...prev }
+          delete newErrors.curriculum
+          return newErrors
+        })
+      }
+    }
+  }
+
+  const removeFile = () => {
+    setCurriculum(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const handleScroll = () => {
+    if (terminosContentRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = terminosContentRef.current
+      // Consideramos que ha llegado al final si está a menos de 10px del final
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10
+      setScrolledToBottom(isAtBottom)
+    }
+  }
+
+  const handleAceptarTerminos = () => {
+    handleInputChange("terminos", true)
+    setTerminosDialogOpen(false)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -216,6 +364,10 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
       nuevosErrores.telefono = "El teléfono es obligatorio"
     }
 
+    if (!curriculum) {
+      nuevosErrores.curriculum = "Debe adjuntar su currículum"
+    }
+
     if (!formData.terminos) {
       nuevosErrores.terminos = "Debe aceptar los términos y condiciones"
     }
@@ -229,6 +381,17 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
     setEnviado(true)
     window.scrollTo(0, 0)
   }
+
+  // Resetear el estado de scroll cuando se abre el diálogo
+  useEffect(() => {
+    if (terminosDialogOpen) {
+      setScrolledToBottom(false)
+      // Asegurarse de que el scroll comience desde arriba
+      if (terminosContentRef.current) {
+        terminosContentRef.current.scrollTop = 0
+      }
+    }
+  }, [terminosDialogOpen])
 
   if (enviado) {
     return (
@@ -641,6 +804,89 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
                         </div>
                       </div>
 
+                      {/* Campo para subir el currículum */}
+                      <div className="space-y-2">
+                        <Label htmlFor="curriculum">
+                          Currículum <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              ref={fileInputRef}
+                              id="curriculum"
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx"
+                              onChange={handleFileChange}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              Seleccionar archivo
+                            </Button>
+                          </div>
+
+                          {curriculum ? (
+                            <div className="flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-primary" />
+                                <span className="text-sm truncate max-w-[200px]">{curriculum.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  ({(curriculum.size / 1024 / 1024).toFixed(2)} MB)
+                                </span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={removeFile}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">
+                              Formatos permitidos: PDF, DOC, DOCX. Tamaño máximo: 5MB
+                            </p>
+                          )}
+                          {errores.curriculum && <p className="text-sm text-red-500">{errores.curriculum}</p>}
+                        </div>
+                      </div>
+
+                      {/* Botón para abrir el diálogo de términos y condiciones */}
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="terminos"
+                            checked={formData.terminos || false}
+                            onCheckedChange={(checked) => handleInputChange("terminos", checked)}
+                          />
+                          <div className="flex items-center gap-1">
+                            <label
+                              htmlFor="terminos"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Acepto los
+                            </label>
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="h-auto p-0 text-sm font-medium"
+                              onClick={() => setTerminosDialogOpen(true)}
+                            >
+                              términos y condiciones
+                            </Button>
+                            <span className="text-red-500">*</span>
+                          </div>
+                        </div>
+                        {errores.terminos && <p className="text-sm text-red-500">{errores.terminos}</p>}
+                      </div>
+
                       <div className="flex justify-end">
                         <Button
                           type="button"
@@ -702,6 +948,14 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
 
                             if (!formData.telefono || formData.telefono.trim() === "") {
                               nuevosErrores.telefono = "El teléfono es obligatorio"
+                            }
+
+                            if (!curriculum) {
+                              nuevosErrores.curriculum = "Debe adjuntar su currículum"
+                            }
+
+                            if (!formData.terminos) {
+                              nuevosErrores.terminos = "Debe aceptar los términos y condiciones"
                             }
 
                             if (Object.keys(nuevosErrores).length > 0) {
@@ -786,23 +1040,6 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
                           </div>
                         ))}
 
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="terminos"
-                              checked={formData.terminos || false}
-                              onCheckedChange={(checked) => handleInputChange("terminos", checked)}
-                            />
-                            <label
-                              htmlFor="terminos"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Acepto los términos y condiciones <span className="text-red-500">*</span>
-                            </label>
-                          </div>
-                          {errores.terminos && <p className="text-sm text-red-500">{errores.terminos}</p>}
-                        </div>
-
                         <div className="flex justify-between">
                           <Button type="button" variant="outline" onClick={() => setActiveTab("datos-personales")}>
                             Volver
@@ -818,6 +1055,39 @@ export default function PostulacionPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       </div>
+
+      {/* Diálogo de Términos y Condiciones */}
+      <Dialog open={terminosDialogOpen} onOpenChange={setTerminosDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScrollText className="h-5 w-5" />
+              Términos y Condiciones
+            </DialogTitle>
+            <DialogDescription>
+              Por favor, lea atentamente los siguientes términos y condiciones antes de continuar.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div
+            ref={terminosContentRef}
+            className="flex-1 overflow-y-auto pr-2 my-4 text-sm"
+            onScroll={handleScroll}
+            style={{ maxHeight: "50vh" }}
+          >
+            <pre className="whitespace-pre-wrap font-sans">{terminosYCondiciones}</pre>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <div className="text-xs text-muted-foreground italic mb-2 sm:mb-0">
+              {!scrolledToBottom && "Por favor, desplácese hasta el final para continuar"}
+            </div>
+            <Button onClick={handleAceptarTerminos} disabled={!scrolledToBottom} className="ml-auto">
+              Aceptar y Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

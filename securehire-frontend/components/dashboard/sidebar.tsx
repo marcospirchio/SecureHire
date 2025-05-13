@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Calendar, Home, Package2Icon, Settings, Users } from "lucide-react"
+import { Calendar, Home, Settings, Users, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -20,7 +20,7 @@ export function Sidebar() {
     <div className="fixed top-0 left-0 h-full w-[280px] border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 z-30 flex flex-col">
       <div className="flex h-16 items-center border-b border-gray-200 dark:border-gray-800 shrink-0 px-4 justify-between">
         <Link href="/" className="flex items-center gap-2 font-semibold" prefetch={false}>
-          <Package2Icon className="h-6 w-6" />
+          <img src="/Logo SecureHire.png" alt="SecureHire Logo" className="h-8 w-auto" />
           <span className="">SecureHire</span>
         </Link>
       </div>
@@ -36,7 +36,7 @@ export function Sidebar() {
             prefetch={false}
           >
             <Home className="h-4 w-4" />
-            Home
+            Inicio
           </Link>
           <Link
             href="/calendario"
@@ -60,6 +60,18 @@ export function Sidebar() {
           >
             <Users className="h-4 w-4" />
             <span>Mis búsquedas</span>
+          </Link>
+          <Link
+            href="/notificaciones"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${
+              pathname === "/notificaciones"
+                ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+            prefetch={false}
+          >
+            <Bell className="h-4 w-4" />
+            Notificaciones
           </Link>
           <Link
             href="/configuracion"

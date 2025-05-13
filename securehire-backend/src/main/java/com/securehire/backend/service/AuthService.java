@@ -23,6 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final ResendEmailService emailService;
 
     public AuthResponse register(AuthRequest request) {
         if (usuarioRepository.existsByEmail(request.getEmail())) {
@@ -45,6 +46,13 @@ public class AuthService {
                 .build();
         
         usuarioRepository.save(usuario);
+
+        emailService.enviarCorreo(
+            usuario.getEmail(),
+            "¡Bienvenido a SecureHire!",
+            "Hola " + usuario.getNombre() + ", gracias por registrarte en nuestra plataforma."
+        );
+
         var jwtToken = jwtService.generateToken((UserDetails) usuario);
         
         return AuthResponse.builder()

@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { Moon, Sun, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Package2Icon, SearchIcon } from "./icons"
 import { Sidebar } from "./sidebar"
 
 export function Header() {
@@ -29,21 +27,12 @@ export function Header() {
         <span className="sr-only">Abrir menú</span>
       </Button>
 
-      <Link href="#" className="lg:hidden flex items-center gap-2 font-semibold" prefetch={false}>
-        <Package2Icon className="h-6 w-6" />
-        <span className="">SecureHire</span>
+      <Link href="/" className="lg:hidden flex items-center gap-2 font-semibold" prefetch={false}>
+        <img src="/Logo SecureHire.png" alt="SecureHire Logo" className="h-8 w-auto" />
+        <span className="font-bold">SecureHire</span>
       </Link>
       <div className="w-full flex items-center justify-between">
-        <form className="flex-1">
-          <div className="relative">
-            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Buscar candidatos..."
-              className="w-full bg-white dark:bg-gray-950 shadow-none appearance-none pl-8 md:w-2/3 lg:w-1/3"
-            />
-          </div>
-        </form>
+        <div className="flex-1"></div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

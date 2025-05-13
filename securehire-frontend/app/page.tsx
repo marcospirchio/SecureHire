@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
 import { DetalleCandidato } from "@/components/dashboard/detalle-candidato"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
-import type { Candidato, EventoReciente } from "@/types/candidato"
+import type { Candidato } from "@/types/candidato"
 
 // Datos de ejemplo
 const candidatosEjemplo: Candidato[] = [
@@ -54,31 +54,6 @@ const candidatosEjemplo: Candidato[] = [
   // ... otros candidatos
 ]
 
-// Datos de ejemplo para eventos recientes
-const eventosRecientes: EventoReciente[] = [
-  {
-    id: 1,
-    candidato: "María Pérez",
-    accion: "confirmó entrevista",
-    fecha: new Date(2025, 4, 20),
-    tipo: "confirmacion",
-  },
-  {
-    id: 2,
-    candidato: "Pablo Sánchez",
-    accion: "canceló entrevista",
-    fecha: new Date(2025, 4, 19),
-    tipo: "cancelacion",
-  },
-  {
-    id: 3,
-    candidato: "Javier González",
-    accion: "fue añadido como candidato",
-    fecha: new Date(2025, 4, 18),
-    tipo: "nuevo",
-  },
-]
-
 // Datos de ejemplo para entrevistas
 const entrevistasEjemplo = [
   {
@@ -94,20 +69,31 @@ const entrevistasEjemplo = [
 const ultimasOfertasEjemplo = [
   {
     id: "1",
-    titulo: "Desarrollador Frontend",
-    descripcion: "Buscamos desarrollador frontend con experiencia en React y TypeScript",
+    titulo: "Pasantía Desarrollador Backend Trainee",
+    fase: "Webinar informativo",
+    candidatos: 133,
+    fechaCreacion: new Date(2025, 3, 17),
   },
   {
     id: "2",
-    titulo: "Diseñador UX/UI",
-    descripcion: "Buscamos diseñador UX/UI con experiencia en Figma y diseño de interfaces móviles",
+    titulo: "Contador Ssr.",
+    fase: "Filtrado de cv",
+    candidatos: 340,
+    fechaCreacion: new Date(2025, 3, 4),
+  },
+  {
+    id: "3",
+    titulo: "Secretario",
+    fase: "Entrevistas finales",
+    candidatos: 10,
+    fechaCreacion: new Date(2025, 1, 22),
   },
 ]
 
 export default function DashboardReclutamiento() {
   const [candidatoSeleccionado, setCandidatoSeleccionado] = useState<Candidato | null>(null)
   const [mostrarDetalles, setMostrarDetalles] = useState(false)
-  const [usuarioLogueado, setUsuarioLogueado] = useState("Carlos Rodríguez")
+  const [usuarioLogueado, setUsuarioLogueado] = useState("Hector")
   const { toast } = useToast()
   const isMobile = useMobile()
 
@@ -178,7 +164,6 @@ export default function DashboardReclutamiento() {
           ) : (
             <DashboardContent
               usuarioLogueado={usuarioLogueado}
-              eventosRecientes={eventosRecientes}
               ultimasOfertas={ultimasOfertasEjemplo}
               entrevistas={entrevistasEjemplo}
             />

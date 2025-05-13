@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { AlertTriangleIcon, CheckCircleIcon, XCircleIcon, ChevronDownIcon } from "lucide-react"
+import { Pagination } from "@/components/ui/pagination"
 import type { Candidato } from "@/types/candidato"
 import type { OfertaTrabajo } from "@/types/ofertas"
 
@@ -25,6 +26,12 @@ interface ListaCandidatosProps {
   setOrdenarPor: (value: string | null) => void
   onSelectCandidato: (candidato: Candidato) => void
   onRechazarCandidato: (id: number) => void
+  paginaActual: number
+  totalPaginas: number
+  candidatosPorPagina: number
+  totalCandidatos: number
+  onPageChange: (page: number) => void
+  onItemsPerPageChange: (itemsPerPage: number) => void
 }
 
 export function ListaCandidatos({
@@ -36,6 +43,12 @@ export function ListaCandidatos({
   setOrdenarPor,
   onSelectCandidato,
   onRechazarCandidato,
+  paginaActual,
+  totalPaginas,
+  candidatosPorPagina,
+  totalCandidatos,
+  onPageChange,
+  onItemsPerPageChange,
 }: ListaCandidatosProps) {
   return (
     <div>
@@ -180,6 +193,17 @@ export function ListaCandidatos({
               </CardContent>
             </Card>
           ))}
+
+          {totalCandidatos > 0 && (
+            <Pagination
+              currentPage={paginaActual}
+              totalPages={totalPaginas}
+              itemsPerPage={candidatosPorPagina}
+              totalItems={totalCandidatos}
+              onPageChange={onPageChange}
+              onItemsPerPageChange={onItemsPerPageChange}
+            />
+          )}
         </div>
       ) : (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hay candidatos para esta oferta</div>

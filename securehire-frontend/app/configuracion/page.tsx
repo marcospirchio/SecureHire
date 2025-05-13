@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast"
 import { PerfilForm } from "@/components/configuracion/perfil-form"
 import { IdiomaZonaForm } from "@/components/configuracion/idioma-zona-form"
 import { SeguridadForm } from "@/components/configuracion/seguridad-form"
-import { Save } from "lucide-react"
+import { Save, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function ConfiguracionPage() {
   const [activeTab, setActiveTab] = useState("perfil")
@@ -24,7 +25,15 @@ export default function ConfiguracionPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Configuración</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" asChild className="mr-2">
+            <Link href="/">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="sr-only">Volver</span>
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold">Configuración</h1>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-6">

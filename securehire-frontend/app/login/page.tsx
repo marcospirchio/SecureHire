@@ -36,7 +36,12 @@ export default function LoginPage() {
         <Card className="border-none shadow-xl">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-2">
-              <Package2Icon className="h-10 w-10 text-primary" />
+              <div className="flex items-center gap-2 font-semibold">
+                <div className="bg-primary/10 p-1.5 rounded-md">
+                  <Package2Icon className="h-5 w-5" />
+                </div>
+                <span className="font-bold">SecureHire</span>
+              </div>
             </div>
 
             <CardTitle className="text-2xl font-bold">SecureHire</CardTitle>

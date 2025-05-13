@@ -124,8 +124,8 @@ export default function EntrevistaPage({ params }: { params: { id: string } }) {
         <header className="mb-12">
           <div className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2.5 rounded-lg">
-                <Package2Icon className="h-6 w-6 text-primary" />
+              <div className="bg-primary/10 p-1.5 rounded-md">
+                <Package2Icon className="h-5 w-5" />
               </div>
               <div>
                 <span className="text-xl font-bold text-black dark:text-white">SecureHire</span>

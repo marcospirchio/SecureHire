@@ -1,4 +1,4 @@
-export type Estado = "Entrevista confirmada" | "Pendiente de confirmación" | "No se presentó"
+export type Estado = "Entrevista confirmada" | "Pendiente de confirmación" | "No se presentó" | string
 
 export interface Entrevista {
   fecha: Date
@@ -16,16 +16,19 @@ export interface AnotacionPersonal {
   id: number
   fecha: Date
   texto: string
+  autor?: string
+  empresa?: string
 }
 
 export interface Candidato {
   id: number
-  _id?: string // Añadido para compatibilidad
+  _id?: string
   nombre: string
-  apellido?: string // Añadido
-  dni?: string // Añadido
-  edad: number // Añadido
-  sexo: string // Añadido
+  apellido?: string
+  dni?: string
+  edad: number
+  sexo: string
+  localidad?: string
   puesto: string
   reputacion: number
   estado: Estado
@@ -35,8 +38,14 @@ export interface Candidato {
   entrevistas: Entrevista[]
   comentarios: Comentario[]
   anotacionesPersonales: AnotacionPersonal[]
-  respuestas?: Record<string, any> // Añadido
-  cumpleRequisitosExcluyentes?: boolean // Añadido
+  respuestas?: Record<string, any>
+  cumpleRequisitosExcluyentes?: boolean
+  fechaNacimiento?: Date
+  genero?: string
+  nacionalidad?: string
+  paisResidencia?: string
+  provincia?: string
+  direccion?: string
 }
 
 export interface EventoReciente {

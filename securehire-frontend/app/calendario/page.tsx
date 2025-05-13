@@ -1,14 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
 import { CalendarioMensual } from "@/components/calendario/calendario-mensual"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, PlusCircle } from "lucide-react"
+import { useCalendario } from "@/hooks/use-calendario"
+import { NuevoEventoDialog } from "@/components/calendario/nuevo-evento-dialog"
+import { ProximosEventos } from "@/components/calendario/proximos-eventos"
 
 // Datos de ejemplo para eventos
 const eventosEjemplo = [
@@ -45,8 +44,24 @@ const eventosEjemplo = [
 ]
 
 export default function CalendarioPage() {
-  const [eventos, setEventos] = useState(eventosEjemplo)
-  const [activeTab, setActiveTab] = useState("calendario")
+  const {
+    eventos,
+    activeTab,
+    setActiveTab,
+    showNewEventDialog,
+    setShowNewEventDialog,
+    selectedDate,
+    setSelectedDate,
+    selectedTime,
+    setSelectedTime,
+    eventTitle,
+    setEventTitle,
+    eventDescription,
+    setEventDescription,
+    handleCreateEvent,
+    getProximosEventos,
+    formatEventDate,
+  } = useCalendario(eventosEjemplo)
 
   return (
     <div className="container mx-auto py-6">
@@ -60,9 +75,9 @@ export default function CalendarioPage() {
           </Button>
           <h1 className="text-3xl font-bold">Calendario de Entrevistas</h1>
         </div>
-        <Button>
+        <Button onClick={() => setShowNewEventDialog(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Nueva Entrevista
+          Nuevo Evento
         </Button>
       </div>
 
@@ -77,42 +92,23 @@ export default function CalendarioPage() {
         </TabsContent>
 
         <TabsContent value="proximas">
-          <Card>
-            <CardHeader>
-              <CardTitle>Próximas Entrevistas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {eventos
-                  .filter((evento) => evento.fecha > new Date())
-                  .sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-                  .map((evento) => (
-                    <Card key={evento.id}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">{evento.candidato}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {format(evento.fecha, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
-                              Reprogramar
-                            </Button>
-                            <Button variant="destructive" size="sm">
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ProximosEventos eventos={getProximosEventos()} formatEventDate={formatEventDate} />
         </TabsContent>
       </Tabs>
+
+      <NuevoEventoDialog
+        open={showNewEventDialog}
+        onOpenChange={setShowNewEventDialog}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        selectedTime={selectedTime}
+        setSelectedTime={setSelectedTime}
+        eventTitle={eventTitle}
+        setEventTitle={setEventTitle}
+        eventDescription={eventDescription}
+        setEventDescription={setEventDescription}
+        onCreateEvent={handleCreateEvent}
+      />
     </div>
   )
 }

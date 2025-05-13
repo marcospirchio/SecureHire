@@ -1,110 +1,176 @@
 "use client"
 
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { Calendar, UserPlus, X } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { ChevronRightIcon } from "./icons"
-import { CalendarioSemanal } from "./calendario-semanal"
-import type { EventoReciente } from "@/types/candidato"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChevronRight } from "lucide-react"
+import { format, startOfWeek, addDays } from "date-fns"
+import { es } from "date-fns/locale"
 
 interface DashboardContentProps {
   usuarioLogueado: string
-  eventosRecientes: EventoReciente[]
-  ultimasOfertas: {
+  ultimasOfertas: Array<{
     id: string
     titulo: string
-    descripcion: string
-  }[]
-  entrevistas: {
+    fase: string
+    candidatos: number
+    fechaCreacion: Date
+  }>
+  entrevistas: Array<{
     id: number
     titulo: string
     fecha: Date
     candidato: string
-  }[]
+  }>
 }
 
-export function DashboardContent({
-  usuarioLogueado,
-  eventosRecientes,
-  ultimasOfertas,
-  entrevistas,
-}: DashboardContentProps) {
+export function DashboardContent({ usuarioLogueado, ultimasOfertas, entrevistas = [] }: DashboardContentProps) {
+  const router = useRouter()
+  const [semanaActual, setSemanaActual] = useState(new Date())
+
+  const formatearFecha = (fecha: Date) => {
+    return fecha.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
+  }
+
+  // Generar los días de la semana actual
+  const inicioDeSemana = startOfWeek(semanaActual, { weekStartsOn: 1 }) // Lunes como inicio de semana
+  const diasDeLaSemana = Array.from({ length: 5 }, (_, i) => addDays(inicioDeSemana, i)) // Lunes a viernes
+
+  // Función para obtener los eventos de un día específico
+  const getEventosDia = (dia: Date) => {
+    return entrevistas.filter((evento) => {
+      const fechaEvento = new Date(evento.fecha)
+      return (
+        fechaEvento.getDate() === dia.getDate() &&
+        fechaEvento.getMonth() === dia.getMonth() &&
+        fechaEvento.getFullYear() === dia.getFullYear()
+      )
+    })
+  }
+
+  // Función para ir a la semana anterior
+  const irASemanaAnterior = () => {
+    setSemanaActual((prevSemana) => addDays(prevSemana, -7))
+  }
+
+  // Función para ir a la semana siguiente
+  const irASemanaSiguiente = () => {
+    setSemanaActual((prevSemana) => addDays(prevSemana, 7))
+  }
+
+  // Formatear el rango de fechas para mostrar
+  const formatoRangoFechas = () => {
+    const inicio = format(diasDeLaSemana[0], "d 'de' MMMM", { locale: es })
+    const fin = format(diasDeLaSemana[4], "d 'de' MMMM", { locale: es })
+    return `${inicio} - ${fin}`
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold">¡Bienvenido, {usuarioLogueado}!</h1>
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Bienvenido, {usuarioLogueado}</h1>
+        <Button onClick={() => router.push("/ofertas?nueva=true")}>
+          <span className="hidden sm:inline-block">Nueva oferta</span>
+          <span className="sm:hidden">+ Oferta</span>
+        </Button>
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-lg font-medium">Últimas actualizaciones</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {eventosRecientes.map((evento) => (
-              <div key={evento.id} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                    evento.tipo === "confirmacion"
-                      ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                      : evento.tipo === "cancelacion"
-                        ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-                  )}
-                >
-                  {evento.tipo === "confirmacion" ? (
-                    <Calendar className="h-4 w-4" />
-                  ) : evento.tipo === "cancelacion" ? (
-                    <X className="h-4 w-4" />
-                  ) : (
-                    <UserPlus className="h-4 w-4" />
-                  )}
+      <div className="grid gap-6">
+        {/* Calendario Semanal */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle>Calendario Semanal</CardTitle>
+              <CardDescription>{formatoRangoFechas()}</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={irASemanaAnterior}>
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                <span className="sr-only">Anterior</span>
+              </Button>
+              <Button variant="outline" size="icon" onClick={irASemanaSiguiente}>
+                <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Siguiente</span>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-5 gap-2">
+              {diasDeLaSemana.map((dia, index) => (
+                <div key={index} className="flex flex-col">
+                  <div
+                    className={`text-center p-2 font-medium ${
+                      dia.getDate() === new Date().getDate()
+                        ? "bg-blue-600 text-white rounded-t-md"
+                        : "bg-gray-100 dark:bg-gray-800 rounded-t-md"
+                    }`}
+                  >
+                    <div>{format(dia, "EEEE", { locale: es })}</div>
+                    <div>{format(dia, "d", { locale: es })}</div>
+                  </div>
+                  <div className="border rounded-b-md p-2 flex-1 min-h-[100px] bg-white dark:bg-gray-950">
+                    {getEventosDia(dia).map((evento) => (
+                      <div key={evento.id} className="mb-1 p-1 text-xs bg-blue-100 dark:bg-blue-900 rounded">
+                        <div className="font-medium">{evento.titulo}</div>
+                        <div>{evento.candidato}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    <span className="font-semibold">{evento.candidato}</span> {evento.accion}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {format(evento.fecha, "d 'de' MMMM 'de' yyyy", { locale: es })}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      <CalendarioSemanal eventos={entrevistas} />
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium">Últimas ofertas publicadas</CardTitle>
-          <Button size="icon" variant="ghost" className="h-6 w-6 rounded-full">
-            <ChevronRightIcon className="h-4 w-4" />
-            <span className="sr-only">Ver más</span>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {ultimasOfertas.map((oferta) => (
-              <Card key={oferta.id}>
-                <CardHeader className="flex flex-row items-center pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium">{oferta.titulo}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {oferta.descripcion.length > 100
-                      ? `${oferta.descripcion.substring(0, 100)}...`
-                      : oferta.descripcion}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Últimas ofertas publicadas */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle>Últimas ofertas publicadas</CardTitle>
+              <CardDescription>Tus búsquedas más recientes</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/ofertas">
+                Ver todas
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {ultimasOfertas.map((oferta) => (
+                <Card key={oferta.id} className="overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold">{oferta.titulo}</h3>
+                      <div className="mt-2 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Fase actual:</span>
+                          <span>{oferta.fase}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Candidatos:</span>
+                          <span className="text-green-600 font-medium">{oferta.candidatos}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Creada el:</span>
+                          <span>{formatearFecha(oferta.fechaCreacion)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
