@@ -17,19 +17,11 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private ResendEmailService emailService;
-
     public Usuario crearUsuario(Usuario usuario) {
         usuario.setPasswordHash(passwordEncoder.encode(usuario.getPasswordHash()));
         usuario.setFechaCreacion(new Date());
 
         Usuario nuevoUsuario = usuarioRepository.save(usuario);
-
-        // Enviar email de bienvenida
-        String asunto = "¡Bienvenido a SecureHire!";
-        String mensaje = "Hola " + usuario.getNombre() + ", gracias por registrarte en nuestra plataforma.";
-        emailService.enviarCorreo(usuario.getEmail(), asunto, mensaje);
 
         return nuevoUsuario;
     }
