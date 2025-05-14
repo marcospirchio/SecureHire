@@ -1,4 +1,5 @@
 "use client"
+
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { DashboardLayout } from "@/components/dashboard/layout"
@@ -7,7 +8,7 @@ import { JobListings } from "@/components/dashboard/job-listings"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useEntrevistas } from "@/hooks/use-entrevistas"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useBusquedas } from "@/hooks/use-busquedas"
 
 export default function DashboardReclutamiento() {
@@ -16,26 +17,30 @@ export default function DashboardReclutamiento() {
   const { entrevistas, loading: entrevistasLoading, error: entrevistasError } = useEntrevistas()
   const { busquedas, loading: busquedasLoading, error: busquedasError } = useBusquedas()
 
-  // Redirigir al login si no está autenticado
+  const [conteoTotalCandidatos, setConteoTotalCandidatos] = useState(0)
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login")
     }
   }, [authLoading, user, router])
 
-  // Convertir las entrevistas al formato esperado por el calendario
+  useEffect(() => {
+    const total = busquedas.reduce((sum, b) => sum + (b.cantidadCandidatos || 0), 0)
+    setConteoTotalCandidatos(total)
+  }, [busquedas])
+
   const calendarEvents = entrevistas.map(entrevista => ({
     date: entrevista.fechaProgramada.split('T')[0],
-    time: entrevista.horaProgramada ?? "Por confirmar", // <- Garantizamos que sea string
+    time: entrevista.horaProgramada ?? "Por confirmar",
     title: "Entrevista",
     person: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
     link: entrevista.linkEntrevista ?? undefined
   }))
 
-  // Adaptar las búsquedas al formato esperado por JobListings
   const jobListings = busquedas.slice(0, 3).map((b) => ({
     title: b.titulo,
-    subtitle: b.faseActual || "-",
+    subtitle: `${b.cantidadCandidatos ?? 0} candidatos`,
     phase: b.faseActual || "-",
     candidates: b.cantidadCandidatos ?? 0,
     createdAt: b.fechaCreacion ? new Date(b.fechaCreacion).toLocaleDateString("es-AR") : "-",
@@ -76,12 +81,14 @@ export default function DashboardReclutamiento() {
       <DashboardLayout>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg sm:text-xl font-bold">
-          ¡Bienvenido, {user ? `${user.nombre} ${user.apellido}` : "Usuario"}!
+            ¡Bienvenido, {user ? `${user.nombre} ${user.apellido}` : "Usuario"}!
           </h1>
           <Button size="sm" className="bg-gray-900 hover:bg-gray-800 h-7 text-xs" onClick={handleNewJobOffer}>
             Nueva oferta
           </Button>
         </div>
+
+        <p className="text-sm text-gray-600 mb-2">Total de candidatos en tus búsquedas: <strong>{conteoTotalCandidatos}</strong></p>
 
         <WeeklyCalendar events={calendarEvents} />
 

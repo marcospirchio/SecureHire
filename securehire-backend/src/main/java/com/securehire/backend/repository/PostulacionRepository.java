@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.Aggregation;
 
 import java.util.List;
 
@@ -27,4 +28,12 @@ public interface PostulacionRepository extends MongoRepository<Postulacion, Stri
 
     // 🔐 Métodos necesarios para validar acceso del reclutador
     boolean existsByCandidatoIdAndBusquedaId(String candidatoId, String busquedaId);
+
+    // ✅ Agregado: conteo de postulaciones por búsqueda
+    @Aggregation(pipeline = {
+        "{ $group: { _id: '$busquedaId', cantidad: { $sum: 1 } } }"
+    })
+    List<org.bson.Document> contarPostulacionesPorBusqueda();
+
+    int countByBusquedaId(String busquedaId);
 }

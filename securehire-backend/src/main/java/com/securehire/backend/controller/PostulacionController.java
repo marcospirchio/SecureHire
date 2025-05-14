@@ -1,5 +1,6 @@
 package com.securehire.backend.controller;
 
+import com.securehire.backend.dto.ConteoPostulacionesDTO;
 import com.securehire.backend.dto.PostulacionRequest;
 import com.securehire.backend.model.Postulacion;
 import com.securehire.backend.model.Postulacion.AnotacionPrivada;
@@ -16,6 +17,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
+import java.util.HashMap;
+import com.securehire.backend.model.Busqueda;
+import com.securehire.backend.repository.BusquedaRepository;
+import com.securehire.backend.repository.PostulacionRepository;
+
 @RestController
 @RequestMapping("/api/postulaciones")
 public class PostulacionController {
@@ -28,6 +34,12 @@ public class PostulacionController {
 
     @Autowired
     private CandidatoService candidatoService;
+
+    @Autowired
+    private BusquedaRepository busquedaRepository;
+
+    @Autowired
+    private PostulacionRepository postulacionRepository;
 
     //FUNCIONA
     @PostMapping
@@ -60,8 +72,18 @@ public class PostulacionController {
             ex.printStackTrace(); // 👈 imprimí el error completo
             return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
         }
+
+        
     }
     
+    @GetMapping("/conteo-por-busqueda")
+    public ResponseEntity<List<ConteoPostulacionesDTO>> obtenerConteoPorBusqueda(@AuthenticationPrincipal Usuario usuario) {
+        List<ConteoPostulacionesDTO> conteo = postulacionService.obtenerConteoPorBusqueda(usuario.getId());
+        return ResponseEntity.ok(conteo);
+    }
+    
+    
+
     
 
     //FUNCIONA

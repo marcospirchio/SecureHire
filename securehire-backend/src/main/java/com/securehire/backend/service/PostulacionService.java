@@ -1,5 +1,6 @@
 package com.securehire.backend.service;
 
+import com.securehire.backend.dto.ConteoPostulacionesDTO;
 import com.securehire.backend.model.Candidato;
 import com.securehire.backend.model.Postulacion;
 import com.securehire.backend.model.Busqueda;
@@ -15,6 +16,20 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import org.bson.Document;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.MatchOperation;
+import org.springframework.data.mongodb.core.aggregation.GroupOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperationContext;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperationContext;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 @Service
 public class PostulacionService {
@@ -27,6 +42,9 @@ public class PostulacionService {
 
     @Autowired
     private BusquedaRepository busquedaRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     public Postulacion crearPostulacion(Postulacion postulacion, Candidato candidatoDatos) {
         Optional<Candidato> candidatoOpt = candidatoRepository.findByEmail(candidatoDatos.getEmail());
@@ -206,4 +224,19 @@ public class PostulacionService {
         }
         return null;
     }
+
+    
+    public List<ConteoPostulacionesDTO> obtenerConteoPorBusqueda(String usuarioId) {
+        List<Busqueda> busquedas = busquedaRepository.findByUsuarioId(usuarioId);
+        List<ConteoPostulacionesDTO> resultado = new ArrayList<>();
+    
+        for (Busqueda b : busquedas) {
+            long cantidad = postulacionRepository.countByBusquedaId(b.getId());
+            resultado.add(new ConteoPostulacionesDTO(b.getId(), cantidad));
+        }
+    
+        return resultado;
+    }
+    
+    
 }

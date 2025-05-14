@@ -10,7 +10,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+import java.util.Optional;  
+import java.text.SimpleDateFormat;      
+import java.util.TimeZone;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/calendario")
@@ -24,25 +28,41 @@ public class EventoCalendarioController {
     public ResponseEntity<List<EventoCalendario>> obtenerEventos(
             @AuthenticationPrincipal Usuario usuario,
             @RequestParam(required = false) String tipo,
-            @RequestParam(required = false) Date inicio,
-            @RequestParam(required = false) Date fin
+            @RequestParam(required = false) String inicio,
+            @RequestParam(required = false) String fin
     ) {
-    String usuarioId = usuario.getId();
-    List<EventoCalendario> eventos;
-
-    if (tipo != null && inicio != null && fin != null) {
-        eventos = eventoCalendarioService.obtenerEventosPorUsuarioYTipoYRangoFechas(usuarioId, tipo, inicio, fin);
-    } else if (tipo != null) {
-        eventos = eventoCalendarioService.obtenerEventosPorUsuarioYTipo(usuarioId, tipo);
-    } else if (inicio != null && fin != null) {
-        eventos = eventoCalendarioService.obtenerEventosPorUsuarioYRangoFechas(usuarioId, inicio, fin);
-    } else {
-        eventos = eventoCalendarioService.obtenerEventosPorUsuario(usuarioId);
+        String usuarioId = usuario.getId();
+        List<EventoCalendario> eventos;
+        Date fechaInicio = null;
+        Date fechaFin = null;
+    
+        try {
+            if (inicio != null && fin != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+    
+                OffsetDateTime odtInicio = OffsetDateTime.parse(inicio, formatter);
+                OffsetDateTime odtFin = OffsetDateTime.parse(fin, formatter);
+    
+                fechaInicio = Date.from(odtInicio.toInstant());
+                fechaFin = Date.from(odtFin.toInstant());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(null);
+        }
+    
+        if (tipo != null && fechaInicio != null && fechaFin != null) {
+            eventos = eventoCalendarioService.obtenerEventosPorUsuarioYTipoYRangoFechas(usuarioId, tipo, fechaInicio, fechaFin);
+        } else if (tipo != null) {
+            eventos = eventoCalendarioService.obtenerEventosPorUsuarioYTipo(usuarioId, tipo);
+        } else if (fechaInicio != null && fechaFin != null) {
+            eventos = eventoCalendarioService.obtenerEventosPorUsuarioYRangoFechas(usuarioId, fechaInicio, fechaFin);
+        } else {
+            eventos = eventoCalendarioService.obtenerEventosPorUsuario(usuarioId);
+        }
+    
+        return ResponseEntity.ok(eventos);
     }
-
-    return ResponseEntity.ok(eventos);
-    }
-
 
     // ✅ Crear un nuevo evento en el calendario del usuario logueado
     // ✅ Asigna el usuario logueado y la fecha automática

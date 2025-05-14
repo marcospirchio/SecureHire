@@ -43,15 +43,24 @@ export function MonthlyCalendar({ events }: MonthlyCalendarProps) {
   while (day <= endDate) {
     for (let i = 0; i < 7; i++) {
       const dayEvents = getEventsForDay(day)
+      const isToday = isSameDay(day, new Date())
+      const isCurrentMonth = isSameMonth(day, monthStart)
+
       days.push(
         <div
           className={`border min-h-[80px] flex flex-col p-1 rounded-md ${
-            !isSameMonth(day, monthStart) ? "bg-gray-50 text-gray-400"
-              : isSameDay(day, new Date()) ? "bg-blue-500 text-white" : "bg-white"
+            !isCurrentMonth ? "bg-gray-50 text-gray-400"
+              : "bg-white"
           }`}
           key={day.toISOString()}
         >
-          <div className="text-xs font-semibold text-center">{format(day, "d")}</div>
+          <div className="text-xs font-semibold text-center">
+            {isToday ? (
+              <span className="text-black">{format(day, "d")}</span>
+            ) : (
+              format(day, "d")
+            )}
+          </div>
           <div className="flex-1">
             {dayEvents.map((event, idx) => (
               <div
