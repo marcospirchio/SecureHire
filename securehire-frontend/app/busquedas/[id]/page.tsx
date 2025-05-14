@@ -292,13 +292,13 @@ function JobOfferDetail() {
   }).format(currentMonth)
 
   // Verificar si una fecha es hoy
-  const isToday = (day, month, year) => {
+  const isToday = (day: number, month: number, year: number) => {
     const today = new Date(2025, 4, 13) // Simulamos que hoy es 13 de mayo de 2025
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
   }
 
   // Verificar si una fecha está seleccionada
-  const isDateSelected = (day, month, year) => {
+  const isDateSelected = (day: number, month: number, year: number) => {
     if (!selectedDate) return false
 
     // Parsear la fecha seleccionada
@@ -307,7 +307,7 @@ function JobOfferDetail() {
   }
 
   // Manejar la selección de fecha
-  const handleDateSelect = (day, month, year) => {
+  const handleDateSelect = (day: number, month: number, year: number) => {
     // Solo permitir seleccionar días del mes actual
     if (month === currentMonth.getMonth() && year === currentMonth.getFullYear()) {
       setSelectedDate(`${day}/${month + 1}/${year}`)
@@ -319,7 +319,7 @@ function JobOfferDetail() {
   const handleConfirmInterview = () => {
     if (selectedDate && selectedTime && selectedCandidate) {
       // Extraer día y mes de la fecha seleccionada
-      const [day, month, year] = selectedDate.split("/")
+      const [day, month, year] = selectedDate.split("/").map(Number)  
 
       // Aquí iría la lógica para guardar la entrevista
       // Por ahora, simulamos actualizar el candidato con la nueva fecha de entrevista
@@ -806,12 +806,12 @@ function JobOfferDetail() {
                     <Clock className="mr-2 h-5 w-5" />
                     Horario para el{" "}
                     {new Date(
-                      selectedDate.split("/")[2],
-                      selectedDate.split("/")[1] - 1,
-                      selectedDate.split("/")[0],
+                      Number(selectedDate.split("/")[2]),
+                      Number(selectedDate.split("/")[1]) - 1,
+                      Number(selectedDate.split("/")[0]),
                     ).toLocaleDateString("es-ES", { weekday: "long" })}{" "}
                     {selectedDate.split("/")[0]} de{" "}
-                    {new Date(selectedDate.split("/")[2], selectedDate.split("/")[1] - 1, 1).toLocaleDateString(
+                    {new Date(Number(selectedDate.split("/")[2]), Number(selectedDate.split("/")[1]) - 1, 1).toLocaleDateString(
                       "es-ES",
                       { month: "long" },
                     )}

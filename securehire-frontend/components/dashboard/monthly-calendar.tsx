@@ -1,16 +1,22 @@
-"use client"
-
 import React, { useState } from "react"
 import {
-  addMonths, subMonths, startOfMonth, endOfMonth,
-  startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, format
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  isSameMonth,
+  isSameDay,
+  format
 } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface CalendarEvent {
   date: string
-  time: string // ← aseguramos que es string, nunca null
+  time: string
   title: string
   person?: string
   link?: string
@@ -18,9 +24,10 @@ interface CalendarEvent {
 
 interface MonthlyCalendarProps {
   events: CalendarEvent[]
+  onEventClick?: (event: CalendarEvent) => void
 }
 
-export function MonthlyCalendar({ events }: MonthlyCalendarProps) {
+export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
 
   const monthStart = startOfMonth(currentMonth)
@@ -49,8 +56,7 @@ export function MonthlyCalendar({ events }: MonthlyCalendarProps) {
       days.push(
         <div
           className={`border min-h-[80px] flex flex-col p-1 rounded-md ${
-            !isCurrentMonth ? "bg-gray-50 text-gray-400"
-              : "bg-white"
+            !isCurrentMonth ? "bg-gray-50 text-gray-400" : "bg-white"
           }`}
           key={day.toISOString()}
         >
@@ -66,7 +72,7 @@ export function MonthlyCalendar({ events }: MonthlyCalendarProps) {
               <div
                 key={idx}
                 className="rounded-md bg-blue-100 text-blue-900 p-1 mb-1 text-xs cursor-pointer hover:bg-blue-200"
-                onClick={() => event.link && window.open(event.link, "_blank")}
+                onClick={() => onEventClick?.(event)}
               >
                 <div className="font-medium truncate">{event.title}</div>
                 {event.person && <div className="text-xs truncate">{event.person}</div>}
