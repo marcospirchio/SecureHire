@@ -39,6 +39,15 @@ interface Postulacion {
   }
 }
 
+interface CampoAdicional {
+  nombre: string;
+  tipo: "texto" | "select" | "checkbox";
+  esExcluyente: boolean;
+  opciones: string[];
+  valoresExcluyentes: string[];
+  obligatorio: boolean;
+}
+
 export default function BusquedasPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")

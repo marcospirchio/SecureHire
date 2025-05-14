@@ -765,210 +765,215 @@ function JobOfferDetail() {
       </div>
 
       {/* Modal para agendar entrevista */}
-      <Dialog open={isInterviewModalOpen} onOpenChange={setIsInterviewModalOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-y-auto max-h-[85vh]">
-          <div className="p-6">
-            <DialogHeader>
-              <DialogTitle>Agendar entrevista</DialogTitle>
-              <DialogDescription>
-                Seleccione una fecha y horario para la entrevista con {selectedCandidate?.name}{" "}
-                {selectedCandidate?.lastName}
-              </DialogDescription>
-            </DialogHeader>
+      {selectedCandidate && (
+        <Dialog open={isInterviewModalOpen} onOpenChange={setIsInterviewModalOpen}>
+          <DialogContent className="sm:max-w-[500px] p-0 overflow-y-auto max-h-[85vh]">
+            <div className="p-6">
+              <DialogHeader>
+                <DialogTitle>Agendar entrevista</DialogTitle>
+                <DialogDescription>
+                  Seleccione una fecha y horario para la entrevista con {selectedCandidate?.name} {selectedCandidate?.lastName}
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="py-4">
-              {/* Encabezado del calendario con navegación */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">{formattedMonthYear}</h3>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8 p-0" onClick={goToPreviousMonth}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-8 w-8 p-0" onClick={goToNextMonth}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Calendario */}
-              <div className="border rounded-lg overflow-hidden">
-                {/* Días de la semana */}
-                <div className="grid grid-cols-7 text-center border-b">
-                  {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day, i) => (
-                    <div key={i} className="py-2 text-sm font-medium text-gray-500">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Días del mes */}
-                <div className="grid grid-cols-7 text-center">
-                  {calendarDays.map((date, index) => (
-                    <div
-                      key={index}
-                      className={`py-2 ${
-                        !date.isCurrentMonth
-                          ? "text-gray-400"
-                          : isToday(date.day, date.month, date.year)
-                            ? "border border-gray-900 rounded-md"
-                            : isDateSelected(date.day, date.month, date.year)
-                              ? "bg-blue-100"
-                              : "hover:bg-gray-50"
-                      } ${date.isCurrentMonth ? "cursor-pointer" : ""}`}
-                      onClick={() => date.isCurrentMonth && handleDateSelect(date.day, date.month, date.year)}
-                    >
-                      {date.day}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Selección de horario */}
-              {selectedDate && (
-                <div className="mt-6">
-                  <h4 className="flex items-center text-base font-medium mb-4">
-                    <Clock className="mr-2 h-5 w-5" />
-                    Horario para el{" "}
-                    {new Date(
-                      Number(selectedDate.split("/")[2]),
-                      Number(selectedDate.split("/")[1]) - 1,
-                      Number(selectedDate.split("/")[0]),
-                    ).toLocaleDateString("es-ES", { weekday: "long" })}{" "}
-                    {selectedDate.split("/")[0]} de{" "}
-                    {new Date(Number(selectedDate.split("/")[2]), Number(selectedDate.split("/")[1]) - 1, 1).toLocaleDateString(
-                      "es-ES",
-                      { month: "long" },
-                    )}
-                    :
-                  </h4>
-
-                  <div className="pr-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        "09:00",
-                        "09:30",
-                        "10:00",
-                        "10:30",
-                        "11:00",
-                        "11:30",
-                        "12:00",
-                        "12:30",
-                        "13:00",
-                        "13:30",
-                        "14:00",
-                        "14:30",
-                        "15:00",
-                        "15:30",
-                        "16:00",
-                        "16:30",
-                        "17:00",
-                        "17:30",
-                        "18:00",
-                        "18:30",
-                        "19:00",
-                        "19:30",
-                      ].map((time) => (
-                        <button
-                          key={time}
-                          className={`py-3 px-4 border rounded-md text-center hover:bg-gray-50 ${
-                            selectedTime === time ? "border-blue-500 bg-blue-50" : "border-gray-200"
-                          }`}
-                          onClick={() => setSelectedTime(time)}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
+              <div className="py-4">
+                {/* Encabezado del calendario con navegación */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium">{formattedMonthYear}</h3>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="icon" className="h-8 w-8 p-0" onClick={goToPreviousMonth}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8 p-0" onClick={goToNextMonth}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-between pt-6 mt-6 border-t">
-              <Button variant="outline" onClick={() => setIsInterviewModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmInterview} disabled={!selectedDate || !selectedTime}>
-                Agendar entrevista
-              </Button>
+                {/* Calendario */}
+                <div className="border rounded-lg overflow-hidden">
+                  {/* Días de la semana */}
+                  <div className="grid grid-cols-7 text-center border-b">
+                    {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day, i) => (
+                      <div key={i} className="py-2 text-sm font-medium text-gray-500">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Días del mes */}
+                  <div className="grid grid-cols-7 text-center">
+                    {calendarDays.map((date, index) => (
+                      <div
+                        key={index}
+                        className={`py-2 ${
+                          !date.isCurrentMonth
+                            ? "text-gray-400"
+                            : isToday(date.day, date.month, date.year)
+                              ? "border border-gray-900 rounded-md"
+                              : isDateSelected(date.day, date.month, date.year)
+                                ? "bg-blue-100"
+                                : "hover:bg-gray-50"
+                        } ${date.isCurrentMonth ? "cursor-pointer" : ""}`}
+                        onClick={() => date.isCurrentMonth && handleDateSelect(date.day, date.month, date.year)}
+                      >
+                        {date.day}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Selección de horario */}
+                {selectedDate && (
+                  <div className="mt-6">
+                    <h4 className="flex items-center text-base font-medium mb-4">
+                      <Clock className="mr-2 h-5 w-5" />
+                      Horario para el{" "}
+                      {new Date(
+                        Number(selectedDate.split("/")[2]),
+                        Number(selectedDate.split("/")[1]) - 1,
+                        Number(selectedDate.split("/")[0]),
+                      ).toLocaleDateString("es-ES", { weekday: "long" })}{" "}
+                      {selectedDate.split("/")[0]} de{" "}
+                      {new Date(Number(selectedDate.split("/")[2]), Number(selectedDate.split("/")[1]) - 1, 1).toLocaleDateString(
+                        "es-ES",
+                        { month: "long" },
+                      )}
+                      :
+                    </h4>
+
+                    <div className="pr-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          "09:00",
+                          "09:30",
+                          "10:00",
+                          "10:30",
+                          "11:00",
+                          "11:30",
+                          "12:00",
+                          "12:30",
+                          "13:00",
+                          "13:30",
+                          "14:00",
+                          "14:30",
+                          "15:00",
+                          "15:30",
+                          "16:00",
+                          "16:30",
+                          "17:00",
+                          "17:30",
+                          "18:00",
+                          "18:30",
+                          "19:00",
+                          "19:30",
+                        ].map((time) => (
+                          <button
+                            key={time}
+                            className={`py-3 px-4 border rounded-md text-center hover:bg-gray-50 ${
+                              selectedTime === time ? "border-blue-500 bg-blue-50" : "border-gray-200"
+                            }`}
+                            onClick={() => setSelectedTime(time)}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between pt-6 mt-6 border-t">
+                <Button variant="outline" onClick={() => setIsInterviewModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleConfirmInterview} disabled={!selectedDate || !selectedTime}>
+                  Agendar entrevista
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Modal para finalizar proceso */}
-      <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              Finalizar proceso de {selectedCandidate?.name} {selectedCandidate?.lastName}
-            </DialogTitle>
-            <DialogDescription>
-              Por favor, ingrese su feedback sobre el candidato antes de finalizar el proceso. Este feedback se agregará
-              a la sección de feedbacks del perfil.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Textarea
-              placeholder="Ingrese su feedback sobre el candidato..."
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              className="min-h-[120px]"
-            />
-          </div>
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsFeedbackModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleFinishProcess} disabled={!feedback.trim()} className="bg-red-500 hover:bg-red-600">
-              Finalizar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {selectedCandidate && (
+        <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                Finalizar proceso de {selectedCandidate?.name} {selectedCandidate?.lastName}
+              </DialogTitle>
+              <DialogDescription>
+                Por favor, ingrese su feedback sobre el candidato antes de finalizar el proceso. Este feedback se agregará
+                a la sección de feedbacks del perfil.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Textarea
+                placeholder="Ingrese su feedback sobre el candidato..."
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setIsFeedbackModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleFinishProcess} disabled={!feedback.trim()} className="bg-red-500 hover:bg-red-600">
+                Finalizar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Modal para detalles de la oferta */}
-      <Dialog open={isJobDetailsModalOpen} onOpenChange={setIsJobDetailsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Detalles de la Oferta</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <h2 className="text-xl font-bold mb-1">{jobOffer.title}</h2>
-            <p className="text-gray-500 mb-4">
-              {jobOffer.company} - {jobOffer.location} ({jobOffer.workMode})
-            </p>
+      {isJobDetailsModalOpen && (
+        <Dialog open={isJobDetailsModalOpen} onOpenChange={setIsJobDetailsModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Detalles de la Oferta</DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <h2 className="text-xl font-bold mb-1">{jobOffer.title}</h2>
+              <p className="text-gray-500 mb-4">
+                {jobOffer.company} - {jobOffer.location} ({jobOffer.workMode})
+              </p>
 
-            <div className="border-t border-gray-200 my-4"></div>
+              <div className="border-t border-gray-200 my-4"></div>
 
-            <div className="flex justify-between mb-4">
-              <span className="font-medium">Publicado el:</span>
-              <span>{jobOffer.publishedDate}</span>
+              <div className="flex justify-between mb-4">
+                <span className="font-medium">Publicado el:</span>
+                <span>{jobOffer.publishedDate}</span>
+              </div>
+
+              <h3 className="font-medium mb-2">Descripción del puesto:</h3>
+              <div className="bg-gray-50 p-4 rounded-md mb-4">
+                <p className="text-sm">{jobOffer.description}</p>
+              </div>
+
+              <h3 className="font-medium mb-2">Beneficios:</h3>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <ul className="list-none">
+                  {jobOffer.benefits.map((benefit, index) => (
+                    <li key={index} className="text-sm mb-1">
+                      - {benefit}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-
-            <h3 className="font-medium mb-2">Descripción del puesto:</h3>
-            <div className="bg-gray-50 p-4 rounded-md mb-4">
-              <p className="text-sm">{jobOffer.description}</p>
+            <div className="flex justify-end">
+              <Button onClick={() => setIsJobDetailsModalOpen(false)} className="bg-gray-900 hover:bg-gray-800">
+                Cerrar
+              </Button>
             </div>
-
-            <h3 className="font-medium mb-2">Beneficios:</h3>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <ul className="list-none">
-                {jobOffer.benefits.map((benefit, index) => (
-                  <li key={index} className="text-sm mb-1">
-                    - {benefit}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={() => setIsJobDetailsModalOpen(false)} className="bg-gray-900 hover:bg-gray-800">
-              Cerrar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

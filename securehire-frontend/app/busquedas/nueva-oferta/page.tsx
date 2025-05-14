@@ -10,6 +10,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 
+interface CampoAdicional {
+  nombre: string;
+  tipo: "texto" | "select" | "checkbox";
+  esExcluyente: boolean;
+  opciones: string[];
+  valoresExcluyentes: string[];
+  opcionesObligatorias: string[];
+}
+
 export default function NuevaOfertaPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("preguntas")
@@ -20,6 +29,29 @@ export default function NuevaOfertaPage() {
     "Oportunidades de crecimiento profesional",
   ])
   const [newBenefit, setNewBenefit] = useState("")
+
+  // Estado para los campos obligatorios
+  const [jobTitle, setJobTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [location, setLocation] = useState("");
+  const [workMode, setWorkMode] = useState("presencial");
+  const [description, setDescription] = useState("");
+  const [contractType, setContractType] = useState("fullTime");
+  const [salary, setSalary] = useState("");
+  const [phases, setPhases] = useState(["Preselección", "Entrevista", "Oferta"]);
+  const [urlPublica, setUrlPublica] = useState("");
+
+  // Estado y helpers para preguntas adicionales con opciones excluyentes
+  const [preguntas, setPreguntas] = useState([
+    {
+      texto: "",
+      tipo: "checkbox", // "checkbox" (opción múltiple) o "radio" (opción única)
+      opciones: [
+        { valor: "Sí", excluyente: false },
+        { valor: "No", excluyente: false }
+      ],
+    },
+  ]);
 
   // Función para volver a la página anterior
   const handleGoBack = () => {
@@ -41,250 +73,224 @@ export default function NuevaOfertaPage() {
     setBenefits(updatedBenefits)
   }
 
+  // Manejar publicación de la oferta
+  const handlePublish = async () => {
+    // Armar camposPorDefecto
+    const camposPorDefecto = [
+      {
+        nombre: "Nombre completo",
+        tipo: "texto",
+        esExcluyente: false,
+        opciones: [],
+        valoresExcluyentes: [],
+        opcionesObligatorias: []
+      },
+      {
+        nombre: "Email",
+        tipo: "texto",
+        esExcluyente: false,
+        opciones: [],
+        valoresExcluyentes: [],
+        opcionesObligatorias: []
+      },
+      {
+        nombre: "CV",
+        tipo: "file",
+        esExcluyente: false,
+        opciones: [],
+        valoresExcluyentes: [],
+        opcionesObligatorias: []
+      }
+    ];
+
+    // Armar el body
+    const camposAdicionales = preguntas.map(preg => ({
+      nombre: preg.texto,
+      tipo: preg.tipo === "radio" ? "select" : "checkbox",
+      esExcluyente: false,
+      opciones: preg.opciones.map(op => op.valor),
+      valoresExcluyentes: preg.opciones.filter(op => op.excluyente).map(op => op.valor),
+    }));
+
+    const body = {
+      titulo: jobTitle,
+      descripcion: description,
+      camposPorDefecto,
+      camposAdicionales,
+      fases: phases,
+      urlPublica: urlPublica || undefined
+    };
+
+    try {
+      const res = await fetch("http://localhost:8080/api/busquedas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error("Error al crear la búsqueda");
+      // Redirigir o mostrar éxito
+      router.push("/busquedas");
+    } catch (err) {
+      alert("Error al crear la búsqueda");
+      console.error(err);
+    }
+  };
+
+  const handlePreguntaChange = (idx: number, field: string, value: any) => {
+    const updated = [...preguntas];
+    (updated[idx] as any)[field] = value;
+    setPreguntas(updated);
+  };
+
+  const handleOpcionChange = (qIdx: number, opIdx: number, value: string) => {
+    const updated = [...preguntas];
+    updated[qIdx].opciones[opIdx].valor = value;
+    setPreguntas(updated);
+  };
+
+  const handleAddOpcion = (qIdx: number) => {
+    const updated = [...preguntas];
+    updated[qIdx].opciones.push({ valor: "", excluyente: false });
+    setPreguntas(updated);
+  };
+
+  const handleRemoveOpcion = (qIdx: number, opIdx: number) => {
+    const updated = [...preguntas];
+    updated[qIdx].opciones.splice(opIdx, 1);
+    setPreguntas(updated);
+  };
+
+  const handleToggleExcluyente = (qIdx: number, opIdx: number) => {
+    const updated = [...preguntas];
+    if (updated[qIdx].tipo === "radio") {
+      // Solo una opción excluyente
+      updated[qIdx].opciones = updated[qIdx].opciones.map((op, i) => ({ ...op, excluyente: i === opIdx }));
+    } else {
+      updated[qIdx].opciones[opIdx].excluyente = !updated[qIdx].opciones[opIdx].excluyente;
+    }
+    setPreguntas(updated);
+  };
+
+  const handleAddPregunta = () => {
+    setPreguntas([
+      ...preguntas,
+      {
+        texto: "",
+        tipo: "checkbox",
+        opciones: [
+          { valor: "Sí", excluyente: false },
+          { valor: "No", excluyente: false }
+        ],
+      },
+    ]);
+  };
+
   return (
     <Sidebar>
       <DashboardLayout>
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8 mt-8 mb-8 border border-gray-100">
           {/* Encabezado */}
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4 mb-8">
             <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" onClick={handleGoBack}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold">Nueva oferta</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Nueva oferta</h1>
           </div>
 
           {/* Contenido principal */}
-          <div className="space-y-8">
+          <div className="space-y-10">
             {/* Información básica */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Información básica</h2>
-
-              <div className="space-y-4">
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+              <h2 className="text-xl font-semibold mb-6 text-gray-800">Información básica</h2>
+              <div className="space-y-6">
                 <div>
-                  <label htmlFor="jobTitle" className="block font-medium mb-1">
+                  <label htmlFor="jobTitle" className="block font-medium mb-1 text-gray-700">
                     Título del puesto: <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="jobTitle"
                     type="text"
                     placeholder="Ej: Contador Semi Senior"
-                    className="w-full p-2 border rounded-md"
+                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                    value={jobTitle}
+                    onChange={e => setJobTitle(e.target.value)}
                   />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="company" className="block font-medium mb-1">
+                    <label htmlFor="company" className="block font-medium mb-1 text-gray-700">
                       Empresa: <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="company"
                       type="text"
                       placeholder="Ej: Acme Inc."
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                      value={company}
+                      onChange={e => setCompany(e.target.value)}
                     />
                   </div>
                   <div>
-                    <label htmlFor="location" className="block font-medium mb-1">
+                    <label htmlFor="location" className="block font-medium mb-1 text-gray-700">
                       Ubicación: <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="location"
                       type="text"
                       placeholder="Ej: Buenos Aires"
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                      value={location}
+                      onChange={e => setLocation(e.target.value)}
                     />
                   </div>
                 </div>
-
                 <div>
-                  <label htmlFor="workMode" className="block font-medium mb-1">
+                  <label htmlFor="workMode" className="block font-medium mb-1 text-gray-700">
                     Modalidad:
                   </label>
                   <div className="relative">
-                    <select id="workMode" className="w-full p-2 border rounded-md appearance-none pr-10">
+                    <select
+                      id="workMode"
+                      className="w-full p-3 border border-gray-200 rounded-lg appearance-none pr-10 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                      value={workMode}
+                      onChange={e => setWorkMode(e.target.value)}
+                    >
                       <option value="presencial">Presencial</option>
                       <option value="remoto">Remoto</option>
                       <option value="hibrido">Híbrido</option>
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
-
                 <div>
-                  <label htmlFor="description" className="block font-medium mb-1">
+                  <label htmlFor="description" className="block font-medium mb-1 text-gray-700">
                     Descripción del puesto: <span className="text-red-500">*</span>
                   </label>
                   <Textarea
                     id="description"
                     placeholder="Describe las responsabilidades, requisitos y expectativas del puesto..."
-                    className="min-h-[120px]"
+                    className="min-h-[120px] w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
                   />
                 </div>
               </div>
             </section>
 
-            {/* Pestañas para preguntas específicas y formulario obligatorio */}
-            <section>
-              <div className="flex justify-between items-center mb-2">
-                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Nuevo!</div>
-                <p className="text-gray-600">Ahora puedes marcar qué campos son requisitos excluyentes</p>
-              </div>
-
-              <Tabs defaultValue="preguntas" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="preguntas">Preguntas Específicas</TabsTrigger>
-                  <TabsTrigger value="formulario">Formulario Obligatorio</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="preguntas" className="bg-white p-4 rounded-lg border">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="text" placeholder="Escribe tu pregunta aquí" className="p-2 border rounded-md" />
-                      <div className="flex items-center gap-2 border rounded-md p-2">
-                        <Check className="h-5 w-5" />
-                        <span>Casillas de verificación</span>
-                        <ChevronDown className="h-4 w-4 ml-auto" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between border rounded-md p-3">
-                        <div className="flex items-center gap-2">
-                          <Square className="h-4 w-4 text-gray-400" />
-                          <span>Sí</span>
-                        </div>
-                        <Trash2 className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <div className="flex items-center justify-between border rounded-md p-3">
-                        <div className="flex items-center gap-2">
-                          <Square className="h-4 w-4 text-gray-400" />
-                          <span>No</span>
-                        </div>
-                        <Trash2 className="h-4 w-4 text-gray-400" />
-                      </div>
-                    </div>
-
-                    <button className="text-gray-500 flex items-center gap-1">
-                      <Plus className="h-4 w-4" /> Agregar otra opción
-                    </button>
-
-                    <div className="flex items-center justify-between mt-4">
-                      <Trash2 className="h-4 w-4 text-gray-400" />
-                      <div className="flex items-center gap-2">
-                        <span>Excluyente</span>
-                        <Switch />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-center mt-6">
-                      <Button className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" /> Nueva pregunta
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="formulario" className="bg-white p-4 rounded-lg border">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Datos personales (obligatorios)</h3>
-                    <p className="text-gray-600 mb-4">
-                      Estos campos se solicitarán automáticamente a todos los candidatos:
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Nombre</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Apellido</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Email</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Teléfono</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>DNI</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Fecha de nacimiento</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Género</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Nacionalidad</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>País de residencia</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Provincia</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Dirección</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-gray-200 rounded p-1">
-                          <Check className="h-4 w-4 text-gray-600" />
-                        </div>
-                        <span>Curriculum Vitae</span>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </section>
-
             {/* Beneficios */}
-            <section>
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-100">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Beneficios:</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Beneficios:</h2>
                 <Button onClick={handleAddBenefit} className="flex items-center gap-1">
                   <Plus className="h-4 w-4" /> Añadir
                 </Button>
               </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg border">
+              <div className="bg-white p-4 rounded-lg border border-gray-100">
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center justify-between border rounded-md p-3 mb-2 bg-white">
+                  <div key={index} className="flex items-center justify-between border border-gray-100 rounded-md p-3 mb-2 bg-gray-50">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">-</span>
+                      <span className="text-gray-400">-</span>
                       <span>{benefit}</span>
                     </div>
                     <button onClick={() => handleRemoveBenefit(index)}>
@@ -296,39 +302,144 @@ export default function NuevaOfertaPage() {
             </section>
 
             {/* Tipo de contrato y Salario */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="contractType" className="block font-medium mb-1">
+                <label htmlFor="contractType" className="block font-medium mb-1 text-gray-700">
                   Tipo de contrato:
                 </label>
                 <div className="relative">
-                  <select id="contractType" className="w-full p-2 border rounded-md appearance-none pr-10">
+                  <select id="contractType" className="w-full p-3 border border-gray-200 rounded-lg appearance-none pr-10 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition">
                     <option value="fullTime">Tiempo completo</option>
                     <option value="partTime">Tiempo parcial</option>
                     <option value="freelance">Freelance</option>
                     <option value="contract">Contrato por obra</option>
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-
               <div>
-                <label htmlFor="salary" className="block font-medium mb-1">
+                <label htmlFor="salary" className="block font-medium mb-1 text-gray-700">
                   Salario:
                 </label>
                 <input
                   id="salary"
                   type="text"
                   placeholder="Competitivo (según experiencia)"
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
                 />
               </div>
             </section>
 
+            {/* Preguntas adicionales */}
+            <section className="mt-8">
+              <div className="flex justify-between items-center mb-2">
+                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Nuevo!</div>
+                <p className="text-gray-600">Marca las opciones excluyentes para filtrar candidatos automáticamente</p>
+              </div>
+              <Tabs defaultValue="preguntas" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="preguntas">Preguntas Específicas</TabsTrigger>
+                  <TabsTrigger value="formulario">Formulario Obligatorio</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="preguntas" className="bg-white p-4 rounded-lg border">
+                  <div className="space-y-4">
+                    {preguntas.map((preg, idx) => (
+                      <div key={idx} className="space-y-4 border-b pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <input
+                            type="text"
+                            placeholder="Escribe tu pregunta aquí"
+                            className="p-2 border rounded-md"
+                            value={preg.texto}
+                            onChange={e => handlePreguntaChange(idx, "texto", e.target.value)}
+                          />
+                          <div className="flex items-center gap-2 border rounded-md p-2">
+                            <Check className="h-5 w-5" />
+                            <span>
+                              {preg.tipo === "checkbox" ? "Casillas de verificación" : "Opción única"}
+                            </span>
+                            <select
+                              className="ml-auto border rounded-md p-1"
+                              value={preg.tipo}
+                              onChange={e => handlePreguntaChange(idx, "tipo", e.target.value)}
+                            >
+                              <option value="checkbox">Casillas de verificación</option>
+                              <option value="radio">Opción única</option>
+                            </select>
+                            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {preg.opciones.map((op, opIdx) => (
+                            <div key={opIdx} className="flex items-center justify-between border rounded-md p-3">
+                              <div className="flex items-center gap-2">
+                                <Square className="h-4 w-4 text-gray-400" />
+                                <input
+                                  type="text"
+                                  className="border-b border-gray-200 focus:border-blue-400 outline-none bg-transparent"
+                                  value={op.valor}
+                                  onChange={e => handleOpcionChange(idx, opIdx, e.target.value)}
+                                  placeholder={`Opción ${opIdx + 1}`}
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span>Excluyente</span>
+                                {preg.tipo === "radio" ? (
+                                  <input
+                                    type="radio"
+                                    name={`excluyente-${idx}`}
+                                    checked={op.excluyente}
+                                    onChange={() => handleToggleExcluyente(idx, opIdx)}
+                                    title="Marcar como excluyente"
+                                  />
+                                ) : (
+                                  <input
+                                    type="checkbox"
+                                    checked={op.excluyente}
+                                    onChange={() => handleToggleExcluyente(idx, opIdx)}
+                                    title="Marcar como excluyente"
+                                  />
+                                )}
+                                <Trash2
+                                  className="h-4 w-4 text-gray-400 cursor-pointer"
+                                  onClick={() => handleRemoveOpcion(idx, opIdx)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="text-gray-500 flex items-center gap-1"
+                          onClick={() => handleAddOpcion(idx)}
+                        >
+                          <Plus className="h-4 w-4" /> Agregar otra opción
+                        </button>
+                      </div>
+                    ))}
+
+                    <div className="flex justify-center mt-6">
+                      <Button type="button" className="flex items-center gap-2" onClick={handleAddPregunta}>
+                        <Plus className="h-4 w-4" /> Nueva pregunta
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="formulario" className="bg-white p-4 rounded-lg border">
+                  {/* Aquí puedes poner los campos obligatorios si lo deseas */}
+                  <p className="text-gray-500">Estos campos se solicitarán automáticamente a todos los candidatos.</p>
+                </TabsContent>
+              </Tabs>
+            </section>
+
             {/* Botones de acción */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline">Cancelar</Button>
-              <Button>Publicar oferta</Button>
+            <div className="flex justify-end gap-3 pt-6 border-t mt-8">
+              <Button variant="outline" onClick={handleGoBack}>Cancelar</Button>
+              <Button onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700 text-white">Publicar oferta</Button>
             </div>
           </div>
         </div>
