@@ -1,6 +1,7 @@
 package com.securehire.backend.repository;
 
 import com.securehire.backend.model.Candidato;
+import com.securehire.backend.model.Comentario;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -31,5 +32,5 @@ public interface CandidatoRepository extends MongoRepository<Candidato, String> 
     Page<Candidato> findByIdIn(List<String> ids, Pageable pageable);
     
     Optional<Candidato> findByIdAndIdIn(String id, List<String> ids);
-    
+
 }

@@ -18,6 +18,7 @@ public interface BusquedaRepository extends MongoRepository<Busqueda, String> {
     Page<Busqueda> findByUsuarioIdAndArchivada(String usuarioId, Boolean archivada, Pageable pageable);
     Page<Busqueda> findByUsuarioIdAndTituloContainingIgnoreCase(String usuarioId, String titulo, Pageable pageable);
     Page<Busqueda> findByUsuarioIdAndArchivadaAndTituloContainingIgnoreCase(String usuarioId, Boolean archivada, String titulo, Pageable pageable);
+    List<Busqueda> findByTituloContainingIgnoreCaseAndUsuarioId(String titulo, String usuarioId);
 
 } 
 

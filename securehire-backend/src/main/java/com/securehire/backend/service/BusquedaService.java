@@ -75,9 +75,10 @@ public class BusquedaService {
         return busquedaRepository.findByUsuarioIdAndArchivada(usuarioId, archivada);
     }
 
-    public List<Busqueda> buscarPorTitulo(String titulo) {
-        return busquedaRepository.findByTituloContainingIgnoreCase(titulo);
+    public List<Busqueda> buscarPorTituloYUsuario(String titulo, String usuarioId) {
+        return busquedaRepository.findByTituloContainingIgnoreCaseAndUsuarioId(titulo, usuarioId);
     }
+    
 
     public Page<Busqueda> obtenerBusquedasPorUsuarioPaginadas(String usuarioId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);

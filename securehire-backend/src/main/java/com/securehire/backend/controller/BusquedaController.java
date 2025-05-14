@@ -53,13 +53,25 @@ public class BusquedaController {
     
 
 
-    // @GetMapping("/{id}")
-    // public ResponseEntity<Busqueda> obtenerBusqueda(@PathVariable String id) {
-    //     Optional<Busqueda> busqueda = busquedaService.obtenerBusquedaPorId(id);
-    //     return busqueda.map(ResponseEntity::ok)
-    //             .orElseGet(() -> ResponseEntity.notFound().build());
-    // }
-
+    @GetMapping("/{id}")
+    public ResponseEntity<Busqueda> obtenerBusqueda(
+            @PathVariable String id,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
+    
+        if (busquedaOpt.isPresent()) {
+            Busqueda busqueda = busquedaOpt.get();
+            if (busqueda.getUsuarioId().equals(usuario.getId())) {
+                return ResponseEntity.ok(busqueda);
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // No es suya
+            }
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    
     
     // lo mismo que el de arriba pero sin paginacion
     // @GetMapping("/mis-busquedas")
@@ -81,10 +93,15 @@ public class BusquedaController {
     
 
     //(FUNCIONA)
-    @GetMapping("/buscar")
-    public ResponseEntity<List<Busqueda>> buscarPorTitulo(@RequestParam String titulo) {
-        return ResponseEntity.ok(busquedaService.buscarPorTitulo(titulo));
-    }
+   @GetMapping("/buscar")
+public ResponseEntity<List<Busqueda>> buscarPorTitulo(
+        @RequestParam String titulo,
+        @AuthenticationPrincipal Usuario usuario
+) {
+    List<Busqueda> resultados = busquedaService.buscarPorTituloYUsuario(titulo, usuario.getId());
+    return ResponseEntity.ok(resultados);
+}
+
     //(FUNCIONA)
     @PutMapping("/{id}")
     public ResponseEntity<Busqueda> actualizarBusqueda(
