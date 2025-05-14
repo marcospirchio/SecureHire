@@ -1,7 +1,8 @@
 package com.securehire.backend.service;
 
+import java.text.SimpleDateFormat;
 import reactor.core.publisher.Mono;
-
+import java.util.Date;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,9 @@ public class ResendEmailService {
     payload.put("subject", asunto);
     payload.put("text", mensaje);
     payload.put("html", "<p>" + mensaje + "</p>");
+
+    System.out.println("Enviando correo a: " + destinatario);
+
 
     webClient.post()
             .uri("/emails")

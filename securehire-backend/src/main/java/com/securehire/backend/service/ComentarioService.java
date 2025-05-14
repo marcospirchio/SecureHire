@@ -4,20 +4,21 @@ import com.securehire.backend.model.Comentario;
 import com.securehire.backend.repository.ComentarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.Date;  
+
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class ComentarioService {
+
     @Autowired
     private ComentarioRepository comentarioRepository;
 
     public Comentario crearComentario(Comentario comentario) {
-        comentario.setFecha(new Date());  // ⬅️ Setea la fecha actual
+        comentario.setFecha(new Date());
         return comentarioRepository.save(comentario);
     }
-    
 
     public List<Comentario> obtenerComentariosPorCandidato(String candidatoId) {
         return comentarioRepository.findByCandidatoId(candidatoId);
@@ -35,12 +36,11 @@ public class ComentarioService {
         return comentarioRepository.findById(id);
     }
 
-
     public Comentario actualizarComentario(Comentario comentario) {
         return comentarioRepository.save(comentario);
     }
-    
+
     public void eliminarComentario(String id) {
         comentarioRepository.deleteById(id);
     }
-} 
+}

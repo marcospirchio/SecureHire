@@ -164,6 +164,7 @@ public class EntrevistaController {
         if (cambios.getMotivoCancelacion() != null && !cambios.getMotivoCancelacion().isBlank()) {
             existente.setMotivoCancelacion(cambios.getMotivoCancelacion());
             existente.setEstado("cancelada");
+            
         }
 
         if (cambios.getEstado() != null && !cambios.getEstado().isBlank()) {
