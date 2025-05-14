@@ -9,12 +9,14 @@ import { useAuth } from "@/hooks/use-auth"
 import { useEntrevistas } from "@/hooks/use-entrevistas"
 import { useEffect } from "react"
 import { useBusquedas } from "@/hooks/use-busquedas"
+import { usePostulacionesConteo } from "@/hooks/use-postulaciones-conteo"
 
 export default function DashboardReclutamiento() {
   const router = useRouter()
   const { user, loading: authLoading, error: authError } = useAuth()
   const { entrevistas, loading: entrevistasLoading, error: entrevistasError } = useEntrevistas()
   const { busquedas, loading: busquedasLoading, error: busquedasError } = useBusquedas()
+  const { conteo, loading: conteoLoading, error: conteoError } = usePostulacionesConteo()
 
   // Redirigir al login si no está autenticado
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function DashboardReclutamiento() {
   // Convertir las entrevistas al formato esperado por el calendario
   const calendarEvents = entrevistas.map(entrevista => ({
     date: entrevista.fechaProgramada.split('T')[0],
-    time: entrevista.horaProgramada ?? "Por confirmar", // <- Garantizamos que sea string
+    time: entrevista.horaProgramada ?? "Por confirmar",
     title: "Entrevista",
     person: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
     link: entrevista.linkEntrevista ?? undefined
@@ -37,19 +39,23 @@ export default function DashboardReclutamiento() {
     .slice()
     .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
     .slice(0, 3)
-    .map(b => ({
-      title: b.titulo,
-      subtitle: b.faseActual ?? "",
-      phase: b.faseActual ?? "",
-      candidates: b.cantidadCandidatos ?? 0,
-      createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
-    }))
+    .map(b => {
+      // Buscar el conteo de postulaciones para esta búsqueda
+      const conteoBusqueda = conteo.find(c => c.busquedaId === b.id)
+      return {
+        title: b.titulo,
+        subtitle: b.faseActual ?? "",
+        phase: b.faseActual ?? "",
+        candidates: conteoBusqueda?.cantidad ?? 0,
+        createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
+      }
+    })
 
   const handleNewJobOffer = () => {
     router.push("/busquedas/nueva-oferta")
   }
 
-  if (authLoading || entrevistasLoading || busquedasLoading) {
+  if (authLoading || entrevistasLoading || busquedasLoading || conteoLoading) {
     return (
       <Sidebar>
         <DashboardLayout>
@@ -61,13 +67,13 @@ export default function DashboardReclutamiento() {
     )
   }
 
-  if (authError || entrevistasError || busquedasError) {
+  if (authError || entrevistasError || busquedasError || conteoError) {
     return (
       <Sidebar>
         <DashboardLayout>
           <div className="flex items-center justify-center h-screen">
             <p className="text-red-500">
-              Error: {authError || entrevistasError || busquedasError}
+              Error: {authError || entrevistasError || busquedasError || conteoError}
             </p>
           </div>
         </DashboardLayout>
@@ -80,7 +86,7 @@ export default function DashboardReclutamiento() {
       <DashboardLayout>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg sm:text-xl font-bold">
-          ¡Bienvenido, {user ? `${user.nombre} ${user.apellido}` : "Usuario"}!
+            ¡Bienvenido, {user ? `${user.nombre} ${user.apellido}` : "Usuario"}!
           </h1>
           <Button size="sm" className="bg-gray-900 hover:bg-gray-800 h-7 text-xs" onClick={handleNewJobOffer}>
             Nueva oferta
@@ -108,4 +114,4 @@ export default function DashboardReclutamiento() {
       </DashboardLayout>
     </Sidebar>
   )
-}
+} 

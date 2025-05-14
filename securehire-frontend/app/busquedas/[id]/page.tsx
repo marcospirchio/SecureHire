@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
   ArrowLeft,
@@ -67,6 +67,35 @@ interface JobOffer {
   benefits: string[]
 }
 
+interface PostulacionRequest {
+  postulacion: {
+    id: string
+    fase: string
+    requisitosExcluyentes?: string[]
+    notas?: Array<{
+      author: string
+      company: string
+      date: string
+      content: string
+    }>
+  }
+  candidato: {
+    id: string
+    nombre: string
+    apellido: string
+    email: string
+    telefono: string
+    dni: string
+    fechaNacimiento: string
+    genero?: string
+    nacionalidad: string
+    paisResidencia: string
+    provincia: string
+    direccion: string
+    cvUrl: string
+  }
+}
+
 // Componente interno que usa useSidebar
 function JobOfferDetail() {
   const params = useParams()
@@ -81,98 +110,119 @@ function JobOfferDetail() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [feedback, setFeedback] = useState("")
   const [activeTab, setActiveTab] = useState("notes")
+  const [jobOffer, setJobOffer] = useState<JobOffer | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 13)) 
 
-  // Datos de ejemplo para la oferta de trabajo
-  const jobOffer: JobOffer = {
-    id: params.id as string,
-    title: "Product Manager",
-    phase: "Pendiente de confirmación",
-    company: "TechSolutions Inc.",
-    location: "Buenos Aires",
-    workMode: "Presencial",
-    publishedDate: "13/05/2025",
-    description:
-      "Buscamos un Product Manager con experiencia en desarrollo de productos digitales. Responsable de definir la visión del producto, crear roadmaps y trabajar con equipos multidisciplinarios para entregar soluciones de alta calidad.",
-    benefits: [
-      "Horario flexible",
-      "Trabajo remoto parcial",
-      "Seguro médico",
-      "Oportunidades de crecimiento profesional",
-      "Capacitación continua",
-    ],
-    candidates: [
-      {
-        id: "1",
-        name: "Elena",
-        lastName: "Martín",
-        age: 26,
-        gender: "Femenino",
-        location: "No especificada",
-        phase: "Pendiente de confirmación",
-        interview: {
-          date: "20/05",
-          time: "09:30hs",
-        },
-        email: "elena.martin@gmail.com",
-        phone: "2222-3333",
-        countryCode: "+54",
-        dni: "35789456",
-        birthDate: "15/08/1998 (26 años)",
-        nationality: "Argentina",
-        residenceCountry: "Argentina",
-        province: "Buenos Aires",
-        address: "Av. Corrientes 1234",
-        cvUrl: "https://cv.elena.com",
-      },
-      {
-        id: "2",
-        name: "Gonzi",
-        lastName: "Caldas",
-        age: 30,
-        gender: "MASCULINO",
-        location: "Buenos Aires",
-        phase: "Pendiente de confirmación",
-        email: "caldasgonzalo@gmail.com",
-        phone: "1111-2222",
-        countryCode: "+54",
-        dni: "45274631",
-        birthDate: "09/04/1995 (30 años)",
-        nationality: "Argentina",
-        residenceCountry: "Argentina",
-        province: "Buenos Aires",
-        address: "Av. Rivadavia 456",
-        cvUrl: "https://cv.gonzi.com",
-        excludingRequirements: ["Conocimiento de TypeScript"],
-        notes: [
-          {
-            author: "Ana Martínez",
-            company: "UADE",
-            date: "05/02/2025",
-            content:
-              "El candidato demuestra una sólida comprensión de principios contables y experiencia práctica en conciliaciones bancarias, armado de reportes y manejo de sistemas como Tango avanzado. Durante la entrevista, mostró seguridad al describir sus responsabilidades anteriores y aportó ejemplos concretos de cierres mensuales y trabajo en equipo con auditorías externas.",
-          },
-        ],
-      },
-      {
-        id: "3",
-        name: "Carlos",
-        lastName: "Rodríguez",
-        age: 28,
-        gender: "MASCULINO",
-        location: "Córdoba",
-        phase: "CV recibido",
-        email: "carlos.rodriguez@gmail.com",
-        phone: "3333-4444",
-        countryCode: "+54",
-        dni: "39456123",
-        birthDate: "22/11/1997 (28 años)",
-        nationality: "Argentina",
-        residenceCountry: "Argentina",
-        province: "Córdoba",
-        address: "Av. Colón 789",
-        cvUrl: "https://cv.carlos.com",
-      },
-    ],
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('Fetching data for busqueda ID:', params.id);
+        
+        const [busquedaRes, postulacionesRes] = await Promise.all([
+          fetch(`http://localhost:8080/api/busquedas/${params.id}`, { 
+            credentials: "include",
+            headers: {
+              'Accept': 'application/json'
+            }
+          }),
+          fetch(`http://localhost:8080/api/postulaciones/busqueda/${params.id}/completas`, { 
+            credentials: "include",
+            headers: {
+              'Accept': 'application/json'
+            }
+          })
+        ]);
+
+        if (!busquedaRes.ok) {
+          const errorText = await busquedaRes.text();
+          console.error('Error response from busqueda:', errorText);
+          throw new Error(`Error al obtener la búsqueda: ${busquedaRes.status} ${busquedaRes.statusText}`);
+        }
+        if (!postulacionesRes.ok) {
+          const errorText = await postulacionesRes.text();
+          console.error('Error response from postulaciones:', errorText);
+          throw new Error(`Error al obtener las postulaciones: ${postulacionesRes.status} ${postulacionesRes.statusText}`);
+        }
+
+        const busquedaData = await busquedaRes.json();
+        console.log('Datos de búsqueda recibidos:', busquedaData);
+
+        const postulacionesData: PostulacionRequest[] = await postulacionesRes.json();
+        console.log('Datos de postulaciones recibidos:', postulacionesData);
+
+        // Convertir los datos al formato esperado por el componente
+        const jobOfferData: JobOffer = {
+          id: busquedaData.id,
+          title: busquedaData.titulo,
+          phase: busquedaData.faseActual || "Sin fase",
+          company: busquedaData.empresa || "",
+          location: busquedaData.ubicacion || "",
+          workMode: busquedaData.modalidad || "",
+          publishedDate: new Date(busquedaData.fechaCreacion).toLocaleDateString("es-AR"),
+          description: busquedaData.descripcion || "",
+          benefits: busquedaData.beneficios || [],
+          candidates: postulacionesData
+            .filter(p => p.candidato && p.postulacion) // Solo incluir postulaciones con candidato completo
+            .map(p => ({
+              id: p.postulacion.id,
+              name: p.candidato.nombre,
+              lastName: p.candidato.apellido,
+              age: calcularEdad(p.candidato.fechaNacimiento),
+              gender: p.candidato.genero || "No especificado",
+              location: p.candidato.provincia || "No especificada",
+              phase: p.postulacion.fase || "Sin fase",
+              email: p.candidato.email,
+              phone: p.candidato.telefono,
+              countryCode: "+54",
+              dni: p.candidato.dni,
+              birthDate: new Date(p.candidato.fechaNacimiento).toLocaleDateString("es-AR"),
+              nationality: p.candidato.nacionalidad,
+              residenceCountry: p.candidato.paisResidencia,
+              province: p.candidato.provincia,
+              address: p.candidato.direccion,
+              cvUrl: p.candidato.cvUrl,
+              excludingRequirements: p.postulacion.requisitosExcluyentes || [],
+              notes: p.postulacion.notas || []
+            }))
+        }
+        setJobOffer(jobOfferData)
+      } catch (error) {
+        console.error("Error al cargar los datos:", error);
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData();
+  }, [params.id])
+
+  // Función auxiliar para calcular la edad
+  const calcularEdad = (fechaNacimiento: string) => {
+    const hoy = new Date()
+    const fechaNac = new Date(fechaNacimiento)
+    let edad = hoy.getFullYear() - fechaNac.getFullYear()
+    const m = hoy.getMonth() - fechaNac.getMonth()
+    if (m < 0 || (m === 0 && hoy.getDate() < fechaNac.getDate())) {
+      edad--
+    }
+    return edad
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Cargando...</p>
+      </div>
+    )
+  }
+
+  if (!jobOffer) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-red-500">No se encontró la información de la búsqueda</p>
+      </div>
+    )
   }
 
   // Filtrar candidatos según la búsqueda y el filtro de fase
@@ -208,8 +258,7 @@ function JobOfferDetail() {
     setIsJobDetailsModalOpen(true)
   }
 
-  // Estado para el mes actual del calendario
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 13)) // Mayo 2025
+  // Estado para el mes actual del calendario// Mayo 2025
 
   // Navegar al mes anterior
   const goToPreviousMonth = () => {
@@ -549,31 +598,6 @@ function JobOfferDetail() {
                 <div>
                   <div className="text-xs text-gray-500">DNI:</div>
                   <div className="text-sm font-medium">{selectedCandidate.dni}</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <div className="text-gray-400 mt-0.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Fecha de nacimiento:</div>
-                  <div className="text-sm font-medium">{selectedCandidate.birthDate}</div>
                 </div>
               </div>
 

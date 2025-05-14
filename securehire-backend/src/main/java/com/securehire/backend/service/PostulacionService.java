@@ -238,5 +238,7 @@ public class PostulacionService {
         return resultado;
     }
     
-    
+    public List<Postulacion> obtenerPorBusqueda(String busquedaId) {
+        return postulacionRepository.findByBusquedaId(busquedaId);
+    }
 }

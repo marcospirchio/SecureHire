@@ -95,6 +95,11 @@ public class CandidatoService {
         return candidatoRepository.findById(id);
     }
 
+    public Candidato obtenerPorId(String id) {
+        return candidatoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Candidato no encontrado con id: " + id));
+    }
+
     public Optional<Candidato> obtenerCandidatoPorEmail(String email) {
         return candidatoRepository.findByEmail(email);
     }

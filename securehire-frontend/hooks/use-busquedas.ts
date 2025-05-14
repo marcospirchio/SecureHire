@@ -8,32 +8,56 @@ export interface Busqueda {
   cantidadCandidatos?: number
 }
 
+export interface ConteoPostulaciones {
+  busquedaId: string
+  cantidad: number
+}
+
 export function useBusquedas() {
   const [busquedas, setBusquedas] = useState<Busqueda[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchBusquedas = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/busquedas", {
+        // Fetch búsquedas
+        const resBusquedas = await fetch("http://localhost:8080/api/busquedas", {
           credentials: "include"
         })
-        if (!response.ok) throw new Error("No se pudieron obtener las búsquedas")
-        const data = await response.json()
-        // data.content es el array de búsquedas si viene paginado
-        const items = (Array.isArray(data.content) ? data.content : data) as Busqueda[]
-        // Ordenar por fechaCreacion descendente
-        items.sort((a, b) => new Date(a.fechaCreacion).getTime() - new Date(b.fechaCreacion).getTime())
-        setBusquedas(items)
+        if (!resBusquedas.ok) throw new Error("No se pudieron obtener las búsquedas")
+        const busquedasData = await resBusquedas.json()
+        const busquedas = (Array.isArray(busquedasData.content) ? busquedasData.content : busquedasData) as Busqueda[]
+
+        // Fetch conteo de postulaciones
+        const resConteo = await fetch("http://localhost:8080/api/postulaciones/conteo-por-busqueda", {
+          credentials: "include"
+        })
+        if (!resConteo.ok) throw new Error("No se pudo obtener el conteo de postulaciones")
+        const conteos: ConteoPostulaciones[] = await resConteo.json()
+
+        // Merge búsquedas con conteo
+        const busquedasConConteo = busquedas.map((b) => {
+          const conteo = conteos.find((c) => c.busquedaId === b.id)
+          return {
+            ...b,
+            cantidadCandidatos: conteo?.cantidad || 0
+          }
+        })
+
+        // Ordenar
+        busquedasConConteo.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+
+        setBusquedas(busquedasConConteo)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al obtener búsquedas")
+        setError(err instanceof Error ? err.message : "Error al obtener datos")
       } finally {
         setLoading(false)
       }
     }
-    fetchBusquedas()
+
+    fetchData()
   }, [])
 
   return { busquedas, loading, error }
-} 
+}

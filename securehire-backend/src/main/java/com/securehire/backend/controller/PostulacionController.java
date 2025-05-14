@@ -21,6 +21,8 @@ import java.util.HashMap;
 import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.repository.PostulacionRepository;
+import com.securehire.backend.model.Candidato;
+
 
 @RestController
 @RequestMapping("/api/postulaciones")
@@ -190,4 +192,19 @@ public class PostulacionController {
         postulacionService.eliminarPostulacion(id);
         return ResponseEntity.ok().build();
     }
+
+
+    @GetMapping("/busqueda/{busquedaId}/completas")
+public List<PostulacionRequest> obtenerPostulacionesCompletasPorBusqueda(@PathVariable String busquedaId) {
+    List<Postulacion> postulaciones = postulacionService.obtenerPorBusqueda(busquedaId);
+
+    return postulaciones.stream().map(p -> {
+        Candidato candidato = candidatoService.obtenerPorId(p.getCandidatoId());
+        PostulacionRequest dto = new PostulacionRequest();
+        dto.setPostulacion(p);
+        dto.setCandidato(candidato);
+        return dto;
+    }).toList();
+}
+
 }

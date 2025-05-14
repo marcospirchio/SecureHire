@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,66 +9,86 @@ import { DashboardLayout } from "@/components/dashboard/layout"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Tipo para las ofertas de trabajo
 interface JobOffer {
   id: string
   title: string
   phase: string
-  phaseColor: string
-  candidates: number
   createdAt: string
+  candidates: number
+}
+
+interface BusquedaData {
+  id: string
+  titulo: string
+  faseActual?: string
+  fechaCreacion: string
+}
+
+interface Postulacion {
+  id: string
+  candidatoId: string
+  busquedaId: string
+  fase: string
+  estado: string
+  fechaPostulacion: string
+  candidato: {
+    id: string
+    nombre: string
+    apellido: string
+    email: string
+  }
 }
 
 export default function BusquedasPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("recent")
+  const [jobOffers, setJobOffers] = useState<JobOffer[]>([])
 
-  // Datos de ejemplo para las ofertas de trabajo
-  const jobOffers: JobOffer[] = [
-    {
-      id: "1",
-      title: "Product Manager",
-      phase: "Sin candidatos",
-      phaseColor: "green",
-      candidates: 0,
-      createdAt: "05/05/2025",
-    },
-    {
-      id: "2",
-      title: "Diseñador UX/UI",
-      phase: "Pendiente de confirmación",
-      phaseColor: "green",
-      candidates: 1,
-      createdAt: "20/04/2025",
-    },
-    {
-      id: "3",
-      title: "Desarrollador Frontend",
-      phase: "Entrevista confirmada",
-      phaseColor: "green",
-      candidates: 2,
-      createdAt: "15/04/2025",
-    },
-  ]
+  useEffect(() => {
+    const fetchJobOffers = async () => {
+      try {
+        const [busquedasRes, conteoRes] = await Promise.all([
+          fetch("http://localhost:8080/api/busquedas", { credentials: "include" }),
+          fetch("http://localhost:8080/api/postulaciones/conteo-por-busqueda", { credentials: "include" }),
+        ])
 
-  // Función para manejar el cambio en el campo de búsqueda
+        if (!busquedasRes.ok || !conteoRes.ok) throw new Error("Error al obtener datos")
+
+        const busquedasData = await busquedasRes.json()
+        const conteoData: { busquedaId: string; cantidad: number }[] = await conteoRes.json()
+
+        const conteoMap = new Map(conteoData.map(c => [c.busquedaId, c.cantidad]))
+
+        const offers: JobOffer[] = (Array.isArray(busquedasData.content) ? busquedasData.content : busquedasData).map((b: BusquedaData) => ({
+          id: b.id,
+          title: b.titulo,
+          phase: b.faseActual || "Sin fase",
+          createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
+          candidates: conteoMap.get(b.id) || 0,
+        }))
+
+        setJobOffers(offers)
+      } catch (err) {
+        console.error("Error al cargar búsquedas:", err)
+      }
+    }
+
+    fetchJobOffers()
+  }, [])
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
   }
 
-  // Función para manejar el cambio en el selector de ordenamiento
   const handleSortChange = (value: string) => {
     setSortBy(value)
   }
 
-  // Filtrar ofertas según la búsqueda
   const filteredOffers = jobOffers.filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
 
-  // Ordenar ofertas según el criterio seleccionado
   const sortedOffers = [...filteredOffers].sort((a, b) => {
     if (sortBy === "recent") {
-      // Convertir fechas para comparar (formato DD/MM/YYYY)
       const dateA = a.createdAt.split("/").reverse().join("")
       const dateB = b.createdAt.split("/").reverse().join("")
       return dateB.localeCompare(dateA)
@@ -79,12 +98,32 @@ export default function BusquedasPage() {
     return 0
   })
 
-  // Función para navegar al detalle de la oferta
-  const handleJobOfferClick = (id: string) => {
-    router.push(`/busquedas/${id}`)
+  const handleJobOfferClick = async (id: string) => {
+    try {
+      const [busquedaRes, postulacionesRes] = await Promise.all([
+        fetch(`http://localhost:8080/api/busquedas/${id}`, { credentials: "include" }),
+        fetch(`http://localhost:8080/api/postulaciones/busqueda/${id}`, { credentials: "include" })
+      ]);
+
+      if (!busquedaRes.ok || !postulacionesRes.ok) {
+        throw new Error("Error al obtener los datos");
+      }
+
+      const busquedaData = await busquedaRes.json();
+      const postulacionesData = await postulacionesRes.json();
+
+      // Guardar los datos en el estado global o en localStorage para usarlos en la siguiente página
+      localStorage.setItem('busquedaSeleccionada', JSON.stringify(busquedaData));
+      localStorage.setItem('postulacionesSeleccionadas', JSON.stringify(postulacionesData));
+
+      // Navegar a la página de detalle
+      router.push(`/busquedas/${id}`);
+    } catch (error) {
+      console.error("Error al cargar los datos:", error);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
   }
 
-  // Función para navegar a la página de nueva oferta
   const handleNewJobOffer = () => {
     router.push("/busquedas/nueva-oferta")
   }
@@ -151,7 +190,7 @@ export default function BusquedasPage() {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Fase actual:</span>
-                  <span className={`font-medium text-${offer.phaseColor}-600`}>{offer.phase}</span>
+                  <span className="font-medium text-blue-600">{offer.phase}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Candidatos:</span>
