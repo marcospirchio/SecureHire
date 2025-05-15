@@ -1,4 +1,4 @@
-import { Search, Calendar } from 'lucide-react'
+import { Search, Calendar, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Candidate } from "@/types/job-offer"
 
@@ -28,6 +28,9 @@ export function CandidateList({
     const matchesPhase = filterPhase === "all" || candidate.postulacion.fase === filterPhase
     return matchesSearch && matchesPhase
   })
+
+  const isConfirmed = (candidate: Candidate) => candidate.entrevista?.estado.toLowerCase().includes("confirm")
+  const isPending = (candidate: Candidate) => candidate.entrevista?.estado.toLowerCase().includes("pendiente")
 
   return (
     <div className="flex flex-col bg-white rounded-lg border p-3 overflow-hidden">
@@ -69,14 +72,25 @@ export function CandidateList({
               <h3 className="text-sm font-bold">
                 {candidate.name} {candidate.lastName}
               </h3>
-              {candidate.entrevista && (
-                <span className={`text-xs ${
-                  candidate.entrevista.estado.toLowerCase() === "confirmada" 
-                    ? "bg-green-100 text-green-800" 
-                    : "bg-amber-100 text-amber-800"
-                } px-2 py-0.5 rounded-full flex items-center`}>
+              {candidate.entrevista && candidate.entrevista.fechaProgramada && candidate.entrevista.horaProgramada && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full flex items-center ${
+                    isConfirmed(candidate)
+                      ? "bg-green-100 text-green-800" 
+                      : isPending(candidate)
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-amber-100 text-amber-800"
+                  }`}
+                >
                   <Calendar className="h-3 w-3 mr-1" />
                   ENTREVISTA {candidate.entrevista.fechaProgramada} | {candidate.entrevista.horaProgramada}
+                  {isConfirmed(candidate) ? (
+                    <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />
+                  ) : isPending(candidate) ? (
+                    <AlertTriangle className="h-3 w-3 ml-1 text-yellow-600" />
+                  ) : (
+                    <AlertCircle className="h-3 w-3 ml-1 text-amber-600" />
+                  )}
                 </span>
               )}
             </div>

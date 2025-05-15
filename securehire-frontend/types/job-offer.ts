@@ -2,29 +2,29 @@ export interface Candidate {
   id: string
   name: string
   lastName: string
+  age: number
+  gender: string
+  location: string
   email: string
   phone: string
   countryCode: string
   dni: string
-  gender: string
+  birthDate: string
   nationality: string
-  address: string
-  province: string
   residenceCountry: string
-  birthDate: string | undefined
-  age: number | undefined
-  location: string | undefined
-  cvUrl: string | undefined
+  province: string
+  address: string
+  cvUrl: string
   postulacion: {
     id: string
     fase: string
     requisitosExcluyentes?: string[]
-    notas?: Array<{
+    notas?: {
       author: string
       company: string
       date: string
       content: string
-    }>
+    }[]
   }
   entrevista?: {
     id: string
