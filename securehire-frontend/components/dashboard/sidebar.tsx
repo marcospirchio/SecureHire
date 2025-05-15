@@ -25,7 +25,12 @@ export function useSidebar() {
   return context
 }
 
-export function Sidebar({ children }: { children?: React.ReactNode }) {
+interface SidebarProps {
+  children?: React.ReactNode
+  onToggle?: (expanded: boolean) => void
+}
+
+export function Sidebar({ children, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
@@ -50,7 +55,9 @@ export function Sidebar({ children }: { children?: React.ReactNode }) {
   }, [])
 
   const toggleCollapse = () => {
-    setCollapsed(!collapsed)
+    const newCollapsed = !collapsed
+    setCollapsed(newCollapsed)
+    onToggle?.(!newCollapsed)
   }
 
   const toggleVisibility = () => {

@@ -72,4 +72,4 @@ export function useBusqueda(id: string) {
   }, [id])
 
   return { busqueda, postulaciones, loading, error }
-} 
+}  
