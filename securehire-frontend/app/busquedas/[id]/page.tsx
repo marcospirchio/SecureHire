@@ -113,6 +113,7 @@ function JobOfferDetail() {
   const [jobOffer, setJobOffer] = useState<JobOffer | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 13)) 
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -365,36 +366,89 @@ function JobOfferDetail() {
   }
 
   // Manejar la confirmación de la entrevista
-  const handleConfirmInterview = () => {
-    if (selectedDate && selectedTime && selectedCandidate) {
-      // Extraer día y mes de la fecha seleccionada
-      const [day, month, year] = selectedDate.split("/").map(Number)  
+  const handleConfirmInterview = async () => {
+    if (selectedDate && selectedTime && selectedCandidate && jobOffer) {
+      // Formatea la fecha a ISO (YYYY-MM-DD)
+      const [day, month, year] = selectedDate.split("/").map(Number);
+      const fechaISO = new Date(year, month - 1, day).toISOString().split("T")[0];
 
-      // Aquí iría la lógica para guardar la entrevista
-      // Por ahora, simulamos actualizar el candidato con la nueva fecha de entrevista
-      const updatedCandidates = jobOffer.candidates.map((candidate) => {
-        if (candidate.id === selectedCandidate.id) {
-          return {
-            ...candidate,
-            interview: {
-              date: `${day}/${month}`,
-              time: `${selectedTime}hs`,
-            },
-            phase: "Entrevista agendada",
-          }
+      const payload = {
+        busquedaId: jobOffer.id,
+        postulacionId: selectedCandidate.id,
+        fechaProgramada: fechaISO,
+        horaProgramada: selectedTime,
+        estado: "Pendiente de confirmación",
+        linkEntrevista: "", // Campo vacío por defecto
+        motivoCancelacion: null,
+        comentarios: []
+      };
+
+      console.log("Enviando datos de entrevista:", payload);
+
+      try {
+        const response = await fetch('http://localhost:8080/api/entrevistas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error al agendar entrevista: ${errorText}`);
         }
-        return candidate
-      })
 
-      // Actualizar el estado
-      // En una aplicación real, esto sería una llamada a la API
-      console.log(`Entrevista agendada: ${day}/${month} a las ${selectedTime}hs`)
+        // Parsear la respuesta completa
+        const entrevistaCreada = await response.json();
+        console.log('Entrevista creada exitosamente:', entrevistaCreada);
 
-      setIsInterviewModalOpen(false)
-      setSelectedDate(null)
-      setSelectedTime(null)
+        // Verificar que la respuesta incluya todos los campos esperados
+        if (!entrevistaCreada.id || !entrevistaCreada.usuarioId || !entrevistaCreada.candidatoId) {
+          console.warn('La respuesta del servidor no incluye todos los campos esperados:', entrevistaCreada);
+        }
+
+        // Actualizar el estado local con la información completa
+        const updatedCandidates = jobOffer.candidates.map((candidate) => {
+          if (candidate.id === selectedCandidate.id) {
+            return {
+              ...candidate,
+              interview: {
+                id: entrevistaCreada.id,
+                date: selectedDate,
+                time: selectedTime,
+                estado: entrevistaCreada.estado,
+                linkEntrevista: entrevistaCreada.linkEntrevista
+              },
+              phase: "Entrevista agendada"
+            };
+          }
+          return candidate;
+        });
+
+        setJobOffer(prev => ({
+          ...prev!,
+          candidates: updatedCandidates
+        }));
+
+        // Mostrar mensaje de éxito en el modal
+        setSuccessMessage("¡Entrevista agendada exitosamente!");
+
+        // Cerrar el modal después de 2 segundos
+        setTimeout(() => {
+          setIsInterviewModalOpen(false);
+          setSelectedDate(null);
+          setSelectedTime(null);
+          setSuccessMessage(null);
+        }, 2000);
+
+      } catch (error) {
+        console.error("Error al agendar entrevista:", error);
+        setSuccessMessage("Error al agendar la entrevista. Por favor, intente nuevamente.");
+      }
     }
-  }
+  };
 
   // Manejar la finalización del proceso
   const handleFinishProcess = () => {
@@ -775,6 +829,16 @@ function JobOfferDetail() {
                   Seleccione una fecha y horario para la entrevista con {selectedCandidate?.name} {selectedCandidate?.lastName}
                 </DialogDescription>
               </DialogHeader>
+
+              {successMessage && (
+                <div className={`mt-4 p-3 rounded-md ${
+                  successMessage.includes("Error") 
+                    ? "bg-red-100 text-red-700" 
+                    : "bg-green-100 text-green-700"
+                }`}>
+                  {successMessage}
+                </div>
+              )}
 
               <div className="py-4">
                 {/* Encabezado del calendario con navegación */}

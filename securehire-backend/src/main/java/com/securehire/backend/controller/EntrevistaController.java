@@ -112,9 +112,12 @@ public class EntrevistaController {
         List<Entrevista> entrevistas = entrevistaService.filtrarEntrevistas(
             null, usuario.getId(), null, null, null, null
         );
-
+    
         List<EntrevistaConCandidatoDTO> dtos = entrevistas.stream()
-            .filter(e -> "confirmada".equalsIgnoreCase(e.getEstado()))
+            .filter(e -> {
+                String estado = e.getEstado() == null ? "" : e.getEstado().toLowerCase();
+                return estado.equals("confirmada") || estado.contains("pendiente");
+            })
             .map(e -> {
                 var dto = new EntrevistaConCandidatoDTO();
                 dto.setId(e.getId());
@@ -122,28 +125,27 @@ public class EntrevistaController {
                 dto.setHoraProgramada(e.getHoraProgramada());
                 dto.setEstado(e.getEstado());
                 dto.setLinkEntrevista(e.getLinkEntrevista());
-
+    
                 // Nombre y apellido del candidato
                 var candidato = candidatoService.obtenerCandidatoPorId(e.getCandidatoId());
                 candidato.ifPresent(c -> {
                     dto.setNombreCandidato(c.getNombre());
                     dto.setApellidoCandidato(c.getApellido());
                 });
-
+    
                 // Título de la búsqueda (puesto)
                 if (e.getPostulacionId() != null) {
                     postulacionService.obtenerPostulacionPorId(e.getPostulacionId())
                         .flatMap(p -> busquedaRepository.findById(p.getBusquedaId()))
                         .ifPresent(busqueda -> dto.setTituloPuesto(busqueda.getTitulo()));
                 }
-
+    
                 return dto;
             })
             .toList();
-
+    
         return ResponseEntity.ok(dtos);
-}
-
+    }
     
 
     @GetMapping("/{id}")
@@ -229,7 +231,4 @@ public class EntrevistaController {
         entrevistaService.eliminarEntrevista(id);
         return ResponseEntity.ok().build();
     }
-
- 
-
 }

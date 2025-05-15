@@ -15,11 +15,15 @@ import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface CalendarEvent {
+  id?: string
   date: string
   time: string
   title: string
   person?: string
   link?: string
+  candidateName?: string
+  jobTitle?: string
+  estado?: string
 }
 
 interface MonthlyCalendarProps {
@@ -44,7 +48,9 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
 
   const getEventsForDay = (date: Date) => {
     const dateString = format(date, "yyyy-MM-dd")
-    return events.filter(event => event.date === dateString)
+    const dayEvents = events.filter(event => event.date === dateString)
+    console.log('Eventos para el día', dateString, ':', dayEvents) // Debug log
+    return dayEvents
   }
 
   while (day <= endDate) {
@@ -68,17 +74,24 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
             )}
           </div>
           <div className="flex-1">
-            {dayEvents.map((event, idx) => (
-              <div
-                key={idx}
-                className="rounded-md bg-blue-100 text-blue-900 p-1 mb-1 text-xs cursor-pointer hover:bg-blue-200"
-                onClick={() => onEventClick?.(event)}
-              >
-                <div className="font-medium truncate">{event.title}</div>
-                {event.person && <div className="text-xs truncate">{event.person}</div>}
-                <div className="text-[11px]">{event.time}</div>
-              </div>
-            ))}
+            {dayEvents.map((event, idx) => {
+              console.log('Renderizando evento:', event) // Debug log
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-md p-1 mb-1 text-xs cursor-pointer ${
+                    event.estado === "Pendiente de confirmación" 
+                      ? "bg-amber-100 text-amber-900 hover:bg-amber-200" 
+                      : "bg-green-100 text-green-900 hover:bg-green-200"
+                  }`}
+                  onClick={() => onEventClick?.(event)}
+                >
+                  <div className="font-medium truncate">{event.time} - {event.title}</div>
+                  {event.person && <div className="text-xs truncate">{event.person}</div>}
+                  {event.jobTitle && <div className="text-[11px] text-gray-600">{event.jobTitle}</div>}
+                </div>
+              )
+            })}
           </div>
         </div>
       )

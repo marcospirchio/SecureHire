@@ -1,23 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react"
 import { addDays, format, startOfWeek, endOfWeek, isSameDay } from "date-fns"
 import { es } from "date-fns/locale"
-
-interface CalendarEvent {
-  date: string
-  time: string | null // ← permite null para validación previa
-  title: string
-  person?: string
-  link?: string
-}
+import type { CalendarEvent } from "@/types/calendar"
 
 interface WeeklyCalendarProps {
   events: CalendarEvent[]
+  onEventClick?: (event: CalendarEvent) => void
 }
 
-export function WeeklyCalendar({ events }: WeeklyCalendarProps) {
+export function WeeklyCalendar({ events, onEventClick }: WeeklyCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
 
   const startDate = startOfWeek(currentDate, { weekStartsOn: 1 })
@@ -33,7 +27,9 @@ export function WeeklyCalendar({ events }: WeeklyCalendarProps) {
 
   const getEventsForDay = (date: Date) => {
     const dateString = format(date, "yyyy-MM-dd")
-    return events.filter(event => event.date === dateString)
+    const dayEvents = events.filter(event => event.date === dateString)
+    console.log('Eventos para el día', dateString, ':', dayEvents)
+    return dayEvents
   }
 
   const formattedStartDate = format(startDate, "d MMM", { locale: es })
@@ -60,7 +56,7 @@ export function WeeklyCalendar({ events }: WeeklyCalendarProps) {
       <div className="grid grid-cols-5 gap-1">
         {weekDays.map((day, index) => {
           const dayEvents = getEventsForDay(day)
-          const isToday = isSameDay(day, currentDate)
+          const isToday = isSameDay(day, new Date())
 
           return (
             <div key={index} className="flex flex-col">
@@ -69,17 +65,35 @@ export function WeeklyCalendar({ events }: WeeklyCalendarProps) {
                 <div className="text-base font-bold">{format(day, "d", { locale: es })}</div>
               </div>
               <div className="h-24 rounded-md border p-1 overflow-y-auto">
-                {dayEvents.map((event, eventIndex) => (
-                  <div
-                    key={eventIndex}
-                    className="rounded-md bg-blue-100 p-1.5 text-xs mb-1.5 cursor-pointer hover:bg-blue-200"
-                    onClick={() => event.link && window.open(event.link, "_blank")}
-                  >
-                    <div className="font-medium truncate">{event.title}</div>
-                    {event.person && <div className="text-xs truncate">{event.person}</div>}
-                    <div className="text-[11px]">{event.time ?? "Por confirmar"}</div>
-                  </div>
-                ))}
+                {dayEvents.map((event, eventIndex) => {
+                  console.log('Renderizando evento:', event)
+                  return (
+                    <div
+                      key={eventIndex}
+                      className={`rounded-md p-1.5 text-xs mb-1.5 cursor-pointer ${
+                        event.tipo === "evento"
+                          ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
+                          : event.estado === "Pendiente de confirmación"
+                            ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
+                            : "bg-green-100 text-green-900 hover:bg-green-200"
+                      }`}
+                      onClick={() => onEventClick?.(event)}
+                    >
+                      <div className="font-medium truncate flex items-center gap-1">
+                        {event.time} - {event.title}
+                        {event.tipo === "entrevista" && (
+                          event.estado === "Pendiente de confirmación" ? (
+                            <AlertCircle className="h-3 w-3 stroke-2" />
+                          ) : (
+                            <CheckCircle2 className="h-3 w-3 stroke-2" />
+                          )
+                        )}
+                      </div>
+                      {event.person && <div className="text-xs truncate">{event.person}</div>}
+                      {event.jobTitle && <div className="text-[11px] text-gray-600">{event.jobTitle}</div>}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )
