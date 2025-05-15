@@ -2,18 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  Search,
-  Settings,
-  X,
-  Calendar,
-  FileText,
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-} from "lucide-react"
+import { ArrowLeft, Search, Settings, X, Calendar, FileText, AlertTriangle, ChevronLeft, ChevronRight, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { DashboardLayout } from "@/components/dashboard/layout"
 import { Sidebar } from "@/components/dashboard/sidebar"
@@ -30,11 +19,6 @@ interface Candidate {
   age: number
   gender: string
   location: string
-  phase: string
-  interview?: {
-    date: string
-    time: string
-  }
   email: string
   phone: string
   countryCode: string
@@ -45,13 +29,23 @@ interface Candidate {
   province: string
   address: string
   cvUrl: string
-  excludingRequirements?: string[]
-  notes?: {
-    author: string
-    company: string
-    date: string
-    content: string
-  }[]
+  postulacion: {
+    id: string
+    fase: string
+    requisitosExcluyentes?: string[]
+    notas?: {
+      author: string
+      company: string
+      date: string
+      content: string
+    }[]
+  }
+  entrevista?: {
+    id: string
+    fechaProgramada: string
+    horaProgramada: string
+    estado: string
+  }
 }
 
 interface JobOffer {
@@ -120,7 +114,7 @@ function JobOfferDetail() {
       try {
         console.log('Fetching data for busqueda ID:', params.id);
         
-        const [busquedaRes, postulacionesRes] = await Promise.all([
+        const [busquedaRes, postulacionesRes, entrevistasRes] = await Promise.all([
           fetch(`http://localhost:8080/api/busquedas/${params.id}`, { 
             credentials: "include",
             headers: {
@@ -132,25 +126,23 @@ function JobOfferDetail() {
             headers: {
               'Accept': 'application/json'
             }
+          }),
+          fetch(`http://localhost:8080/api/entrevistas/mis-entrevistas-con-candidato`, {
+            credentials: "include",
+            headers: {
+              'Accept': 'application/json'
+            }
           })
         ]);
 
-        if (!busquedaRes.ok) {
-          const errorText = await busquedaRes.text();
-          console.error('Error response from busqueda:', errorText);
-          throw new Error(`Error al obtener la búsqueda: ${busquedaRes.status} ${busquedaRes.statusText}`);
-        }
-        if (!postulacionesRes.ok) {
-          const errorText = await postulacionesRes.text();
-          console.error('Error response from postulaciones:', errorText);
-          throw new Error(`Error al obtener las postulaciones: ${postulacionesRes.status} ${postulacionesRes.statusText}`);
+        if (!busquedaRes.ok || !postulacionesRes.ok || !entrevistasRes.ok) {
+          throw new Error('Error al obtener los datos');
         }
 
         const busquedaData = await busquedaRes.json();
-        console.log('Datos de búsqueda recibidos:', busquedaData);
-
         const postulacionesData: PostulacionRequest[] = await postulacionesRes.json();
-        console.log('Datos de postulaciones recibidos:', postulacionesData);
+        const entrevistasData = await entrevistasRes.json();
+        console.log('Datos de entrevistas:', entrevistasData);
 
         // Convertir los datos al formato esperado por el componente
         const jobOfferData: JobOffer = {
@@ -164,39 +156,71 @@ function JobOfferDetail() {
           description: busquedaData.descripcion || "",
           benefits: busquedaData.beneficios || [],
           candidates: postulacionesData
-            .filter(p => p.candidato && p.postulacion) // Solo incluir postulaciones con candidato completo
-            .map(p => ({
-              id: p.postulacion.id,
-              name: p.candidato.nombre,
-              lastName: p.candidato.apellido,
-              age: calcularEdad(p.candidato.fechaNacimiento),
-              gender: p.candidato.genero || "No especificado",
-              location: p.candidato.provincia || "No especificada",
-              phase: p.postulacion.fase || "Sin fase",
-              email: p.candidato.email,
-              phone: p.candidato.telefono,
-              countryCode: "+54",
-              dni: p.candidato.dni,
-              birthDate: new Date(p.candidato.fechaNacimiento).toLocaleDateString("es-AR"),
-              nationality: p.candidato.nacionalidad,
-              residenceCountry: p.candidato.paisResidencia,
-              province: p.candidato.provincia,
-              address: p.candidato.direccion,
-              cvUrl: p.candidato.cvUrl,
-              excludingRequirements: p.postulacion.requisitosExcluyentes || [],
-              notes: p.postulacion.notas || []
-            }))
-        }
-        setJobOffer(jobOfferData)
+            .filter(p => p.candidato && p.postulacion)
+            .map(p => {
+              // Buscar la entrevista correspondiente
+              const entrevista = entrevistasData.find(
+                (e: any) => {
+                  console.log('Comparando:', {
+                    entrevistaPostulacionId: e.postulacionId,
+                    postulacionId: p.postulacion.id,
+                    match: e.postulacionId === p.postulacion.id
+                  });
+                  return e.postulacionId === p.postulacion.id;
+                }
+              );
+
+              const candidateData = {
+                id: p.postulacion.id,
+                name: p.candidato.nombre,
+                lastName: p.candidato.apellido,
+                age: calcularEdad(p.candidato.fechaNacimiento),
+                gender: p.candidato.genero || "No especificado",
+                location: p.candidato.provincia || "No especificada",
+                email: p.candidato.email,
+                phone: p.candidato.telefono,
+                countryCode: "+54",
+                dni: p.candidato.dni,
+                birthDate: new Date(p.candidato.fechaNacimiento).toLocaleDateString("es-AR"),
+                nationality: p.candidato.nacionalidad,
+                residenceCountry: p.candidato.paisResidencia,
+                province: p.candidato.provincia,
+                address: p.candidato.direccion,
+                cvUrl: p.candidato.cvUrl,
+                postulacion: {
+                  id: p.postulacion.id,
+                  fase: p.postulacion.fase || "Sin fase",
+                  requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
+                  notas: p.postulacion.notas || []
+                },
+                entrevista: entrevista ? {
+                  id: entrevista.id,
+                  fechaProgramada: entrevista.fechaProgramada,
+                  horaProgramada: entrevista.horaProgramada,
+                  estado: entrevista.estado
+                } : undefined
+              };
+
+              console.log('Datos del candidato:', {
+                id: candidateData.id,
+                name: candidateData.name,
+                tieneEntrevista: !!candidateData.entrevista,
+                entrevista: candidateData.entrevista
+              });
+
+              return candidateData;
+            })
+        };
+        setJobOffer(jobOfferData);
       } catch (error) {
         console.error("Error al cargar los datos:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     fetchData();
-  }, [params.id])
+  }, [params.id]);
 
   // Función auxiliar para calcular la edad
   const calcularEdad = (fechaNacimiento: string) => {
@@ -230,7 +254,7 @@ function JobOfferDetail() {
   const filteredCandidates = jobOffer.candidates.filter((candidate) => {
     const fullName = `${candidate.name} ${candidate.lastName}`.toLowerCase()
     const matchesSearch = fullName.includes(searchQuery.toLowerCase())
-    const matchesPhase = filterPhase === "all" || candidate.phase === filterPhase
+    const matchesPhase = filterPhase === "all" || candidate.postulacion.fase === filterPhase
     return matchesSearch && matchesPhase
   })
 
@@ -414,12 +438,15 @@ function JobOfferDetail() {
           if (candidate.id === selectedCandidate.id) {
             return {
               ...candidate,
-              interview: {
-                id: entrevistaCreada.id,
-                date: selectedDate,
-                time: selectedTime,
-                estado: entrevistaCreada.estado,
-                linkEntrevista: entrevistaCreada.linkEntrevista
+              postulacion: {
+                ...candidate.postulacion,
+                entrevista: {
+                  id: entrevistaCreada.id,
+                  fechaProgramada: selectedDate,
+                  horaProgramada: selectedTime,
+                  estado: entrevistaCreada.estado,
+                  linkEntrevista: entrevistaCreada.linkEntrevista
+                }
               },
               phase: "Entrevista agendada"
             };
@@ -543,10 +570,14 @@ function JobOfferDetail() {
                   <h3 className="text-sm font-bold">
                     {candidate.name} {candidate.lastName}
                   </h3>
-                  {candidate.interview && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                  {candidate.entrevista && (
+                    <span className={`text-xs ${
+                      candidate.entrevista.estado.toLowerCase() === "confirmada" 
+                        ? "bg-green-100 text-green-800" 
+                        : "bg-amber-100 text-amber-800"
+                    } px-2 py-0.5 rounded-full flex items-center`}>
                       <Calendar className="h-3 w-3 mr-1" />
-                      ENTREVISTA {candidate.interview.date} | {candidate.interview.time}
+                      ENTREVISTA {candidate.entrevista.fechaProgramada} | {candidate.entrevista.horaProgramada}
                     </span>
                   )}
                 </div>
@@ -565,7 +596,7 @@ function JobOfferDetail() {
                   </div>
                   <div className="flex gap-1">
                     <span className="text-gray-500">Fase:</span>
-                    <span className="font-medium">{candidate.phase}</span>
+                    <span className="font-medium">{candidate.postulacion.fase}</span>
                   </div>
                 </div>
               </div>
@@ -732,11 +763,11 @@ function JobOfferDetail() {
             <div className="flex justify-between items-center mb-3">
               <div className="text-sm text-gray-500">Fase actual:</div>
               <div className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                {selectedCandidate.phase}
+                {selectedCandidate.postulacion.fase}
               </div>
             </div>
 
-            {selectedCandidate.excludingRequirements && selectedCandidate.excludingRequirements.length > 0 && (
+            {selectedCandidate.postulacion.requisitosExcluyentes && selectedCandidate.postulacion.requisitosExcluyentes.length > 0 && (
               <div className="mt-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
@@ -745,7 +776,7 @@ function JobOfferDetail() {
                       El candidato no cumple con el/los siguientes requisitos excluyentes:
                     </p>
                     <ul className="mt-2 ml-5 list-disc">
-                      {selectedCandidate.excludingRequirements.map((req, index) => (
+                      {selectedCandidate.postulacion.requisitosExcluyentes.map((req, index) => (
                         <li key={index} className="text-sm text-amber-700">
                           - {req}
                         </li>
@@ -791,9 +822,9 @@ function JobOfferDetail() {
                   <TabsTrigger value="feedbacks">Feedbacks</TabsTrigger>
                 </TabsList>
                 <TabsContent value="notes" className="mt-4">
-                  {selectedCandidate.notes && selectedCandidate.notes.length > 0 ? (
+                  {selectedCandidate.postulacion.notas && selectedCandidate.postulacion.notas.length > 0 ? (
                     <div className="space-y-4">
-                      {selectedCandidate.notes.map((note, index) => (
+                      {selectedCandidate.postulacion.notas.map((note, index) => (
                         <div key={index} className="border-b pb-4">
                           <div className="flex justify-between mb-2">
                             <div className="font-medium">
