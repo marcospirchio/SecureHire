@@ -24,6 +24,13 @@ export function CandidatesList({
   onCandidateClick,
   isCollapsed
 }: CandidatesListProps) {
+  // Filtrar candidatos que no estén finalizados (case insensitive)
+  const activeCandidates = candidates.filter(candidate => {
+    const fase = candidate.postulacion.fase?.toUpperCase() || ""
+    const estado = candidate.postulacion.estado?.toUpperCase() || ""
+    return fase !== "FINALIZADA" && estado !== "FINALIZADA"
+  })
+
   return (
     <div
       className={`flex flex-col ${isCollapsed ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
@@ -48,13 +55,12 @@ export function CandidatesList({
             <SelectItem value="Pendiente de confirmación">Pendiente de confirmación</SelectItem>
             <SelectItem value="CV recibido">CV recibido</SelectItem>
             <SelectItem value="Entrevista agendada">Entrevista agendada</SelectItem>
-            <SelectItem value="Proceso finalizado">Proceso finalizado</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2">
-        {candidates.map((candidate) => (
+        {activeCandidates.map((candidate) => (
           <CandidateCard
             key={candidate.id}
             candidate={candidate}

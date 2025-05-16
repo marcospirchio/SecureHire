@@ -97,11 +97,25 @@ public class EntrevistaController {
         if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
 
         Entrevista entrevista = entrevistaOpt.get();
-        if (!"pendiente".equalsIgnoreCase(entrevista.getEstado())) {
+        if (!"Pendiente de confirmación".equalsIgnoreCase(entrevista.getEstado())) {
             return ResponseEntity.badRequest().body("La entrevista ya fue confirmada, cancelada o finalizada.");
         }
 
         entrevista.setEstado("confirmada");
+        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+    }
+
+    @PatchMapping("/cancelar/{id}")
+    public ResponseEntity<?> cancelarEntrevista(@PathVariable String id) {
+        Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
+        if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        Entrevista entrevista = entrevistaOpt.get();
+        if (!"Pendiente de confirmación".equalsIgnoreCase(entrevista.getEstado())) {
+            return ResponseEntity.badRequest().body("La entrevista ya fue confirmada, cancelada o finalizada.");
+        }
+
+        entrevista.setEstado("Cancelada por el candidato");
         return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
     }
 

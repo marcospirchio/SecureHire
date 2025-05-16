@@ -4,14 +4,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Candidate } from "@/types/job-offer";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+interface Feedback {
+  id: string;
+  texto: string;
+  fecha: string;
+  autor: string;
+  postulacionId: string;
+}
 
 interface CandidateDetailsProps {
   candidate: Candidate;
   onClose: () => void;
   onOpenInterviewModal: () => void;
   onOpenFeedbackModal: () => void;
-  onPhaseChange?: (newPhase: string) => void;
+  onPhaseChange: (newPhase: string) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
 export function CandidateDetails({
@@ -19,10 +29,54 @@ export function CandidateDetails({
   onClose,
   onOpenInterviewModal,
   onOpenFeedbackModal,
-  onPhaseChange
+  onPhaseChange,
+  activeTab,
+  setActiveTab
 }: CandidateDetailsProps) {
-  const [activeTab, setActiveTab] = useState("notes");
   const [newNote, setNewNote] = useState("");
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      if (activeTab === "feedbacks") {
+        setLoading(true);
+        try {
+          console.log("Fetching feedbacks for candidate:", candidate.id);
+          const response = await fetch(`http://localhost:8080/api/comentarios/candidato/${candidate.id}`, {
+            credentials: "include",
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error('Error al cargar los feedbacks');
+          }
+
+          const data = await response.json();
+          console.log("Received feedbacks:", data);
+          
+          // Asegurarse de que los datos tengan el formato correcto
+          const formattedFeedbacks = data.map((feedback: any) => ({
+            id: feedback.id,
+            texto: feedback.texto,
+            fecha: feedback.fecha,
+            autor: feedback.autor || 'Anónimo',
+            postulacionId: feedback.postulacionId
+          }));
+          
+          setFeedbacks(formattedFeedbacks);
+        } catch (error) {
+          console.error('Error fetching feedbacks:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchFeedbacks();
+  }, [activeTab, candidate.id]);
 
   const handleAddNote = () => {
     if (newNote.trim()) {
@@ -30,9 +84,6 @@ export function CandidateDetails({
       setNewNote("");
     }
   };
-
-  const isConfirmed = candidate.entrevista?.estado.toLowerCase() === "confirmada"
-  const isPending = candidate.entrevista?.estado.toLowerCase() === "pendiente de confirmación"
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -198,40 +249,13 @@ export function CandidateDetails({
 
       <div className="mt-4 border-t pt-4"></div>
 
-      {/* Fase actual y estado de entrevista */}
+      {/* Fase actual */}
       <div className="flex justify-between items-center mb-3">
         <div className="text-sm text-gray-500">Fase actual:</div>
         <div className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
           {candidate.postulacion.fase}
         </div>
       </div>
-
-      {/* Estado de la entrevista */}
-      {candidate.entrevista && (
-        <div className="mb-4">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full flex items-center ${
-                isConfirmed
-                  ? "bg-green-100 text-green-800" 
-                  : isPending
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-amber-100 text-amber-800"
-              }`}
-            >
-              <Calendar className="h-3 w-3 mr-1" />
-              ENTREVISTA {formatDate(candidate.entrevista.fechaProgramada)} | {candidate.entrevista.horaProgramada}
-              {isConfirmed ? (
-                <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />
-              ) : isPending ? (
-                <AlertTriangle className="h-3 w-3 ml-1 text-yellow-600" />
-              ) : (
-                <AlertCircle className="h-3 w-3 ml-1 text-amber-600" />
-              )}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Alerta de requisitos excluyentes */}
       {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 && (
@@ -278,7 +302,11 @@ export function CandidateDetails({
           <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
         </Button>
 
-        <Button variant="destructive" className="h-9 text-xs" onClick={onOpenFeedbackModal}>
+        <Button 
+          variant="destructive" 
+          className="h-9 text-xs" 
+          onClick={onOpenFeedbackModal}
+        >
           Finalizar proceso
         </Button>
       </div>
@@ -289,15 +317,6 @@ export function CandidateDetails({
           <Button className="h-8 text-xs flex items-center gap-1 mb-4 w-full" variant="outline">
             <FileText className="h-3 w-3" /> Ver CV Completo
           </Button>
-          
-          <a 
-            href={candidate.cvUrl} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-xs text-blue-600 hover:underline flex items-center gap-1 mb-2"
-          >
-            <ExternalLink className="h-3 w-3" /> Abrir CV en nueva pestaña
-          </a>
         </div>
         
         <div className="bg-gray-50 p-3 rounded-md">
@@ -358,7 +377,7 @@ export function CandidateDetails({
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No hay anotaciones disponibles. Añade la primera nota sobre este candidato.</p>
+              <p className="text-gray-500 text-sm">No hay anotaciones disponibles.</p>
             )}
           </TabsContent>
           
@@ -371,8 +390,25 @@ export function CandidateDetails({
               </p>
             </div>
             
-            {/* Lista de feedbacks (simulada vacía) */}
-            <p className="text-gray-500 text-sm">No hay feedbacks disponibles para este candidato.</p>
+            {loading ? (
+              <p className="text-gray-500 text-sm">Cargando feedbacks...</p>
+            ) : feedbacks.length > 0 ? (
+              <div className="space-y-4">
+                {feedbacks.map((feedback) => (
+                  <div key={feedback.id} className="border-b pb-4">
+                    <div className="flex justify-between mb-2">
+                      <div className="font-medium">
+                        {feedback.autor}
+                      </div>
+                      <div className="text-gray-500 text-sm">{formatDate(feedback.fecha)}</div>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{feedback.texto}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No hay feedbacks disponibles.</p>
+            )}
             
             {/* Botón para añadir feedback */}
             <Button 

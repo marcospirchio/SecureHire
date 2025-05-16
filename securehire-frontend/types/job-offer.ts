@@ -18,6 +18,7 @@ export interface Candidate {
   postulacion: {
     id: string
     fase: string
+    estado?: string
     requisitosExcluyentes?: string[]
     notas?: {
       author: string
@@ -32,10 +33,23 @@ export interface Candidate {
     horaProgramada: string
     estado: string
     linkEntrevista?: string
+    postulacionId?: string
   }
 }
 
 export interface PostulacionRequest {
+  postulacion: {
+    id: string
+    fase: string
+    estado?: string
+    requisitosExcluyentes?: string[]
+    notas?: {
+      author: string
+      company: string
+      date: string
+      content: string
+    }[]
+  }
   candidato: {
     id: string
     nombre: string
@@ -43,24 +57,13 @@ export interface PostulacionRequest {
     email: string
     telefono: string
     dni: string
-    fechaNacimiento: string
     genero?: string
     nacionalidad: string
     paisResidencia: string
     provincia: string
     direccion: string
-    cvUrl: string | undefined
-  }
-  postulacion: {
-    id: string
-    fase: string
-    requisitosExcluyentes?: string[]
-    notas?: Array<{
-      author: string
-      company: string
-      date: string
-      content: string
-    }>
+    fechaNacimiento: string
+    cvUrl?: string
   }
 }
 

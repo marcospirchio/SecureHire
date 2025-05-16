@@ -6,12 +6,17 @@ import { JobOfferHeader } from "@/components/job-offer/JobOfferHeader"
 import { CandidateDetails } from "@/components/job-offer/CandidateDetails"
 import { CandidateCard } from "@/components/job-offer/candidate-card"
 import { InterviewModal } from "@/components/job-offer/interview-modal"
+import { CandidatesList } from "@/components/job-offer/candidates-list"
 import { jobOfferService } from "@/services/job-offer.service"
 import { JobOffer, Candidate, PostulacionRequest } from "@/types/job-offer"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { useToast } from "@/components/ui/use-toast"
 import { Search } from "lucide-react"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 interface EntrevistaConCandidato {
   id: string
@@ -26,7 +31,7 @@ interface EntrevistaConCandidato {
 
 interface PageProps {
   params: Promise<{
-    id: string
+  id: string
   }>
 }
 
@@ -41,6 +46,10 @@ export default function JobOfferPage({ params }: PageProps) {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true)
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false)
   const [entrevistas, setEntrevistas] = useState<EntrevistaConCandidato[]>([])
+  const [activeTab, setActiveTab] = useState("notes")
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
+  const [feedback, setFeedback] = useState("")
+  const [finalizationReason, setFinalizationReason] = useState("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,6 +104,7 @@ export default function JobOfferPage({ params }: PageProps) {
               postulacion: {
                 id: p.postulacion.id,
                 fase: p.postulacion.fase || "Sin fase",
+                estado: p.postulacion.estado,
                 requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
                 notas: p.postulacion.notas || []
               },
@@ -177,33 +187,143 @@ export default function JobOfferPage({ params }: PageProps) {
     }
   }
 
-  const handleEndProcess = async () => {
-    if (!selectedCandidate) return
+  const handleEndProcess = () => {
+    setIsFeedbackModalOpen(true)
+  }
 
-    try {
-      await jobOfferService.updateCandidateStatus(resolvedParams.id, selectedCandidate.id, "Rechazado", "Proceso finalizado")
-      
-      // Actualizar el estado local
-      setJobOffer(prev => {
-        if (!prev) return null
-        return {
-          ...prev,
-          candidates: prev.candidates.filter(c => c.id !== selectedCandidate.id)
+  const handleFinishProcess = async () => {
+    if (selectedCandidate && feedback.trim() && finalizationReason.trim()) {
+      try {
+        // Si hay una entrevista pendiente o confirmada, cancelarla
+        if (selectedCandidate.entrevista && 
+            (selectedCandidate.entrevista.estado.toLowerCase() === "pendiente de confirmación" || 
+             selectedCandidate.entrevista.estado.toLowerCase() === "confirmada")) {
+          
+          const entrevistaData = {
+            estado: "cancelada",
+            motivoCancelacion: "El reclutador canceló la entrevista."
+          }
+
+          console.log("Cancelando entrevista:", selectedCandidate.entrevista.id, entrevistaData)
+
+          const entrevistaResponse = await fetch(`http://localhost:8080/api/entrevistas/${selectedCandidate.entrevista.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify(entrevistaData)
+          })
+
+          if (!entrevistaResponse.ok) {
+            const errorText = await entrevistaResponse.text()
+            console.error("Error al cancelar entrevista:", errorText)
+            throw new Error("Error al cancelar la entrevista")
+          }
         }
-      })
 
-      setSelectedCandidate(null)
-      toast({
-        title: "Proceso finalizado",
-        description: "El proceso del candidato ha sido finalizado correctamente.",
-      })
-    } catch (error) {
-      console.error("Error ending process:", error)
-      toast({
-        title: "Error",
-        description: "No se pudo finalizar el proceso del candidato.",
-        variant: "destructive",
-      })
+        // Actualizar el estado de la postulación
+        const postulacionResponse = await fetch(`http://localhost:8080/api/postulaciones/${selectedCandidate.postulacion.id}/estado?nuevoEstado=FINALIZADA&motivo=${encodeURIComponent(finalizationReason)}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          credentials: "include"
+        })
+
+        if (!postulacionResponse.ok) {
+          throw new Error("Error al actualizar el estado de la postulación")
+        }
+
+        // Crear el comentario
+        const comentarioData = {
+          postulacionId: selectedCandidate.postulacion.id,
+          candidatoId: selectedCandidate.id,
+          texto: `${finalizationReason} - ${feedback}`
+        }
+
+        console.log("Enviando comentario:", comentarioData)
+
+        const comentarioResponse = await fetch("http://localhost:8080/api/comentarios", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify(comentarioData)
+        })
+
+        if (!comentarioResponse.ok) {
+          const errorText = await comentarioResponse.text()
+          console.error("Error response:", errorText)
+          throw new Error(`Error al crear el comentario: ${errorText}`)
+        }
+
+        // Recargar los datos de la búsqueda y postulaciones
+        const [busquedaData, postulacionesData] = await Promise.all([
+          jobOfferService.getJobOffer(resolvedParams.id),
+          jobOfferService.getCandidates(resolvedParams.id)
+        ])
+
+        const jobOfferData: JobOffer = {
+          id: busquedaData.id,
+          titulo: busquedaData.titulo,
+          faseActual: busquedaData.faseActual || "Sin fase",
+          empresa: busquedaData.empresa || "",
+          ubicacion: busquedaData.ubicacion || "",
+          modalidad: busquedaData.modalidad || "",
+          fechaCreacion: busquedaData.fechaCreacion,
+          descripcion: busquedaData.descripcion || "",
+          beneficios: busquedaData.beneficios || [],
+          candidates: postulacionesData.map((p: PostulacionRequest) => ({
+            id: p.postulacion.id,
+            name: p.candidato.nombre,
+            lastName: p.candidato.apellido,
+            email: p.candidato.email,
+            phone: p.candidato.telefono,
+            countryCode: "+54",
+            dni: p.candidato.dni,
+            gender: p.candidato.genero || "No especificado",
+            nationality: p.candidato.nacionalidad,
+            residenceCountry: p.candidato.paisResidencia,
+            province: p.candidato.provincia,
+            address: p.candidato.direccion,
+            birthDate: p.candidato.fechaNacimiento,
+            age: calcularEdad(p.candidato.fechaNacimiento),
+            location: p.candidato.provincia,
+            cvUrl: p.candidato.cvUrl || "",
+            postulacion: {
+              id: p.postulacion.id,
+              fase: p.postulacion.fase || "Sin fase",
+              estado: p.postulacion.estado,
+              requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
+              notas: p.postulacion.notas || []
+            }
+          }))
+        }
+
+        setJobOffer(jobOfferData)
+
+        toast({
+          title: "Proceso finalizado",
+          description: "El proceso ha sido finalizado correctamente.",
+        })
+
+        setIsFeedbackModalOpen(false)
+        setFeedback("")
+        setFinalizationReason("")
+        setSelectedCandidate(null)
+      } catch (error) {
+        console.error("Error completo:", error)
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "No se pudo finalizar el proceso.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -311,56 +431,58 @@ export default function JobOfferPage({ params }: PageProps) {
             onOpenJobDetails={handleOpenJobDetails}
           />
 
-          <div className="flex flex-1 gap-3 overflow-hidden">
-            {/* Lista de candidatos */}
-            <div
-              className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
-            >
-              <div className="mb-3 flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder="Búsqueda de candidatos"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
-                  />
-                </div>
-                <Select defaultValue="all" onValueChange={setFilterPhase}>
-                  <SelectTrigger className="w-[150px] h-8 text-xs">
-                    <SelectValue placeholder="Todos los..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los...</SelectItem>
-                    <SelectItem value="Pendiente de confirmación">Pendiente de confirmación</SelectItem>
-                    <SelectItem value="CV recibido">CV recibido</SelectItem>
-                    <SelectItem value="Entrevista agendada">Entrevista agendada</SelectItem>
-                    <SelectItem value="Proceso finalizado">Proceso finalizado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <div className="flex flex-1 gap-3 overflow-hidden">
+        {/* Lista de candidatos */}
+        <div
+          className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
+        >
+          <div className="mb-3 flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Búsqueda de candidatos"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
+              />
+            </div>
+            <Select defaultValue="all" onValueChange={setFilterPhase}>
+              <SelectTrigger className="w-[150px] h-8 text-xs">
+                <SelectValue placeholder="Todos los..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los...</SelectItem>
+                <SelectItem value="Pendiente de confirmación">Pendiente de confirmación</SelectItem>
+                <SelectItem value="CV recibido">CV recibido</SelectItem>
+                <SelectItem value="Entrevista agendada">Entrevista agendada</SelectItem>
+                <SelectItem value="Proceso finalizado">Proceso finalizado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2">
-                {filteredCandidates.map((candidate) => (
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {filteredCandidates.map((candidate) => (
                   <CandidateCard
-                    key={candidate.id}
+                key={candidate.id}
                     candidate={candidate}
                     isSelected={selectedCandidate?.id === candidate.id}
                     onClick={setSelectedCandidate}
                   />
-                ))}
-              </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            {/* Panel de detalles del candidato */}
-            {selectedCandidate && (
+        {/* Panel de detalles del candidato */}
+        {selectedCandidate && (
               <CandidateDetails
                 candidate={selectedCandidate}
                 onClose={() => setSelectedCandidate(null)}
                 onOpenInterviewModal={() => setIsInterviewModalOpen(true)}
                 onOpenFeedbackModal={handleEndProcess}
                 onPhaseChange={handlePhaseChange}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
               />
             )}
           </div>
@@ -376,6 +498,51 @@ export default function JobOfferPage({ params }: PageProps) {
           onConfirm={handleConfirmInterview}
         />
       )}
+
+      {/* Modal para finalizar proceso */}
+      <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Finalizar proceso de {selectedCandidate?.name} {selectedCandidate?.lastName}
+            </DialogTitle>
+            <DialogDescription>
+              Por favor, ingrese su feedback y el motivo de finalización del proceso.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Motivo de finalización</label>
+              <Input
+                placeholder="Ingrese el motivo de finalización..."
+                value={finalizationReason}
+                onChange={(e) => setFinalizationReason(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Feedback</label>
+              <Textarea
+                placeholder="Ingrese su feedback sobre el candidato..."
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setIsFeedbackModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleFinishProcess} 
+              disabled={!feedback.trim() || !finalizationReason.trim()} 
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Finalizar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
