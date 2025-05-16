@@ -1,5 +1,4 @@
 import { Search } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Candidate } from "@/types/job-offer"
 import { CandidateCard } from "./candidate-card"
 
@@ -8,8 +7,6 @@ interface CandidatesListProps {
   selectedCandidate: Candidate | null
   searchQuery: string
   setSearchQuery: (query: string) => void
-  filterPhase: string
-  setFilterPhase: (phase: string) => void
   onCandidateClick: (candidate: Candidate) => void
   isCollapsed: boolean
 }
@@ -19,16 +16,13 @@ export function CandidatesList({
   selectedCandidate,
   searchQuery,
   setSearchQuery,
-  filterPhase,
-  setFilterPhase,
   onCandidateClick,
   isCollapsed
 }: CandidatesListProps) {
   // Filtrar candidatos que no estén finalizados (case insensitive)
   const activeCandidates = candidates.filter(candidate => {
-    const fase = candidate.postulacion.fase?.toUpperCase() || ""
     const estado = candidate.postulacion.estado?.toUpperCase() || ""
-    return fase !== "FINALIZADA" && estado !== "FINALIZADA"
+    return estado !== "FINALIZADA"
   })
 
   return (
@@ -46,17 +40,6 @@ export function CandidatesList({
             className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
           />
         </div>
-        <Select defaultValue="all" onValueChange={setFilterPhase}>
-          <SelectTrigger className="w-[150px] h-8 text-xs">
-            <SelectValue placeholder="Todos los..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los...</SelectItem>
-            <SelectItem value="Pendiente de confirmación">Pendiente de confirmación</SelectItem>
-            <SelectItem value="CV recibido">CV recibido</SelectItem>
-            <SelectItem value="Entrevista agendada">Entrevista agendada</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2">

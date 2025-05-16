@@ -19,7 +19,6 @@ interface CandidateDetailsProps {
   onClose: () => void;
   onOpenInterviewModal: () => void;
   onOpenFeedbackModal: () => void;
-  onPhaseChange: (newPhase: string) => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
@@ -29,7 +28,6 @@ export function CandidateDetails({
   onClose,
   onOpenInterviewModal,
   onOpenFeedbackModal,
-  onPhaseChange,
   activeTab,
   setActiveTab
 }: CandidateDetailsProps) {
@@ -249,14 +247,6 @@ export function CandidateDetails({
 
       <div className="mt-4 border-t pt-4"></div>
 
-      {/* Fase actual */}
-      <div className="flex justify-between items-center mb-3">
-        <div className="text-sm text-gray-500">Fase actual:</div>
-        <div className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-          {candidate.postulacion.fase}
-        </div>
-      </div>
-
       {/* Alerta de requisitos excluyentes */}
       {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 && (
         <div className="mt-4 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -279,32 +269,14 @@ export function CandidateDetails({
       )}
 
       {/* Acciones */}
-      <div className="flex flex-col sm:flex-row gap-2 mt-4">
-        <Select 
-          defaultValue={candidate.postulacion.fase}
-          onValueChange={onPhaseChange}
-        >
-          <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
-            <SelectValue placeholder="Cambiar fase" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Sin fase">Sin fase</SelectItem>
-            <SelectItem value="Entrevista inicial">Entrevista inicial</SelectItem>
-            <SelectItem value="Entrevista técnica">Entrevista técnica</SelectItem>
-            <SelectItem value="Entrevista final">Entrevista final</SelectItem>
-            <SelectItem value="Oferta">Oferta</SelectItem>
-            <SelectItem value="Contratado">Contratado</SelectItem>
-            <SelectItem value="Rechazado">Rechazado</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button className="h-9 text-xs bg-green-600 hover:bg-green-700" onClick={onOpenInterviewModal}>
+      <div className="flex flex-col sm:flex-row gap-2 mt-4 justify-center">
+        <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
           <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
         </Button>
 
         <Button 
           variant="destructive" 
-          className="h-9 text-xs" 
+          className="h-9 text-xs w-full sm:w-48" 
           onClick={onOpenFeedbackModal}
         >
           Finalizar proceso

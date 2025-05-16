@@ -2,22 +2,21 @@ export interface Candidate {
   id: string
   name: string
   lastName: string
-  age: number
-  gender: string
-  location: string
   email: string
   phone: string
   countryCode: string
   dni: string
-  birthDate: string
+  gender: string
   nationality: string
   residenceCountry: string
   province: string
   address: string
+  birthDate: string
+  age: number
+  location: string
   cvUrl: string
   postulacion: {
     id: string
-    fase: string
     estado?: string
     requisitosExcluyentes?: string[]
     notas?: {
@@ -32,15 +31,13 @@ export interface Candidate {
     fechaProgramada: string
     horaProgramada: string
     estado: string
-    linkEntrevista?: string
-    postulacionId?: string
+    linkEntrevista: string
   }
 }
 
 export interface PostulacionRequest {
   postulacion: {
     id: string
-    fase: string
     estado?: string
     requisitosExcluyentes?: string[]
     notas?: {
@@ -70,7 +67,6 @@ export interface PostulacionRequest {
 export interface JobOffer {
   id: string
   titulo: string
-  faseActual: string
   empresa: string
   ubicacion: string
   modalidad: string

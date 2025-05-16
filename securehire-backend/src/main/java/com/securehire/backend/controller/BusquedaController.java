@@ -9,12 +9,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
-import java.util.NoSuchElementException;    
+import java.util.NoSuchElementException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Date;
-import org.springframework.http.HttpStatus;    
+import org.springframework.http.HttpStatus;
 import com.securehire.backend.exception.UnauthorizedException;
+
 @RestController
 @RequestMapping("/api/busquedas")
 public class BusquedaController {
@@ -22,7 +23,6 @@ public class BusquedaController {
     @Autowired
     private BusquedaService busquedaService;
 
-    //(FUNCIONA)
     @PostMapping
     public ResponseEntity<Busqueda> crearBusqueda(
             @RequestBody Busqueda busqueda,
@@ -32,7 +32,7 @@ public class BusquedaController {
         busqueda.setUsuarioId(usuarioId);
         return ResponseEntity.ok(busquedaService.crearBusqueda(busqueda));
     }
-    // Obtiene las busquedas del usuario paginadas (FUNCIONA)
+
     @GetMapping
     public ResponseEntity<Page<Busqueda>> obtenerBusquedasDelUsuarioPaginadas(
             @AuthenticationPrincipal Usuario usuario,
@@ -50,59 +50,34 @@ public class BusquedaController {
         );
     }
 
-    
-
-
     @GetMapping("/{id}")
     public ResponseEntity<Busqueda> obtenerBusqueda(
             @PathVariable String id,
             @AuthenticationPrincipal Usuario usuario
     ) {
         Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
-    
+
         if (busquedaOpt.isPresent()) {
             Busqueda busqueda = busquedaOpt.get();
             if (busqueda.getUsuarioId().equals(usuario.getId())) {
                 return ResponseEntity.ok(busqueda);
             } else {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // No es suya
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
         } else {
             return ResponseEntity.notFound().build();
         }
     }
-    
-    
-    // lo mismo que el de arriba pero sin paginacion
-    // @GetMapping("/mis-busquedas")
-    // public ResponseEntity<List<Busqueda>> obtenerBusquedasDelUsuario(
-    //         @AuthenticationPrincipal Usuario usuario,
-    //         @RequestParam(required = false) Boolean archivada
-    // ) {
-    //     String usuarioId = usuario.getId();
-    //     List<Busqueda> busquedas;
-    
-    //     if (archivada != null) {
-    //         busquedas = busquedaService.obtenerBusquedasPorUsuarioYArchivada(usuarioId, archivada);
-    //     } else {
-    //         busquedas = busquedaService.obtenerBusquedasPorUsuario(usuarioId);
-    //     }
-    
-    //     return ResponseEntity.ok(busquedas);
-    // }
-    
 
-    //(FUNCIONA)
-   @GetMapping("/buscar")
-public ResponseEntity<List<Busqueda>> buscarPorTitulo(
-        @RequestParam String titulo,
-        @AuthenticationPrincipal Usuario usuario
-) {
-    List<Busqueda> resultados = busquedaService.buscarPorTituloYUsuario(titulo, usuario.getId());
-    return ResponseEntity.ok(resultados);
-}
+    @GetMapping("/buscar")
+    public ResponseEntity<List<Busqueda>> buscarPorTitulo(
+            @RequestParam String titulo,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        List<Busqueda> resultados = busquedaService.buscarPorTituloYUsuario(titulo, usuario.getId());
+        return ResponseEntity.ok(resultados);
+    }
 
-    //(FUNCIONA)
     @PutMapping("/{id}")
     public ResponseEntity<Busqueda> actualizarBusqueda(
             @PathVariable String id,
@@ -115,7 +90,6 @@ public ResponseEntity<List<Busqueda>> buscarPorTitulo(
         return ResponseEntity.ok(busquedaService.actualizarBusqueda(busqueda));
     }
 
-    //(FUNCIONA)
     @PatchMapping("/{id}/archivar")
     public ResponseEntity<Busqueda> cambiarEstadoArchivado(
             @PathVariable String id,
@@ -131,7 +105,6 @@ public ResponseEntity<List<Busqueda>> buscarPorTitulo(
         }
     }
 
-    //(FUNCIONA)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarBusqueda(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
         try {
@@ -144,5 +117,54 @@ public ResponseEntity<List<Busqueda>> buscarPorTitulo(
         }
     }
 
+    // // NUEVO: Agregar una fase a la búsqueda
+    // @PatchMapping("/{id}/agregar-fase")
+    // public ResponseEntity<?> agregarFase(
+    //         @PathVariable String id,
+    //         @RequestParam String nuevaFase,
+    //         @AuthenticationPrincipal Usuario usuario
+    // ) {
+    //     Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
 
+    //     if (busquedaOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+    //     Busqueda busqueda = busquedaOpt.get();
+    //     if (!busqueda.getUsuarioId().equals(usuario.getId())) {
+    //         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    //     }
+
+    //     if (busqueda.getFases() == null) {
+    //         busqueda.setFases(new java.util.ArrayList<>());
+    //     }
+
+    //     if (!busqueda.getFases().contains(nuevaFase)) {
+    //         busqueda.getFases().add(nuevaFase);
+    //         busquedaService.actualizarBusqueda(busqueda);
+    //     }
+
+    //     return ResponseEntity.ok(busqueda);
+    // }
+
+    // // NUEVO: Eliminar una fase de la búsqueda
+    // @PatchMapping("/{id}/eliminar-fase")
+    // public ResponseEntity<?> eliminarFase(
+    //         @PathVariable String id,
+    //         @RequestParam String faseAEliminar,
+    //         @AuthenticationPrincipal Usuario usuario
+    // ) {
+    //     Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
+
+    //     if (busquedaOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+    //     Busqueda busqueda = busquedaOpt.get();
+    //     if (!busqueda.getUsuarioId().equals(usuario.getId())) {
+    //         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    //     }
+
+    //     if (busqueda.getFases() != null && busqueda.getFases().remove(faseAEliminar)) {
+    //         busquedaService.actualizarBusqueda(busqueda);
+    //     }
+
+    //     return ResponseEntity.ok(busqueda);
+    // }
 }

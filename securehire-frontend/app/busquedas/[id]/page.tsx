@@ -42,7 +42,6 @@ export default function JobOfferPage({ params }: PageProps) {
   const [jobOffer, setJobOffer] = useState<JobOffer | null>(null)
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterPhase, setFilterPhase] = useState("all")
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true)
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false)
   const [entrevistas, setEntrevistas] = useState<EntrevistaConCandidato[]>([])
@@ -70,7 +69,6 @@ export default function JobOfferPage({ params }: PageProps) {
         const jobOfferData: JobOffer = {
           id: busquedaData.id,
           titulo: busquedaData.titulo,
-          faseActual: busquedaData.faseActual || "Sin fase",
           empresa: busquedaData.empresa || "",
           ubicacion: busquedaData.ubicacion || "",
           modalidad: busquedaData.modalidad || "",
@@ -103,7 +101,6 @@ export default function JobOfferPage({ params }: PageProps) {
               cvUrl: p.candidato.cvUrl || "",
               postulacion: {
                 id: p.postulacion.id,
-                fase: p.postulacion.fase || "Sin fase",
                 estado: p.postulacion.estado,
                 requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
                 notas: p.postulacion.notas || []
@@ -271,7 +268,6 @@ export default function JobOfferPage({ params }: PageProps) {
         const jobOfferData: JobOffer = {
           id: busquedaData.id,
           titulo: busquedaData.titulo,
-          faseActual: busquedaData.faseActual || "Sin fase",
           empresa: busquedaData.empresa || "",
           ubicacion: busquedaData.ubicacion || "",
           modalidad: busquedaData.modalidad || "",
@@ -297,7 +293,6 @@ export default function JobOfferPage({ params }: PageProps) {
             cvUrl: p.candidato.cvUrl || "",
             postulacion: {
               id: p.postulacion.id,
-              fase: p.postulacion.fase || "Sin fase",
               estado: p.postulacion.estado,
               requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
               notas: p.postulacion.notas || []
@@ -411,8 +406,7 @@ export default function JobOfferPage({ params }: PageProps) {
   const filteredCandidates = jobOffer?.candidates.filter(candidate => {
     const nameMatch = candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                      candidate.lastName.toLowerCase().includes(searchQuery.toLowerCase())
-    const phaseMatch = filterPhase === "all" || candidate.postulacion.fase === filterPhase
-    return nameMatch && phaseMatch
+    return nameMatch
   }) || []
 
   if (!jobOffer) {
@@ -426,61 +420,47 @@ export default function JobOfferPage({ params }: PageProps) {
         <div className="container mx-auto p-4">
           <JobOfferHeader
             title={jobOffer.titulo}
-            phase={jobOffer.faseActual}
             onBack={handleBack}
             onOpenJobDetails={handleOpenJobDetails}
           />
 
-      <div className="flex flex-1 gap-3 overflow-hidden">
-        {/* Lista de candidatos */}
-        <div
-          className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
-        >
-          <div className="mb-3 flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Búsqueda de candidatos"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
-              />
-            </div>
-            <Select defaultValue="all" onValueChange={setFilterPhase}>
-              <SelectTrigger className="w-[150px] h-8 text-xs">
-                <SelectValue placeholder="Todos los..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los...</SelectItem>
-                <SelectItem value="Pendiente de confirmación">Pendiente de confirmación</SelectItem>
-                <SelectItem value="CV recibido">CV recibido</SelectItem>
-                <SelectItem value="Entrevista agendada">Entrevista agendada</SelectItem>
-                <SelectItem value="Proceso finalizado">Proceso finalizado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="flex flex-1 gap-3 overflow-hidden">
+            {/* Lista de candidatos */}
+            <div
+              className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
+            >
+              <div className="mb-3 flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Búsqueda de candidatos"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
+                  />
+                </div>
+              </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {filteredCandidates.map((candidate) => (
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {filteredCandidates.map((candidate) => (
                   <CandidateCard
-                key={candidate.id}
+                    key={candidate.id}
                     candidate={candidate}
                     isSelected={selectedCandidate?.id === candidate.id}
                     onClick={setSelectedCandidate}
                   />
-            ))}
-          </div>
-        </div>
+                ))}
+              </div>
+            </div>
 
-        {/* Panel de detalles del candidato */}
-        {selectedCandidate && (
+            {/* Panel de detalles del candidato */}
+            {selectedCandidate && (
               <CandidateDetails
                 candidate={selectedCandidate}
                 onClose={() => setSelectedCandidate(null)}
                 onOpenInterviewModal={() => setIsInterviewModalOpen(true)}
                 onOpenFeedbackModal={handleEndProcess}
-                onPhaseChange={handlePhaseChange}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
               />

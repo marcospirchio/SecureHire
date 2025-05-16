@@ -66,10 +66,6 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
           <span className="text-gray-500">Localidad:</span>
           <span>{candidate.location}</span>
         </div>
-        <div className="flex gap-1">
-          <span className="text-gray-500">Fase:</span>
-          <span className="font-medium">{candidate.postulacion.fase}</span>
-        </div>
       </div>
     </div>
   )

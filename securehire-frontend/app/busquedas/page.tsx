@@ -3,25 +3,32 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Plus, Search } from "lucide-react"
+import { ArrowLeft, Plus, Search, Archive, ArchiveRestore } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardLayout } from "@/components/dashboard/layout"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { toast } from "@/components/ui/use-toast"
 
 interface JobOffer {
   id: string
   title: string
-  phase: string
   createdAt: string
   candidates: number
+  archivada: boolean
 }
 
 interface BusquedaData {
   id: string
   titulo: string
-  faseActual?: string
   fechaCreacion: string
+  archivada: boolean
 }
 
 interface Postulacion {
@@ -52,6 +59,7 @@ export default function BusquedasPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("recent")
+  const [showArchived, setShowArchived] = useState(false)
   const [jobOffers, setJobOffers] = useState<JobOffer[]>([])
 
   useEffect(() => {
@@ -72,9 +80,9 @@ export default function BusquedasPage() {
         const offers: JobOffer[] = (Array.isArray(busquedasData.content) ? busquedasData.content : busquedasData).map((b: BusquedaData) => ({
           id: b.id,
           title: b.titulo,
-          phase: b.faseActual || "Sin fase",
           createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
           candidates: conteoMap.get(b.id) || 0,
+          archivada: b.archivada || false
         }))
 
         setJobOffers(offers)
@@ -94,7 +102,45 @@ export default function BusquedasPage() {
     setSortBy(value)
   }
 
-  const filteredOffers = jobOffers.filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  const handleArchiveToggle = async (id: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/busquedas/${id}/archivar?archivar=${!currentStatus}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        credentials: "include"
+      })
+
+      if (!response.ok) throw new Error("Error al actualizar el estado de archivo")
+
+      // Actualizar el estado local
+      setJobOffers(prev => prev.map(offer => 
+        offer.id === id 
+          ? { ...offer, archivada: !currentStatus }
+          : offer
+      ))
+
+      toast({
+        title: currentStatus ? "Búsqueda desarchivada" : "Búsqueda archivada",
+        description: currentStatus 
+          ? "La búsqueda ha sido desarchivada correctamente."
+          : "La búsqueda ha sido archivada correctamente.",
+      })
+    } catch (error) {
+      console.error("Error al archivar/desarchivar búsqueda:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado de la búsqueda.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const filteredOffers = jobOffers
+    .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((offer) => offer.archivada === showArchived)
 
   const sortedOffers = [...filteredOffers].sort((a, b) => {
     if (sortBy === "recent") {
@@ -177,6 +223,23 @@ export default function BusquedasPage() {
             </div>
 
             <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setShowArchived(!showArchived)}
+            >
+              {showArchived ? (
+                <>
+                  <ArchiveRestore className="mr-1 h-3 w-3" /> Ver activas
+                </>
+              ) : (
+                <>
+                  <Archive className="mr-1 h-3 w-3" /> Ver archivadas
+                </>
+              )}
+            </Button>
+
+            <Button
               size="sm"
               className="bg-[#111827] hover:bg-gray-800 text-white ml-auto sm:ml-0 h-7 text-xs"
               onClick={handleNewJobOffer}
@@ -188,26 +251,47 @@ export default function BusquedasPage() {
 
         <div className="mt-6"></div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {sortedOffers.map((offer) => (
             <div
               key={offer.id}
-              className="rounded-lg border bg-white p-3 hover:shadow-sm transition-shadow cursor-pointer"
+              className="rounded-lg border bg-white p-5 hover:shadow-sm transition-shadow cursor-pointer relative group min-h-[160px] flex flex-col"
               onClick={() => handleJobOfferClick(offer.id)}
             >
-              <h3 className="text-sm font-bold mb-2">{offer.title}</h3>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Fase actual:</span>
-                  <span className="font-medium text-blue-600">{offer.phase}</span>
-                </div>
-                <div className="flex justify-between">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-3 right-3 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleArchiveToggle(offer.id, offer.archivada)
+                      }}
+                    >
+                      {offer.archivada ? (
+                        <ArchiveRestore className="h-3 w-3" />
+                      ) : (
+                        <Archive className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{offer.archivada ? "Desarchivar búsqueda" : "Archivar búsqueda"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <h2 className="text-xl font-bold mb-6 pr-10 line-clamp-2">{offer.title}</h2>
+              <div className="space-y-5 text-sm mt-auto">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-500">Candidatos:</span>
                   <span className={`font-medium ${offer.candidates > 0 ? "text-green-600" : ""}`}>
                     {offer.candidates}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-500">Creada el:</span>
                   <span className="font-medium">{offer.createdAt}</span>
                 </div>
