@@ -1,6 +1,7 @@
 package com.securehire.backend.service;
 
 import com.securehire.backend.model.Comentario;
+import com.securehire.backend.model.Usuario;
 import com.securehire.backend.repository.ComentarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,19 @@ public class ComentarioService {
     @Autowired
     private ComentarioRepository comentarioRepository;
 
+    @Autowired
+    private UsuarioService usuarioService;
+
     public Comentario crearComentario(Comentario comentario) {
-        comentario.setFecha(new Date());  // ⬅️ Setea la fecha actual
+        comentario.setFecha(new Date());
+        
+        // Obtener información del reclutador
+        usuarioService.obtenerUsuarioPorId(comentario.getUsuarioId())
+            .ifPresent(reclutador -> {
+                comentario.setNombreReclutador(reclutador.getNombre() + " " + reclutador.getApellido());
+                comentario.setEmpresaReclutador(reclutador.getEmpresa());
+            });
+        
         return comentarioRepository.save(comentario);
     }
     

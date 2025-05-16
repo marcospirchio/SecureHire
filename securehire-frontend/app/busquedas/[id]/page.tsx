@@ -103,6 +103,7 @@ export default function JobOfferPage({ params }: PageProps) {
               cvUrl: p.candidato.cvUrl || "",
               postulacion: {
                 id: p.postulacion.id,
+                candidatoId: p.candidato.id,
                 estado: p.postulacion.estado,
                 requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
                 notas: p.postulacion.notas || []
@@ -297,6 +298,7 @@ export default function JobOfferPage({ params }: PageProps) {
             cvUrl: p.candidato.cvUrl || "",
             postulacion: {
               id: p.postulacion.id,
+              candidatoId: p.candidato.id,
               estado: p.postulacion.estado,
               requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
               notas: p.postulacion.notas || []
@@ -455,7 +457,7 @@ export default function JobOfferPage({ params }: PageProps) {
                     isSelected={selectedCandidate?.id === candidate.id}
                     onClick={setSelectedCandidate}
                   />
-                ))}
+            ))}
           </div>
         </div>
 

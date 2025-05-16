@@ -65,7 +65,6 @@ public class ComentarioController {
     public ResponseEntity<List<Comentario>> obtenerComentariosPorCandidato(@PathVariable String candidatoId) {
         return ResponseEntity.ok(comentarioService.obtenerComentariosPorCandidato(candidatoId));
     }
-
     @PutMapping("/{id}")
     public ResponseEntity<Comentario> actualizarComentario(
             @PathVariable String id,
@@ -85,11 +84,11 @@ public class ComentarioController {
         }
     
         existente.setTexto(actualizado.getTexto());
-        existente.setPuntaje(actualizado.getPuntaje());
         existente.setFecha(new Date()); // 🔄 actualiza fecha al momento de edición
     
         return ResponseEntity.ok(comentarioService.actualizarComentario(existente));
     }
+    
     
     
     

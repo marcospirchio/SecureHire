@@ -23,4 +23,6 @@ public class Comentario {
     private String texto;
     private int puntaje;
     private Date fecha;
+    private String nombreReclutador;
+    private String empresaReclutador;
 }

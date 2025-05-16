@@ -17,6 +17,7 @@ export interface Candidate {
   cvUrl: string
   postulacion: {
     id: string
+    candidatoId: string
     estado?: string
     requisitosExcluyentes?: string[]
     notas?: {

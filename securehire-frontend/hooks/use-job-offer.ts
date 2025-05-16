@@ -81,6 +81,7 @@ export function useJobOffer(id: string) {
                 cvUrl: p.candidato.cvUrl || "",
                 postulacion: {
                   id: p.postulacion.id,
+                  candidatoId: p.candidato.id,
                   requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
                   notas: p.postulacion.notas || []
                 },
