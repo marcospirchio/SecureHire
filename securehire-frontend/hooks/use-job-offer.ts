@@ -45,14 +45,15 @@ export function useJobOffer(id: string) {
         // Convertir los datos al formato esperado por el componente
         const jobOfferData: JobOffer = {
           id: busquedaData.id,
-          title: busquedaData.titulo,
-          phase: busquedaData.faseActual || "Sin fase",
-          company: busquedaData.empresa || "",
-          location: busquedaData.ubicacion || "",
-          workMode: busquedaData.modalidad || "",
-          publishedDate: new Date(busquedaData.fechaCreacion).toLocaleDateString("es-AR"),
-          description: busquedaData.descripcion || "",
-          benefits: busquedaData.beneficios || [],
+          titulo: busquedaData.titulo,
+          empresa: busquedaData.empresa || "No especificada",
+          ubicacion: busquedaData.ubicacion || "No especificada",
+          modalidad: busquedaData.modalidad || "No especificada",
+          tipoContrato: busquedaData.tipoContrato || "No especificado",
+          salario: busquedaData.salario || "No especificado",
+          fechaCreacion: new Date(busquedaData.fechaCreacion).toLocaleDateString("es-AR"),
+          descripcion: busquedaData.descripcion || "",
+          beneficios: busquedaData.beneficios || [],
           candidates: postulacionesData
             .filter(p => p.candidato && p.postulacion)
             .map(p => {
@@ -77,10 +78,9 @@ export function useJobOffer(id: string) {
                 residenceCountry: p.candidato.paisResidencia,
                 province: p.candidato.provincia,
                 address: p.candidato.direccion,
-                cvUrl: p.candidato.cvUrl,
+                cvUrl: p.candidato.cvUrl || "",
                 postulacion: {
                   id: p.postulacion.id,
-                  fase: p.postulacion.fase || "Sin fase",
                   requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
                   notas: p.postulacion.notas || []
                 },
@@ -88,7 +88,8 @@ export function useJobOffer(id: string) {
                   id: entrevista.id,
                   fechaProgramada: entrevista.fechaProgramada,
                   horaProgramada: entrevista.horaProgramada,
-                  estado: entrevista.estado
+                  estado: entrevista.estado,
+                  linkEntrevista: entrevista.linkEntrevista || ""
                 } : undefined
               }
             })
@@ -106,4 +107,56 @@ export function useJobOffer(id: string) {
   }, [id])
 
   return { jobOffer, loading, error, setJobOffer }
+}
+
+export function usePublicJobOffer(id: string) {
+  const [jobOffer, setJobOffer] = useState<JobOffer | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('Fetching public job offer data for ID:', id)
+        
+        const response = await fetch(`http://localhost:8080/api/busquedas/${id}`, { 
+          credentials: "include",
+          headers: {
+            'Accept': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Error al obtener los datos de la oferta')
+        }
+
+        const busquedaData = await response.json()
+        
+        const jobOfferData: JobOffer = {
+          id: busquedaData.id,
+          titulo: busquedaData.titulo,
+          empresa: busquedaData.empresa || "No especificada",
+          ubicacion: busquedaData.ubicacion || "No especificada",
+          modalidad: busquedaData.modalidad || "No especificada",
+          tipoContrato: busquedaData.tipoContrato || "No especificado",
+          salario: busquedaData.salario || "No especificado",
+          fechaCreacion: new Date(busquedaData.fechaCreacion).toLocaleDateString("es-AR"),
+          descripcion: busquedaData.descripcion || "",
+          beneficios: busquedaData.beneficios || [],
+          candidates: []
+        }
+
+        setJobOffer(jobOfferData)
+      } catch (error) {
+        console.error("Error al cargar los datos:", error)
+        setError(error instanceof Error ? error.message : "Error desconocido")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [id])
+
+  return { jobOffer, loading, error }
 } 

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Candidate } from "@/types/job-offer";
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Feedback {
   id: string;
@@ -34,13 +35,13 @@ export function CandidateDetails({
   const [newNote, setNewNote] = useState("");
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchFeedbacks = async () => {
       if (activeTab === "feedbacks") {
         setLoading(true);
         try {
-          console.log("Fetching feedbacks for candidate:", candidate.id);
           const response = await fetch(`http://localhost:8080/api/comentarios/candidato/${candidate.id}`, {
             credentials: "include",
             headers: {
@@ -49,13 +50,12 @@ export function CandidateDetails({
           });
 
           if (!response.ok) {
-            throw new Error('Error al cargar los feedbacks');
+            throw new Error('Error al cargar los comentarios');
           }
 
           const data = await response.json();
-          console.log("Received feedbacks:", data);
           
-          // Asegurarse de que los datos tengan el formato correcto
+          // Formatear los comentarios recibidos
           const formattedFeedbacks = data.map((feedback: any) => ({
             id: feedback.id,
             texto: feedback.texto,
@@ -67,6 +67,11 @@ export function CandidateDetails({
           setFeedbacks(formattedFeedbacks);
         } catch (error) {
           console.error('Error fetching feedbacks:', error);
+          toast({
+            title: "Error",
+            description: "No se pudieron cargar los comentarios",
+            variant: "destructive",
+          });
         } finally {
           setLoading(false);
         }
@@ -74,7 +79,7 @@ export function CandidateDetails({
     };
 
     fetchFeedbacks();
-  }, [activeTab, candidate.id]);
+  }, [activeTab, candidate.id, toast]);
 
   const handleAddNote = () => {
     if (newNote.trim()) {
@@ -311,7 +316,7 @@ export function CandidateDetails({
         <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
-            <TabsTrigger value="feedbacks">Feedbacks</TabsTrigger>
+            <TabsTrigger value="feedbacks">Comentarios</TabsTrigger>
           </TabsList>
           
           <TabsContent value="notes" className="mt-4">
@@ -355,15 +360,16 @@ export function CandidateDetails({
           
           <TabsContent value="feedbacks" className="mt-4">
             <div className="bg-gray-50 p-4 rounded-md mb-4">
-              <h4 className="text-sm font-medium mb-2">¿Qué son los feedbacks?</h4>
+              <h4 className="text-sm font-medium mb-2">Comentarios del candidato</h4>
               <p className="text-xs text-gray-600">
-                Los feedbacks son evaluaciones formales que se registran al finalizar un proceso con un candidato. 
-                Estos quedan guardados en el sistema y pueden ser consultados por otros reclutadores en el futuro.
+                Aquí podrás ver todos los comentarios y feedbacks registrados para este candidato.
               </p>
             </div>
             
             {loading ? (
-              <p className="text-gray-500 text-sm">Cargando feedbacks...</p>
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
             ) : feedbacks.length > 0 ? (
               <div className="space-y-4">
                 {feedbacks.map((feedback) => (
@@ -379,17 +385,17 @@ export function CandidateDetails({
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No hay feedbacks disponibles.</p>
+              <p className="text-gray-500 text-sm text-center py-4">No hay comentarios disponibles.</p>
             )}
             
             {/* Botón para añadir feedback */}
             <Button 
               variant="outline" 
               size="sm" 
-              className="mt-4"
+              className="mt-4 w-full"
               onClick={onOpenFeedbackModal}
             >
-              Añadir feedback y finalizar proceso
+              Añadir comentario y finalizar proceso
             </Button>
           </TabsContent>
         </Tabs>

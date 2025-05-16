@@ -19,6 +19,11 @@ public class Busqueda {
     @Id
     private String id;
     private String titulo;
+    private String empresa;
+    private String ubicacion;
+    private String modalidad;
+    private String tipoContrato;
+    private String salario;
     private String descripcion;
     private List<CampoFormulario> camposPorDefecto;
     private List<CampoFormulario> camposAdicionales;

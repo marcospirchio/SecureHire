@@ -11,6 +11,12 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
   const hasInterview = candidate.entrevista && candidate.entrevista.fechaProgramada && candidate.entrevista.horaProgramada
   const isConfirmed = candidate.entrevista?.estado.toLowerCase() === "confirmada"
   const isPending = candidate.entrevista?.estado.toLowerCase() === "pendiente de confirmación"
+  const isActive = candidate.postulacion.estado?.toUpperCase() !== "FINALIZADA"
+
+  // Si el candidato está finalizado, no mostramos la tarjeta
+  if (!isActive) {
+    return null
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

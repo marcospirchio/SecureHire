@@ -70,6 +70,8 @@ export interface JobOffer {
   empresa: string
   ubicacion: string
   modalidad: string
+  tipoContrato: string
+  salario: string
   fechaCreacion: string
   descripcion: string
   beneficios: string[]

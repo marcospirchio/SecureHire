@@ -231,7 +231,10 @@ public class PostulacionService {
         List<ConteoPostulacionesDTO> resultado = new ArrayList<>();
     
         for (Busqueda b : busquedas) {
-            long cantidad = postulacionRepository.countByBusquedaId(b.getId());
+            List<Postulacion> postulaciones = postulacionRepository.findByBusquedaId(b.getId());
+            long cantidad = postulaciones.stream()
+                .filter(p -> !"FINALIZADA".equalsIgnoreCase(p.getEstado()))
+                .count();
             resultado.add(new ConteoPostulacionesDTO(b.getId(), cantidad));
         }
     

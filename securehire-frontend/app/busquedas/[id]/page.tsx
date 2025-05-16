@@ -72,6 +72,8 @@ export default function JobOfferPage({ params }: PageProps) {
           empresa: busquedaData.empresa || "",
           ubicacion: busquedaData.ubicacion || "",
           modalidad: busquedaData.modalidad || "",
+          tipoContrato: busquedaData.tipoContrato || "No especificado",
+          salario: busquedaData.salario || "No especificado",
           fechaCreacion: busquedaData.fechaCreacion,
           descripcion: busquedaData.descripcion || "",
           beneficios: busquedaData.beneficios || [],
@@ -88,7 +90,7 @@ export default function JobOfferPage({ params }: PageProps) {
               lastName: p.candidato.apellido,
               email: p.candidato.email,
               phone: p.candidato.telefono,
-              countryCode: "+54",
+        countryCode: "+54",
               dni: p.candidato.dni,
               gender: p.candidato.genero || "No especificado",
               nationality: p.candidato.nacionalidad,
@@ -271,6 +273,8 @@ export default function JobOfferPage({ params }: PageProps) {
           empresa: busquedaData.empresa || "",
           ubicacion: busquedaData.ubicacion || "",
           modalidad: busquedaData.modalidad || "",
+          tipoContrato: busquedaData.tipoContrato || "No especificado",
+          salario: busquedaData.salario || "No especificado",
           fechaCreacion: busquedaData.fechaCreacion,
           descripcion: busquedaData.descripcion || "",
           beneficios: busquedaData.beneficios || [],
@@ -364,7 +368,7 @@ export default function JobOfferPage({ params }: PageProps) {
       // Actualizar el estado local
       setJobOffer(prev => {
         if (!prev) return null
-        return {
+          return {
           ...prev,
           candidates: prev.candidates.map(c => 
             c.id === selectedCandidate.id 
@@ -422,40 +426,41 @@ export default function JobOfferPage({ params }: PageProps) {
             title={jobOffer.titulo}
             onBack={handleBack}
             onOpenJobDetails={handleOpenJobDetails}
+            busquedaId={resolvedParams.id}
           />
 
-          <div className="flex flex-1 gap-3 overflow-hidden">
-            {/* Lista de candidatos */}
-            <div
-              className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
-            >
-              <div className="mb-3 flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder="Búsqueda de candidatos"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
-                  />
-                </div>
-              </div>
+      <div className="flex flex-1 gap-3 overflow-hidden">
+        {/* Lista de candidatos */}
+        <div
+          className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
+        >
+          <div className="mb-3 flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Búsqueda de candidatos"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
+              />
+            </div>
+          </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2">
-                {filteredCandidates.map((candidate) => (
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {filteredCandidates.map((candidate) => (
                   <CandidateCard
-                    key={candidate.id}
+                key={candidate.id}
                     candidate={candidate}
                     isSelected={selectedCandidate?.id === candidate.id}
                     onClick={setSelectedCandidate}
                   />
                 ))}
-              </div>
-            </div>
+          </div>
+        </div>
 
-            {/* Panel de detalles del candidato */}
-            {selectedCandidate && (
+        {/* Panel de detalles del candidato */}
+        {selectedCandidate && (
               <CandidateDetails
                 candidate={selectedCandidate}
                 onClose={() => setSelectedCandidate(null)}
@@ -501,12 +506,12 @@ export default function JobOfferPage({ params }: PageProps) {
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Feedback</label>
-              <Textarea
-                placeholder="Ingrese su feedback sobre el candidato..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                className="min-h-[120px]"
-              />
+            <Textarea
+              placeholder="Ingrese su feedback sobre el candidato..."
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              className="min-h-[120px]"
+            />
             </div>
           </div>
           <div className="flex justify-between">

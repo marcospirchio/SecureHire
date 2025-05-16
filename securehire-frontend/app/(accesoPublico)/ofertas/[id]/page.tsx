@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, use } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,8 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Upload, CalendarIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { usePublicJobOffer } from "@/hooks/use-job-offer"
+import { TERMS_AND_CONDITIONS } from "@/constants/terms-and-conditions"
+import { toast } from "@/components/ui/use-toast"
 
-export default function OfertaPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: Promise<{
+    id: string
+  }>
+}
+
+export default function OfertaPage({ params }: PageProps) {
+  const resolvedParams = use(params)
+  const { jobOffer, loading, error } = usePublicJobOffer(resolvedParams.id)
+  
   // Estados para el formulario
   const [tab, setTab] = useState("datos")
   const [nombre, setNombre] = useState("")
@@ -30,31 +41,10 @@ export default function OfertaPage({ params }: { params: { id: string } }) {
   const [curriculum, setCurriculum] = useState<File | null>(null)
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [termsRead, setTermsRead] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
   const termsRef = useRef<HTMLDivElement>(null)
-
-  // Datos de ejemplo de la oferta (en una aplicación real, estos datos vendrían de una API)
-  const oferta = {
-    id: params.id,
-    titulo: "Desarrollador Frontend",
-    empresa: "SecureHire",
-    ubicacion: "Madrid, España",
-    modalidad: "Remoto",
-    fechaPublicacion: "15 de abril de 2025",
-    reclutador: "Carlos Rodríguez",
-    descripcion: `Buscamos un desarrollador frontend con experiencia en React y TypeScript para unirse a nuestro equipo. 
-    El candidato ideal tendrá experiencia en el desarrollo de aplicaciones web modernas y conocimientos de buenas prácticas de desarrollo.
-    
-    Además de los conocimientos técnicos, valoramos la capacidad de trabajar en equipo, la proactividad y la pasión por el desarrollo de software. Ofrecemos un ambiente de trabajo dinámico y desafiante, con oportunidades de crecimiento profesional y personal.`,
-    requisitos: [
-      "Experiencia mínima de 3 años en desarrollo frontend",
-      "Conocimientos sólidos de React, TypeScript y HTML/CSS",
-      "Experiencia con herramientas modernas de desarrollo web",
-      "Capacidad para trabajar en equipo y comunicarse efectivamente",
-    ],
-  }
 
   // Función para manejar el scroll en los términos y condiciones
   const handleTermsScroll = () => {
@@ -71,91 +61,102 @@ export default function OfertaPage({ params }: { params: { id: string } }) {
   // Función para manejar el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsSubmitting(true)
 
-    // Simulación de envío de datos a un servidor
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Crear el objeto de candidato
+      const candidato = {
+        nombre,
+        apellido,
+        dni: documento,
+        fechaNacimiento,
+        genero,
+        nacionalidad,
+        paisResidencia: pais,
+        provincia,
+        direccion,
+        email,
+        telefono: `${codigoPais}${telefono}`,
+        cvUrl: "", // Esto se manejará en el backend
+      }
 
-    setSuccess(true)
-    setLoading(false)
+      // Crear el objeto de postulación
+      const postulacion = {
+        busquedaId: resolvedParams.id,
+        estado: "PENDIENTE",
+        fase: "Nueva",
+        requisitosExcluyentes: [],
+        notas: []
+      }
+
+      // Crear el objeto de request
+      const postulacionRequest = {
+        candidato,
+        postulacion
+      }
+
+      // Enviar la postulación al backend
+      const response = await fetch("http://localhost:8080/api/postulaciones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify(postulacionRequest)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        throw new Error(errorData || "Error al enviar la postulación")
+      }
+
+      // Si todo salió bien, mostrar el mensaje de éxito
+      setSuccess(true)
+    } catch (error) {
+      console.error("Error al enviar la postulación:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al enviar la postulación",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  // Términos y condiciones
-  const termsAndConditions = `
-TÉRMINOS Y CONDICIONES DE USO
+  // Si está cargando, mostrar un indicador de carga
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 md:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    )
+  }
 
-Al acceder y utilizar esta plataforma, el usuario acepta quedar obligado por los presentes Términos y Condiciones, así como por todas las leyes y regulaciones aplicables en la República Argentina.
+  // Si hay un error, mostrarlo
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 md:p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+          Error al cargar la oferta: {error}
+        </div>
+      </div>
+    )
+  }
 
-1. DEFINICIONES
-
-Usuario: Persona física o jurídica que utiliza la plataforma, ya sea como candidato o reclutador.
-
-Candidato: Persona que se postula a ofertas laborales a través de la plataforma.
-
-Reclutador: Empresa o individuo que publica ofertas laborales y gestiona postulaciones.
-
-Plataforma: Sitio web, sistema y servicios digitales ofrecidos por la empresa proveedora del servicio.
-
-2. USO DE LA PLATAFORMA
-
-La plataforma tiene como finalidad facilitar procesos de selección de personal, permitiendo a los candidatos completar formularios, postularse a búsquedas laborales y recibir comunicaciones, y a los reclutadores gestionar postulaciones, registrar evaluaciones, y consultar historial de comportamiento laboral de los candidatos.
-
-3. PROTECCIÓN DE DATOS PERSONALES
-
-Conforme a la Ley N.º 25.326 de Protección de los Datos Personales, el usuario declara conocer y aceptar que:
-
-Sus datos personales serán tratados con confidencialidad y utilizados exclusivamente para los fines de reclutamiento y selección.
-
-Podrá ejercer en cualquier momento sus derechos de acceso, rectificación, actualización y supresión de sus datos.
-
-La plataforma implementará las medidas de seguridad adecuadas para evitar el acceso no autorizado, pérdida o alteración de la información almacenada.
-
-En caso de compartir información sensible (como CVs, identificaciones u opiniones sobre terceros), el usuario asume la responsabilidad del contenido y garantiza contar con el consentimiento correspondiente cuando aplique.
-
-4. DERECHOS DEL USUARIO
-
-De acuerdo con la Ley N.º 24.240 de Defensa del Consumidor, el usuario tiene derecho a:
-
-Recibir información clara, veraz y detallada sobre los servicios ofrecidos.
-
-Presentar consultas y reclamos ante los canales habilitados por la plataforma.
-
-Rescindir voluntariamente el uso de la plataforma, solicitar la baja de su cuenta y la eliminación de sus datos.
-
-5. RESPONSABILIDADES DEL USUARIO
-
-El usuario se compromete a:
-
-Proporcionar información veraz, completa y actualizada.
-
-Abstenerse de utilizar la plataforma para fines ilícitos, fraudulentos o que infrinjan derechos de terceros.
-
-No realizar conductas discriminatorias, ofensivas, falsas o que atenten contra la integridad de otras personas usuarias.
-
-No extraer, reutilizar ni redistribuir datos del sistema sin autorización expresa.
-
-6. RESPONSABILIDADES DE LA PLATAFORMA
-
-La plataforma:
-
-No garantiza que los candidatos resulten contratados, ni que las evaluaciones sean infalibles.
-
-No se responsabiliza por la veracidad de los datos ingresados por terceros.
-
-Se reserva el derecho de suspender o eliminar cuentas que incumplan con estos términos o infrinjan normativas vigentes.
-
-7. MODIFICACIONES
-
-La plataforma podrá modificar estos Términos y Condiciones en cualquier momento, notificando a los usuarios a través de sus medios habituales. La continuidad en el uso implicará la aceptación de las nuevas condiciones.
-
-8. JURISDICCIÓN
-
-Estos Términos se regirán e interpretarán conforme a las leyes de la República Argentina. Toda controversia será resuelta ante los tribunales ordinarios del domicilio legal de la empresa.
-
-9. CONSENTIMIENTO EXPRESO
-
-Al aceptar estos Términos y Condiciones, el usuario declara haber leído, entendido y aceptado todas las cláusulas aquí expuestas, autorizando expresamente el tratamiento de sus datos personales según la normativa vigente.
-  `
+  // Si no hay datos de la oferta, mostrar un mensaje
+  if (!jobOffer) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 md:p-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-600">
+          No se encontró la oferta solicitada
+        </div>
+      </div>
+    )
+  }
 
   // Si la postulación fue exitosa, mostrar mensaje de confirmación
   if (success) {
@@ -175,7 +176,7 @@ Al aceptar estos Términos y Condiciones, el usuario declara haber leído, enten
           </div>
           <h1 className="text-2xl font-bold mb-4">¡Postulación enviada con éxito!</h1>
           <p className="text-gray-600 mb-8">
-            Gracias por postularte al puesto de {oferta.titulo}. Hemos recibido tu información y la revisaremos a la
+            Gracias por postularte al puesto de {jobOffer.titulo}. Hemos recibido tu información y la revisaremos a la
             brevedad. Te contactaremos pronto con novedades sobre tu postulación.
           </p>
           <Button onClick={() => (window.location.href = "/")}>Volver al inicio</Button>
@@ -190,36 +191,43 @@ Al aceptar estos Términos y Condiciones, el usuario declara haber leído, enten
         {/* Información de la oferta */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h1 className="text-2xl font-bold mb-2">{oferta.titulo}</h1>
+            <h1 className="text-2xl font-bold mb-2">{jobOffer.titulo}</h1>
             <p className="text-gray-600 mb-4">
-              {oferta.empresa} • {oferta.ubicacion} ({oferta.modalidad})
+              {jobOffer.empresa} • {jobOffer.ubicacion} ({jobOffer.modalidad})
             </p>
 
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-700">Publicado el</p>
-              <p className="text-gray-600">{oferta.fechaPublicacion}</p>
+              <p className="text-sm font-medium text-gray-700">Tipo de contrato</p>
+              <p className="text-gray-600">{jobOffer.tipoContrato}</p>
             </div>
 
             <div className="mb-4">
-              <p className="text-sm font-medium text-gray-700">Reclutador</p>
-              <p className="text-gray-600">{oferta.reclutador}</p>
+              <p className="text-sm font-medium text-gray-700">Salario</p>
+              <p className="text-gray-600">{jobOffer.salario}</p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700">Publicado el</p>
+              <p className="text-gray-600">{jobOffer.fechaCreacion}</p>
             </div>
 
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Descripción del puesto</h2>
-              <p className="text-gray-600 whitespace-pre-line">{oferta.descripcion}</p>
+              <p className="text-gray-600 whitespace-pre-line">{jobOffer.descripcion}</p>
             </div>
 
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Requisitos</h2>
-              <ul className="list-disc pl-5 text-gray-600">
-                {oferta.requisitos.map((requisito, index) => (
-                  <li key={index} className="mb-1">
-                    {requisito}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {jobOffer.beneficios && jobOffer.beneficios.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Beneficios</h2>
+                <ul className="list-disc pl-5 text-gray-600">
+                  {jobOffer.beneficios.map((beneficio: string, index: number) => (
+                    <li key={index} className="mb-1">
+                      {beneficio}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
@@ -500,7 +508,7 @@ Al aceptar estos Términos y Condiciones, el usuario declara haber leído, enten
                       onScroll={handleTermsScroll}
                       className="border border-gray-300 rounded-md p-4 h-60 overflow-y-auto mb-3 text-sm text-gray-700 whitespace-pre-line"
                     >
-                      {termsAndConditions}
+                      {TERMS_AND_CONDITIONS}
                     </div>
 
                     {!termsRead && (
@@ -553,11 +561,11 @@ Al aceptar estos Términos y Condiciones, el usuario declara haber leído, enten
                         !telefono ||
                         !curriculum ||
                         !aceptaTerminos ||
-                        loading
+                        isSubmitting
                       }
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      {loading ? (
+                      {isSubmitting ? (
                         <>
                           <span className="animate-spin mr-2">⟳</span>
                           Enviando...

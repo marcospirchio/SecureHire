@@ -25,6 +25,12 @@ export function CandidatesList({
     return estado !== "FINALIZADA"
   })
 
+  // Filtrar por búsqueda
+  const filteredCandidates = activeCandidates.filter(candidate => {
+    const fullName = `${candidate.name} ${candidate.lastName}`.toLowerCase()
+    return fullName.includes(searchQuery.toLowerCase())
+  })
+
   return (
     <div
       className={`flex flex-col ${isCollapsed ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
@@ -43,7 +49,7 @@ export function CandidatesList({
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2">
-        {activeCandidates.map((candidate) => (
+        {filteredCandidates.map((candidate) => (
           <CandidateCard
             key={candidate.id}
             candidate={candidate}

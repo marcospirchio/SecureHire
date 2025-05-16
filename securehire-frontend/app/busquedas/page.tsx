@@ -73,26 +73,37 @@ export default function BusquedasPage() {
         if (!busquedasRes.ok || !conteoRes.ok) throw new Error("Error al obtener datos")
 
         const busquedasData = await busquedasRes.json()
-        const conteoData: { busquedaId: string; cantidad: number }[] = await conteoRes.json()
+        const conteoData: { busquedaId: string; cantidad: number; estado: string }[] = await conteoRes.json()
 
-        const conteoMap = new Map(conteoData.map(c => [c.busquedaId, c.cantidad]))
+        // Filtrar solo las postulaciones activas (no finalizadas)
+        const conteoActivos = conteoData.reduce((acc, curr) => {
+          if (curr.estado?.toUpperCase() !== "FINALIZADA") {
+            acc[curr.busquedaId] = (acc[curr.busquedaId] || 0) + curr.cantidad
+          }
+          return acc
+        }, {} as Record<string, number>)
 
         const offers: JobOffer[] = (Array.isArray(busquedasData.content) ? busquedasData.content : busquedasData).map((b: BusquedaData) => ({
           id: b.id,
           title: b.titulo,
           createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
-          candidates: conteoMap.get(b.id) || 0,
+          candidates: conteoActivos[b.id] || 0,
           archivada: b.archivada || false
         }))
 
         setJobOffers(offers)
       } catch (err) {
         console.error("Error al cargar búsquedas:", err)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las búsquedas. Por favor, intente nuevamente.",
+          variant: "destructive",
+        })
       }
     }
 
     fetchJobOffers()
-  }, [])
+  }, [toast])
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)

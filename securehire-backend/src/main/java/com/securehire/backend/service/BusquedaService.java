@@ -30,8 +30,26 @@ public class BusquedaService {
         busqueda.setFechaCreacion(new Date());
         busqueda.setArchivada(false);
     
+        // Debug logs
+        System.out.println("📝 Datos de la búsqueda a guardar:");
+        System.out.println("🔹 Título: " + busqueda.getTitulo());
+        System.out.println("🔹 Empresa: " + busqueda.getEmpresa());
+        System.out.println("🔹 Ubicación: " + busqueda.getUbicacion());
+        System.out.println("🔹 Modalidad: " + busqueda.getModalidad());
+        System.out.println("🔹 Tipo de contrato: " + busqueda.getTipoContrato());
+        System.out.println("🔹 Salario: " + busqueda.getSalario());
+    
         // 1. Guardar la búsqueda
         Busqueda guardada = busquedaRepository.save(busqueda);
+    
+        // Debug logs después de guardar
+        System.out.println("✅ Búsqueda guardada:");
+        System.out.println("🔹 ID: " + guardada.getId());
+        System.out.println("🔹 Empresa: " + guardada.getEmpresa());
+        System.out.println("🔹 Ubicación: " + guardada.getUbicacion());
+        System.out.println("🔹 Modalidad: " + guardada.getModalidad());
+        System.out.println("🔹 Tipo de contrato: " + guardada.getTipoContrato());
+        System.out.println("🔹 Salario: " + guardada.getSalario());
     
         // 2. Buscar el usuario
         Optional<Usuario> optUsuario = usuarioRepository.findById(guardada.getUsuarioId());

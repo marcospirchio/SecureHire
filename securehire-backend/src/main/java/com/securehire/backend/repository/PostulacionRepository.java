@@ -36,4 +36,9 @@ public interface PostulacionRepository extends MongoRepository<Postulacion, Stri
     List<org.bson.Document> contarPostulacionesPorBusqueda();
 
     int countByBusquedaId(String busquedaId);
+
+    long countByBusquedaIdAndEstadoNot(String busquedaId, String estado);
+
+
+    List<Postulacion> findByBusquedaIdAndEstadoNot(String busquedaId, String estado);
 }

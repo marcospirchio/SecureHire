@@ -73,6 +73,13 @@ export default function NuevaOfertaPage() {
     setBenefits(updatedBenefits)
   }
 
+  // Función para eliminar una pregunta
+  const handleRemovePregunta = (index: number) => {
+    const updated = [...preguntas];
+    updated.splice(index, 1);
+    setPreguntas(updated);
+  };
+
   // Manejar publicación de la oferta
   const handlePublish = async () => {
     // Armar camposPorDefecto
@@ -104,17 +111,24 @@ export default function NuevaOfertaPage() {
     ];
 
     // Armar el body
-    const camposAdicionales = preguntas.map(preg => ({
-      nombre: preg.texto,
-      tipo: preg.tipo === "radio" ? "select" : "checkbox",
-      esExcluyente: false,
-      opciones: preg.opciones.map(op => op.valor),
-      valoresExcluyentes: preg.opciones.filter(op => op.excluyente).map(op => op.valor),
-    }));
+    const camposAdicionales = preguntas
+      .filter(preg => preg.texto.trim() !== "") // Solo incluir preguntas con texto
+      .map(preg => ({
+        nombre: preg.texto,
+        tipo: preg.tipo === "radio" ? "select" : "checkbox",
+        esExcluyente: false,
+        opciones: preg.opciones.map(op => op.valor),
+        valoresExcluyentes: preg.opciones.filter(op => op.excluyente).map(op => op.valor),
+      }));
 
     const body = {
       titulo: jobTitle,
       descripcion: description,
+      empresa: company,
+      ubicacion: location,
+      modalidad: workMode,
+      tipoContrato: contractType,
+      salario: salary,
       camposPorDefecto,
       camposAdicionales,
       fases: phases,
@@ -308,7 +322,12 @@ export default function NuevaOfertaPage() {
                   Tipo de contrato:
                 </label>
                 <div className="relative">
-                  <select id="contractType" className="w-full p-3 border border-gray-200 rounded-lg appearance-none pr-10 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition">
+                  <select
+                    id="contractType"
+                    className="w-full p-3 border border-gray-200 rounded-lg appearance-none pr-10 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                    value={contractType}
+                    onChange={e => setContractType(e.target.value)}
+                  >
                     <option value="fullTime">Tiempo completo</option>
                     <option value="partTime">Tiempo parcial</option>
                     <option value="freelance">Freelance</option>
@@ -326,6 +345,8 @@ export default function NuevaOfertaPage() {
                   type="text"
                   placeholder="Competitivo (según experiencia)"
                   className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                  value={salary}
+                  onChange={e => setSalary(e.target.value)}
                 />
               </div>
             </section>
@@ -346,29 +367,39 @@ export default function NuevaOfertaPage() {
                   <div className="space-y-4">
                     {preguntas.map((preg, idx) => (
                       <div key={idx} className="space-y-4 border-b pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input
-                            type="text"
-                            placeholder="Escribe tu pregunta aquí"
-                            className="p-2 border rounded-md"
-                            value={preg.texto}
-                            onChange={e => handlePreguntaChange(idx, "texto", e.target.value)}
-                          />
-                          <div className="flex items-center gap-2 border rounded-md p-2">
-                            <Check className="h-5 w-5" />
-                            <span>
-                              {preg.tipo === "checkbox" ? "Casillas de verificación" : "Opción única"}
-                            </span>
-                            <select
-                              className="ml-auto border rounded-md p-1"
-                              value={preg.tipo}
-                              onChange={e => handlePreguntaChange(idx, "tipo", e.target.value)}
-                            >
-                              <option value="checkbox">Casillas de verificación</option>
-                              <option value="radio">Opción única</option>
-                            </select>
-                            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
+                        <div className="flex justify-between items-start">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                            <input
+                              type="text"
+                              placeholder="Escribe tu pregunta aquí"
+                              className="p-2 border rounded-md"
+                              value={preg.texto}
+                              onChange={e => handlePreguntaChange(idx, "texto", e.target.value)}
+                            />
+                            <div className="flex items-center gap-2 border rounded-md p-2">
+                              <Check className="h-5 w-5" />
+                              <span>
+                                {preg.tipo === "checkbox" ? "Casillas de verificación" : "Opción única"}
+                              </span>
+                              <select
+                                className="ml-auto border rounded-md p-1"
+                                value={preg.tipo}
+                                onChange={e => handlePreguntaChange(idx, "tipo", e.target.value)}
+                              >
+                                <option value="checkbox">Casillas de verificación</option>
+                                <option value="radio">Opción única</option>
+                              </select>
+                              <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
+                            </div>
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="ml-2 text-red-500 hover:text-red-700"
+                            onClick={() => handleRemovePregunta(idx)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
 
                         <div className="space-y-2">
