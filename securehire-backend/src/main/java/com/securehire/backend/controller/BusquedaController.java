@@ -34,21 +34,18 @@ public class BusquedaController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<Busqueda>> obtenerBusquedasDelUsuarioPaginadas(
-            @AuthenticationPrincipal Usuario usuario,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Boolean archivada,
-            @RequestParam(required = false) String titulo,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaHasta
-    ) {
-        return ResponseEntity.ok(
-            busquedaService.obtenerBusquedasPaginadasPorUsuario(
-                usuario.getId(), page, size, archivada, titulo, fechaDesde, fechaHasta
-            )
-        );
-    }
+    public ResponseEntity<List<Busqueda>> obtenerTodasLasBusquedasDelUsuario(
+        @AuthenticationPrincipal Usuario usuario,
+        @RequestParam(required = false) Boolean archivada,
+        @RequestParam(required = false) String titulo,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaDesde,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaHasta
+) {
+    List<Busqueda> resultado = busquedaService.obtenerBusquedasPorUsuario(
+        usuario.getId(), archivada, titulo, fechaDesde, fechaHasta
+    );
+    return ResponseEntity.ok(resultado);
+}
 
     @GetMapping("/{id}")
     public ResponseEntity<Busqueda> obtenerBusqueda(

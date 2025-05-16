@@ -85,8 +85,20 @@ public class BusquedaService {
         return busquedaRepository.findById(id);
     }
 
-    public List<Busqueda> obtenerBusquedasPorUsuario(String usuarioId) {
-        return busquedaRepository.findByUsuarioId(usuarioId);
+    public List<Busqueda> obtenerBusquedasPorUsuario(
+        String usuarioId, 
+        Boolean archivada, 
+        String titulo, 
+        Date fechaDesde, 
+        Date fechaHasta
+    ) {
+        return busquedaRepository.findByUsuarioId(usuarioId) // ya filtra internamente
+            .stream()
+            .filter(b -> archivada == null || b.isArchivada() == archivada)
+            .filter(b -> titulo == null || b.getTitulo().toLowerCase().contains(titulo.toLowerCase()))
+            .filter(b -> fechaDesde == null || (b.getFechaCreacion() != null && !b.getFechaCreacion().before(fechaDesde)))
+            .filter(b -> fechaHasta == null || (b.getFechaCreacion() != null && !b.getFechaCreacion().after(fechaHasta)))
+            .toList();
     }
 
     public List<Busqueda> obtenerBusquedasPorUsuarioYArchivada(String usuarioId, boolean archivada) {

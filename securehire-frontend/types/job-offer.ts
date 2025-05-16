@@ -65,6 +65,24 @@ export interface PostulacionRequest {
   }
 }
 
+export interface CampoAdicional {
+  nombre: string;
+  tipo: string;
+  esExcluyente: boolean;
+  opciones: string[];
+  valoresExcluyentes: string[];
+  obligatorio: boolean;
+}
+
+export interface CampoPorDefecto {
+  nombre: string;
+  tipo: string;
+  esExcluyente: boolean;
+  opciones: string[];
+  valoresExcluyentes: string[];
+  obligatorio: boolean;
+}
+
 export interface JobOffer {
   id: string
   titulo: string
@@ -77,6 +95,11 @@ export interface JobOffer {
   descripcion: string
   beneficios: string[]
   candidates: Candidate[]
+  camposAdicionales?: CampoAdicional[]
+  camposPorDefecto?: CampoPorDefecto[]
+  fases?: string[]
+  usuarioId?: string
+  archivada?: boolean
 }
 
 export interface TimeSlot {

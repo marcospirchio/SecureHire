@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react"
-import { JobOffer, PostulacionRequest } from "@/types/job-offer"
+import { Candidate, JobOffer, PostulacionRequest } from "@/types/job-offer"
 import { calcularEdad } from "@/utils/date-utils"
+
+interface CampoAdicional {
+  nombre: string;
+  tipo: string;
+  esExcluyente: boolean;
+  opciones: string[];
+  valoresExcluyentes: string[];
+  obligatorio: boolean;
+}
 
 export function useJobOffer(id: string) {
   const [jobOffer, setJobOffer] = useState<JobOffer | null>(null)
@@ -120,7 +129,8 @@ export function usePublicJobOffer(id: string) {
       try {
         console.log('Fetching public job offer data for ID:', id)
         
-        const response = await fetch(`http://localhost:8080/api/busquedas/${id}`, { 
+        // Obtener la búsqueda y sus postulaciones en una sola llamada
+        const response = await fetch(`http://localhost:8080/api/busquedas/${id}/completa`, { 
           credentials: "include",
           headers: {
             'Accept': 'application/json'
@@ -132,21 +142,52 @@ export function usePublicJobOffer(id: string) {
         }
 
         const busquedaData = await response.json()
+        console.log('Datos recibidos del backend:', busquedaData)
         
+        // Asegurarnos de que todos los campos estén presentes
         const jobOfferData: JobOffer = {
-          id: busquedaData.id,
-          titulo: busquedaData.titulo,
-          empresa: busquedaData.empresa || "No especificada",
-          ubicacion: busquedaData.ubicacion || "No especificada",
-          modalidad: busquedaData.modalidad || "No especificada",
-          tipoContrato: busquedaData.tipoContrato || "No especificado",
-          salario: busquedaData.salario || "No especificado",
+          id: busquedaData._id || busquedaData.id,
+          titulo: busquedaData.titulo || "",
+          empresa: busquedaData.empresa || "",
+          ubicacion: busquedaData.ubicacion || "",
+          modalidad: busquedaData.modalidad || "",
+          tipoContrato: busquedaData.tipoContrato || "",
+          salario: busquedaData.salario || "",
           fechaCreacion: new Date(busquedaData.fechaCreacion).toLocaleDateString("es-AR"),
           descripcion: busquedaData.descripcion || "",
           beneficios: busquedaData.beneficios || [],
-          candidates: []
+          candidates: busquedaData.postulaciones?.map((p: any) => ({
+            id: p.candidato.id,
+            name: p.candidato.nombre,
+            lastName: p.candidato.apellido,
+            email: p.candidato.email,
+            phone: p.candidato.telefono,
+            countryCode: "+54",
+            dni: p.candidato.dni,
+            gender: p.candidato.genero || "No especificado",
+            nationality: p.candidato.nacionalidad,
+            residenceCountry: p.candidato.paisResidencia,
+            province: p.candidato.provincia,
+            address: p.candidato.direccion,
+            birthDate: new Date(p.candidato.fechaNacimiento).toLocaleDateString("es-AR"),
+            age: calcularEdad(p.candidato.fechaNacimiento),
+            location: p.candidato.provincia,
+            cvUrl: p.candidato.cvUrl || "",
+            postulacion: {
+              id: p.id,
+              candidatoId: p.candidato.id,
+              requisitosExcluyentes: p.requisitosExcluyentes || [],
+              notas: p.notas || []
+            }
+          })) || [],
+          camposAdicionales: busquedaData.camposAdicionales || [],
+          camposPorDefecto: busquedaData.camposPorDefecto || [],
+          fases: busquedaData.fases || [],
+          usuarioId: busquedaData.usuarioId || "",
+          archivada: busquedaData.archivada || false
         }
 
+        console.log('Datos procesados:', jobOfferData)
         setJobOffer(jobOfferData)
       } catch (error) {
         console.error("Error al cargar los datos:", error)

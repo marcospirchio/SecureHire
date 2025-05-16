@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Plus, Search, Archive, ArchiveRestore } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -61,10 +61,14 @@ export default function BusquedasPage() {
   const [sortBy, setSortBy] = useState("recent")
   const [showArchived, setShowArchived] = useState(false)
   const [jobOffers, setJobOffers] = useState<JobOffer[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 9
 
   useEffect(() => {
     const fetchJobOffers = async () => {
       try {
+        console.log('Iniciando fetchJobOffers...')
+        
         const [busquedasRes, conteoRes] = await Promise.all([
           fetch("http://localhost:8080/api/busquedas", { credentials: "include" }),
           fetch("http://localhost:8080/api/postulaciones/conteo-por-busqueda", { credentials: "include" }),
@@ -75,6 +79,12 @@ export default function BusquedasPage() {
         const busquedasData = await busquedasRes.json()
         const conteoData: { busquedaId: string; cantidad: number; estado: string }[] = await conteoRes.json()
 
+        console.log('=== DATOS DEL BACKEND ===')
+        console.log('Busquedas recibidas:')
+        console.table(busquedasData)
+        console.log('Conteo de postulaciones:')
+        console.table(conteoData)
+
         // Filtrar solo las postulaciones activas (no finalizadas)
         const conteoActivos = conteoData.reduce((acc, curr) => {
           if (curr.estado?.toUpperCase() !== "FINALIZADA") {
@@ -83,15 +93,35 @@ export default function BusquedasPage() {
           return acc
         }, {} as Record<string, number>)
 
-        const offers: JobOffer[] = (Array.isArray(busquedasData.content) ? busquedasData.content : busquedasData).map((b: BusquedaData) => ({
-          id: b.id,
-          title: b.titulo,
+        console.log('=== CONTEOS ACTIVOS ===')
+        console.table(conteoActivos)
+
+        // Asegurarnos de que busquedasData sea un array
+        const busquedasArray = Array.isArray(busquedasData) ? busquedasData : 
+                             Array.isArray(busquedasData.content) ? busquedasData.content : 
+                             [busquedasData]
+
+        console.log('=== BÚSQUEDAS PROCESADAS ===')
+        console.table(busquedasArray.map((b: { _id?: string; id?: string; titulo: string; fechaCreacion: string; usuarioId: string }) => ({
+          id: b._id || b.id,
+          titulo: b.titulo,
+          fechaCreacion: b.fechaCreacion,
+          usuarioId: b.usuarioId
+        })))
+
+        const offers: JobOffer[] = busquedasArray.map((b: any) => ({
+          id: b._id || b.id,
+          title: b.titulo || "",
           createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
-          candidates: conteoActivos[b.id] || 0,
+          candidates: conteoActivos[b._id || b.id] || 0,
           archivada: b.archivada || false
         }))
 
+        console.log('=== OFERTAS FINALES ===')
+        console.table(offers)
         setJobOffers(offers)
+        // Resetear a la primera página cuando se cargan nuevos datos
+        setCurrentPage(1)
       } catch (err) {
         console.error("Error al cargar búsquedas:", err)
         toast({
@@ -149,20 +179,35 @@ export default function BusquedasPage() {
     }
   }
 
-  const filteredOffers = jobOffers
-    .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    .filter((offer) => offer.archivada === showArchived)
+  // Aplicar filtros y ordenamiento
+  const filteredOffers = useMemo(() => {
+    return jobOffers
+      .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter((offer) => offer.archivada === showArchived)
+      .sort((a, b) => {
+        if (sortBy === "recent") {
+          const dateA = a.createdAt.split("/").reverse().join("")
+          const dateB = b.createdAt.split("/").reverse().join("")
+          return dateB.localeCompare(dateA)
+        } else if (sortBy === "candidates") {
+          return b.candidates - a.candidates
+        }
+        return 0
+      })
+  }, [jobOffers, searchQuery, showArchived, sortBy])
 
-  const sortedOffers = [...filteredOffers].sort((a, b) => {
-    if (sortBy === "recent") {
-      const dateA = a.createdAt.split("/").reverse().join("")
-      const dateB = b.createdAt.split("/").reverse().join("")
-      return dateB.localeCompare(dateA)
-    } else if (sortBy === "candidates") {
-      return b.candidates - a.candidates
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredOffers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentOffers = filteredOffers.slice(startIndex, endIndex)
+
+  // Asegurarse de que la página actual sea válida
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages)
     }
-    return 0
-  })
+  }, [currentPage, totalPages])
 
   const handleJobOfferClick = async (id: string) => {
     try {
@@ -192,6 +237,11 @@ export default function BusquedasPage() {
 
   const handleNewJobOffer = () => {
     router.push("/busquedas/nueva-oferta")
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
@@ -263,7 +313,7 @@ export default function BusquedasPage() {
         <div className="mt-6"></div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {sortedOffers.map((offer) => (
+          {currentOffers.map((offer) => (
             <div
               key={offer.id}
               className="rounded-lg border bg-white p-5 hover:shadow-sm transition-shadow cursor-pointer relative group min-h-[160px] flex flex-col"
@@ -310,6 +360,50 @@ export default function BusquedasPage() {
             </div>
           ))}
         </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(page)}
+                  className="w-8 h-8"
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+            </Button>
+          </div>
+        )}
+
+        {/* Mensaje cuando no hay resultados */}
+        {filteredOffers.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No se encontraron búsquedas que coincidan con los criterios seleccionados.
+          </div>
+        )}
       </DashboardLayout>
     </Sidebar>
   )

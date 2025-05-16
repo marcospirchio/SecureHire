@@ -43,6 +43,7 @@ export default function OfertaPage({ params }: PageProps) {
   const [termsRead, setTermsRead] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [respuestasAdicionales, setRespuestasAdicionales] = useState<Record<string, string | string[]>>({})
 
   const termsRef = useRef<HTMLDivElement>(null)
 
@@ -55,6 +56,91 @@ export default function OfertaPage({ params }: PageProps) {
 
     if (isAtBottom && !termsRead) {
       setTermsRead(true)
+    }
+  }
+
+  const handleRespuestaChange = (campo: string, valor: string | string[]) => {
+    setRespuestasAdicionales(prev => ({
+      ...prev,
+      [campo]: valor
+    }))
+  }
+
+  const renderCampoAdicional = (campo: any) => {
+    switch (campo.tipo) {
+      case 'select':
+        return (
+          <div key={campo.nombre} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {campo.nombre} {campo.obligatorio && <span className="text-red-500">*</span>}
+            </label>
+            <Select
+              value={respuestasAdicionales[campo.nombre] as string || ""}
+              onValueChange={(value) => handleRespuestaChange(campo.nombre, value)}
+              required={campo.obligatorio}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={`Seleccione una opción`} />
+              </SelectTrigger>
+              <SelectContent>
+                {campo.opciones.map((opcion: string) => (
+                  <SelectItem key={opcion} value={opcion}>
+                    {opcion}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )
+
+      case 'checkbox':
+        return (
+          <div key={campo.nombre} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {campo.nombre} {campo.obligatorio && <span className="text-red-500">*</span>}
+            </label>
+            <div className="space-y-2">
+              {campo.opciones.map((opcion: string) => (
+                <div key={opcion} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${campo.nombre}-${opcion}`}
+                    checked={(respuestasAdicionales[campo.nombre] as string[] || []).includes(opcion)}
+                    onCheckedChange={(checked) => {
+                      const currentValues = respuestasAdicionales[campo.nombre] as string[] || []
+                      const newValues = checked
+                        ? [...currentValues, opcion]
+                        : currentValues.filter(v => v !== opcion)
+                      handleRespuestaChange(campo.nombre, newValues)
+                    }}
+                  />
+                  <label
+                    htmlFor={`${campo.nombre}-${opcion}`}
+                    className="text-sm text-gray-700"
+                  >
+                    {opcion}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+
+      case 'texto':
+        return (
+          <div key={campo.nombre} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {campo.nombre} {campo.obligatorio && <span className="text-red-500">*</span>}
+            </label>
+            <Input
+              value={respuestasAdicionales[campo.nombre] as string || ""}
+              onChange={(e) => handleRespuestaChange(campo.nombre, e.target.value)}
+              required={campo.obligatorio}
+            />
+          </div>
+        )
+
+      default:
+        return null
     }
   }
 
@@ -489,7 +575,7 @@ export default function OfertaPage({ params }: PageProps) {
                           <>
                             <span className="text-gray-700 font-medium">Seleccionar archivo</span>
                             <span className="text-gray-500 text-sm mt-1">
-                              Formatos permitidos: PDF, DOC, DOCX. Tamaño máximo: 5MB
+                              Único formato permitido: PDF Tamaño máximo: 5MB
                             </span>
                           </>
                         )}
@@ -579,13 +665,37 @@ export default function OfertaPage({ params }: PageProps) {
               </TabsContent>
 
               <TabsContent value="preguntas" className="pt-4">
-                <div className="p-8 text-center">
-                  <h3 className="text-lg font-medium mb-2">Preguntas específicas</h3>
-                  <p className="text-gray-600 mb-4">Esta oferta no tiene preguntas específicas adicionales.</p>
-                  <Button onClick={() => setTab("datos")} variant="outline">
-                    Volver a datos personales
-                  </Button>
-                </div>
+                <form onSubmit={handleSubmit}>
+                  <div className="space-y-4">
+                    {jobOffer?.camposAdicionales && jobOffer.camposAdicionales.length > 0 ? (
+                      jobOffer.camposAdicionales.map(campo => renderCampoAdicional(campo))
+                    ) : (
+                      <div className="p-8 text-center">
+                        <h3 className="text-lg font-medium mb-2">Preguntas específicas</h3>
+                        <p className="text-gray-600 mb-4">Esta oferta no tiene preguntas específicas adicionales.</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between mt-6">
+                    <Button onClick={() => setTab("datos")} variant="outline">
+                      Volver a datos personales
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span className="animate-spin mr-2">⟳</span>
+                          Enviando...
+                        </>
+                      ) : (
+                        "Enviar postulación"
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </TabsContent>
             </Tabs>
           </div>
