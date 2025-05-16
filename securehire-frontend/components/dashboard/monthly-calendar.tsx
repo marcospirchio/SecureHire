@@ -77,19 +77,19 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
             {dayEvents.map((event, idx) => {
               console.log('Renderizando evento:', event) // Debug log
               return (
-                <div
-                  key={idx}
+              <div
+                key={idx}
                   className={`rounded-md p-1 mb-1 text-xs cursor-pointer ${
                     event.estado === "Pendiente de confirmación" 
                       ? "bg-amber-100 text-amber-900 hover:bg-amber-200" 
                       : "bg-green-100 text-green-900 hover:bg-green-200"
                   }`}
-                  onClick={() => onEventClick?.(event)}
-                >
+                onClick={() => onEventClick?.(event)}
+              >
                   <div className="font-medium truncate">{event.time} - {event.title}</div>
-                  {event.person && <div className="text-xs truncate">{event.person}</div>}
+                {event.person && <div className="text-xs truncate">{event.person}</div>}
                   {event.jobTitle && <div className="text-[11px] text-gray-600">{event.jobTitle}</div>}
-                </div>
+              </div>
               )
             })}
           </div>

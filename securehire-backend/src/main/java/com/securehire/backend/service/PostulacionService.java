@@ -244,4 +244,62 @@ public class PostulacionService {
     public List<Postulacion> obtenerPorBusqueda(String busquedaId) {
         return postulacionRepository.findByBusquedaId(busquedaId);
     }
+
+    public Postulacion agregarAnotacionPrivada(String postulacionId, String usuarioId, String comentario) {
+        Postulacion p = postulacionRepository.findById(postulacionId)
+            .orElseThrow(() -> new IllegalArgumentException("Postulación no encontrada"));
+    
+        if (p.getAnotacionesPrivadas() == null) {
+            p.setAnotacionesPrivadas(new ArrayList<>());
+        }
+    
+        Postulacion.AnotacionPrivada anotacion = Postulacion.AnotacionPrivada.builder()
+            .usuarioId(usuarioId)
+            .comentario(comentario)
+            .fecha(new Date())
+            .build();
+    
+        p.getAnotacionesPrivadas().add(anotacion);
+        return postulacionRepository.save(p);
+    }
+    
+    public Postulacion editarAnotacionPrivada(String postulacionId, int indice, String usuarioId, String nuevoComentario) {
+        Postulacion p = postulacionRepository.findById(postulacionId)
+                .orElseThrow(() -> new IllegalArgumentException("Postulación no encontrada"));
+    
+        if (p.getAnotacionesPrivadas() == null || indice < 0 || indice >= p.getAnotacionesPrivadas().size()) {
+            throw new IllegalArgumentException("Índice de anotación inválido");
+        }
+    
+        Postulacion.AnotacionPrivada anotacion = p.getAnotacionesPrivadas().get(indice);
+    
+        if (!anotacion.getUsuarioId().equals(usuarioId)) {
+            throw new IllegalArgumentException("No tenés permiso para editar esta anotación");
+        }
+    
+        anotacion.setComentario(nuevoComentario);
+        anotacion.setFecha(new Date()); // opcional: actualizar fecha de edición
+    
+        return postulacionRepository.save(p);
+    }
+    
+    
+    public Postulacion eliminarAnotacionPrivada(String postulacionId, String usuarioId, int index) {
+        Postulacion p = postulacionRepository.findById(postulacionId)
+            .orElseThrow(() -> new IllegalArgumentException("Postulación no encontrada"));
+    
+        if (index < 0 || index >= p.getAnotacionesPrivadas().size()) {
+            throw new IllegalArgumentException("Índice inválido");
+        }
+    
+        Postulacion.AnotacionPrivada anotacion = p.getAnotacionesPrivadas().get(index);
+        if (!anotacion.getUsuarioId().equals(usuarioId)) {
+            throw new IllegalArgumentException("No puedes eliminar anotaciones de otros usuarios");
+        }
+    
+        p.getAnotacionesPrivadas().remove(index);
+        return postulacionRepository.save(p);
+    }
+    
+
 }

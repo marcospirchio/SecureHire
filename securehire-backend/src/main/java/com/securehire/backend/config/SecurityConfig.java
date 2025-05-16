@@ -36,14 +36,19 @@ public class SecurityConfig {
                 // Público: autenticación y documentación
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/api-docs/**").permitAll()
 
-                // Público: creación de candidatos y postulaciones desde la web
+                // Público: creación de candidatos y postulaciones desde la web (solo raíz)
                 .requestMatchers(HttpMethod.POST, "/api/candidatos").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/asociar-candidato").permitAll()
 
-                // ✅ Público: confirmación o reprogramación de entrevista por link
+                // Público: confirmación o reprogramación de entrevista por link
                 .requestMatchers(HttpMethod.PATCH, "/api/entrevistas/confirmar/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/entrevistas/reprogramar/**").permitAll()
+
+                // Protegido: cualquier acción debajo de /api/postulaciones requiere token
+                .requestMatchers(HttpMethod.POST, "/api/postulaciones/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/postulaciones/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/postulaciones/**").authenticated()
 
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
@@ -59,7 +64,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // frontend
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

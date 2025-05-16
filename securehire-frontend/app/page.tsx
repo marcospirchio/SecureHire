@@ -199,7 +199,7 @@ export default function DashboardReclutamiento() {
             ))}
           </div>
         ) : (
-          <JobListings listings={jobListings} />
+        <JobListings listings={jobListings} />
         )}
 
         <Dialog open={isEventDetailsModalOpen} onOpenChange={setIsEventDetailsModalOpen}>

@@ -237,7 +237,7 @@ export default function CalendarioPage() {
           const createdEvent = await response.json()
           setEventos([...eventos, createdEvent])
           setIsNewEventModalOpen(false)
-        }
+  }
       } catch (error) {
         console.error('Error al crear evento:', error)
       }
@@ -255,8 +255,8 @@ export default function CalendarioPage() {
 
       if (response.ok) {
         setEventos(eventos.filter(e => e.id !== selectedEvent.id))
-        setIsEventDetailsModalOpen(false)
-      }
+      setIsEventDetailsModalOpen(false)
+    }
     } catch (error) {
       console.error('Error al eliminar evento:', error)
     }
@@ -477,20 +477,20 @@ export default function CalendarioPage() {
                 )}
                 {selectedEvent?.tipo === "entrevista" && (
                   <>
-                    <div className="flex items-start gap-3">
-                      <User className="h-6 w-6 text-gray-400 mt-1" />
-                      <div>
-                        <p className="text-gray-500 font-medium">Candidato</p>
+                <div className="flex items-start gap-3">
+                  <User className="h-6 w-6 text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-gray-500 font-medium">Candidato</p>
                         <p className="text-gray-700">{selectedEvent?.candidateName || selectedEvent?.person}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Briefcase className="h-6 w-6 text-gray-400 mt-1" />
-                      <div>
-                        <p className="text-gray-500 font-medium">Búsqueda</p>
-                        <p className="text-gray-700">{selectedEvent?.jobTitle}</p>
-                      </div>
-                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Briefcase className="h-6 w-6 text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-gray-500 font-medium">Búsqueda</p>
+                    <p className="text-gray-700">{selectedEvent?.jobTitle}</p>
+                  </div>
+                </div>
                   </>
                 )}
               </div>
@@ -504,13 +504,13 @@ export default function CalendarioPage() {
                     Eliminar evento
                   </Button>
                 ) : (
-                  <Button
-                    variant="destructive"
-                    className="bg-red-500 hover:bg-red-600 border-2 border-red-600"
-                    onClick={handleCancelInterview}
-                  >
-                    Cancelar entrevista
-                  </Button>
+                <Button
+                  variant="destructive"
+                  className="bg-red-500 hover:bg-red-600 border-2 border-red-600"
+                  onClick={handleCancelInterview}
+                >
+                  Cancelar entrevista
+                </Button>
                 )}
                 <Button variant="outline" onClick={() => setIsEventDetailsModalOpen(false)}>
                   Cerrar
@@ -522,4 +522,4 @@ export default function CalendarioPage() {
       </DashboardLayout>
     </Sidebar>
   )
-} 
+}

@@ -152,12 +152,7 @@ export function CandidateDetails({
     }
   }, [candidate.id])
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      alert("Nota añadida: " + newNote)
-      setNewNote("")
-    }
-  }
+  
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -246,154 +241,269 @@ export function CandidateDetails({
     }
   };
 
+// Estado para anotaciones privadas
+const [anotaciones, setAnotaciones] = useState<{ content: string; fecha?: string | null }[]>([])
+const [loadingNotas, setLoadingNotas] = useState(false)
+const [editingIndex, setEditingIndex] = useState<number | null>(null)
+
+// Función para obtener anotaciones privadas
+const fetchAnotaciones = async () => {
+  setLoadingNotas(true)
+  try {
+    const res = await fetch(`http://localhost:8080/api/postulaciones/anotaciones/postulacion/${candidate.postulacion.id}`, {
+      credentials: "include"
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const anotacionesFormateadas = data.map((a: any) => ({
+        content: a.comentario,
+        fecha: a.fecha || null
+      }))
+      setAnotaciones(anotacionesFormateadas)
+    }
+  } catch (error) {
+    console.error("Error al obtener anotaciones privadas:", error)
+  } finally {
+    setLoadingNotas(false)
+  }
+}
+
+// Cargar anotaciones al montar o cambiar postulación
+useEffect(() => {
+  if (candidate?.postulacion?.id) {
+    fetchAnotaciones()
+  }
+}, [candidate?.postulacion?.id])
+
+// Agregar anotación privada
+const handleAddNote = async () => {
+  if (!newNote.trim()) return
+  try {
+    const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ comentario: newNote })
+    })
+    if (!res.ok) throw new Error("No se pudo guardar la anotación")
+    setNewNote("")
+    await fetchAnotaciones()
+  } catch (error) {
+    console.error("Error al agregar anotación:", error)
+  }
+}
+
+// Editar anotación privada
+const handleEditNote = async (index: number) => {
+  if (!editText.trim()) return
+  try {
+    const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(editText)
+    })
+    if (!res.ok) throw new Error("No se pudo editar la anotación")
+    setEditingIndex(null)
+    setEditText("")
+    await fetchAnotaciones()
+  } catch (error) {
+    console.error("Error al editar anotación:", error)
+  }
+}
+
+// Eliminar anotación privada
+const handleDeleteNote = async (index: number) => {
+  try {
+    const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    })
+    if (!res.ok) throw new Error("No se pudo eliminar la anotación")
+    await fetchAnotaciones()
+  } catch (error) {
+    console.error("Error al eliminar anotación:", error)
+  }
+}
+
+// Mostrar anotaciones privadas solo en la pestaña 'notes'
+const anotacionesOrdenadas = [...anotaciones]
+  .map((a, idx) => ({ ...a, idx }))
+  .sort((a, b) => {
+    // Si tienes la fecha como string ISO, puedes comparar así:
+    if (a.fecha && b.fecha) {
+      return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+    }
+    return 0;
+  });
+
   return (
-    <div className="w-1/2 bg-white rounded-lg border p-3 overflow-y-auto relative">
+    <div className="w-1/2 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
       <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
         <X className="h-4 w-4" />
       </button>
+      <div className="flex-1 overflow-y-auto pr-2">
+        <h2 className="text-xl font-bold mb-4">{candidate.name} {candidate.lastName}</h2>
 
-      <h2 className="text-xl font-bold mb-4">{candidate.name} {candidate.lastName}</h2>
+        <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+          <p><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
+          <p><strong>Email:</strong> {candidate.email}</p>
+          <p><strong>DNI:</strong> {candidate.dni}</p>
+          <p><strong>Género:</strong> {candidate.gender}</p>
+          <p><strong>Nacionalidad:</strong> {candidate.nationality}</p>
+          <p><strong>Dirección:</strong> {candidate.address}, {candidate.province}, {candidate.residenceCountry}</p>
+        </div>
 
-      <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-        <p><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
-        <p><strong>Email:</strong> {candidate.email}</p>
-        <p><strong>DNI:</strong> {candidate.dni}</p>
-        <p><strong>Género:</strong> {candidate.gender}</p>
-        <p><strong>Nacionalidad:</strong> {candidate.nationality}</p>
-        <p><strong>Dirección:</strong> {candidate.address}, {candidate.province}, {candidate.residenceCountry}</p>
-      </div>
-
-      {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 && (
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">
-                El candidato no cumple con el/los siguientes requisitos excluyentes:
-              </p>
-              <ul className="mt-2 ml-5 list-disc">
-                {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
-                  <li key={i} className="text-sm text-amber-700">{req}</li>
-                ))}
-              </ul>
+        {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  El candidato no cumple con el/los siguientes requisitos excluyentes:
+                </p>
+                <ul className="mt-2 ml-5 list-disc">
+                  {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
+                    <li key={i} className="text-sm text-amber-700">{req}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
+        )}
+
+        <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+          <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
+            <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
+          </Button>
+          <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
+            Finalizar proceso
+          </Button>
         </div>
-      )}
 
-      <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
-        <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
-          <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
-        </Button>
-        <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
-          Finalizar proceso
-        </Button>
-      </div>
-
-      <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Button className="h-8 text-xs flex items-center gap-1 mb-4 w-full" variant="outline">
-          <FileText className="h-3 w-3" /> Ver CV Completo
-        </Button>
-        <div className="bg-gray-50 p-3 rounded-md">
-          <h4 className="text-xs font-medium text-gray-700 mb-2">Resumen del CV</h4>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Profesional con 5 años de experiencia en desarrollo de software. Especializado en tecnologías frontend como React y TypeScript. Experiencia en proyectos de e-commerce y aplicaciones financieras. Graduado en Ingeniería Informática. Certificaciones en React Advanced y TypeScript. Inglés nivel avanzado. Disponibilidad inmediata.
-          </p>
+        <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Button className="h-8 text-xs flex items-center gap-1 mb-4 w-full" variant="outline">
+            <FileText className="h-3 w-3" /> Ver CV Completo
+          </Button>
+          <div className="bg-gray-50 p-3 rounded-md">
+            <h4 className="text-xs font-medium text-gray-700 mb-2">Resumen del CV</h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Profesional con 5 años de experiencia en desarrollo de software. Especializado en tecnologías frontend como React y TypeScript. Experiencia en proyectos de e-commerce y aplicaciones financieras. Graduado en Ingeniería Informática. Certificaciones en React Advanced y TypeScript. Inglés nivel avanzado. Disponibilidad inmediata.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4 pt-4 border-t">
-        <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
-            <TabsTrigger value="feedbacks">Historial de comentarios</TabsTrigger>
-          </TabsList>
+        <div className="mt-4 pt-4 border-t">
+          <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
+              <TabsTrigger value="feedbacks">Historial de comentarios</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="notes" className="mt-4">
-            <Textarea
-              placeholder="Añadir una nueva nota..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              className="min-h-[80px] text-sm"
-            />
-            <div className="flex justify-end mt-2">
-              <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
-                Guardar nota
-              </Button>
-            </div>
-            {candidate.postulacion.notas?.length ? (
-              <div className="space-y-4 mt-4">
-                {candidate.postulacion.notas.map((note, i) => (
-                  <div key={i} className="border-b pb-4">
-                    <div className="font-medium">Nota #{i + 1}</div>
-                    <p className="text-sm">{note.content || "Sin contenido"}</p>
-                  </div>
-                ))}
+            <TabsContent value="notes" className="mt-4">
+              <div className="mb-4">
+                <Textarea
+                  placeholder="Añadir una nueva nota..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="min-h-[80px] text-base"
+                />
+                <div className="flex justify-end mt-2">
+                  <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
+                    Guardar nota
+                  </Button>
+                </div>
               </div>
-            ) : (
-              <p className="text-gray-500 text-sm">No hay anotaciones disponibles.</p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="feedbacks" className="mt-4">
-            <div className="bg-gray-50 p-4 rounded-md mb-4">
-              <h4 className="text-sm font-medium mb-2">Historial de comentarios</h4>
-              <p className="text-xs text-gray-600">
-                Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores.
-              </p>
-            </div>
-            {loading ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              </div>
-            ) : feedbacks.length > 0 ? (
               <div className="space-y-4">
-                {feedbacks.map((f) => (
-                  <div key={f.id} className="border-b pb-4">
-                    <div className="flex justify-between mb-2">
-                      <div className="font-medium">
-                        {f.nombreReclutador} - {f.empresaReclutador}
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-500 text-sm">
-                        {formatDate(f.fecha)}
-                        {currentUserId && f.usuarioId && currentUserId === f.usuarioId && (
-                          <>
-                            <button
-                              onClick={() => {
-                                console.log("Editando comentario:", f);
-                                setEditingFeedback(f);
-                                setEditText(f.texto);
-                              }}
-                              className="p-1 hover:text-blue-600 transition-colors"
-                              title="Editar comentario"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                console.log("Eliminando comentario:", f);
-                                handleDeleteFeedback(f.id);
-                              }}
-                              className="p-1 hover:text-red-600 transition-colors"
-                              title="Eliminar comentario"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
+                {anotacionesOrdenadas.length > 0 && anotacionesOrdenadas.map((note) => (
+                  <div key={note.idx} className="border rounded-lg p-4 bg-gray-50 flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-base font-medium text-gray-800">{note.content}</span>
+                      <div className="flex gap-2">
+                        <Pencil className="h-5 w-5 cursor-pointer text-gray-500 hover:text-blue-600" onClick={() => { setEditingIndex(note.idx); setEditText(note.content); }} />
+                        <Trash2 className="h-5 w-5 cursor-pointer text-gray-500 hover:text-red-600" onClick={() => handleDeleteNote(note.idx)} />
                       </div>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{f.texto}</p>
+                    {note.fecha && (
+                      <span className="text-xs text-gray-500">{formatDate(note.fecha)}</span>
+                    )}
+                    {editingIndex === note.idx && (
+                      <div className="flex flex-col gap-2 mt-2">
+                        <input
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          className="border rounded px-2 py-1 text-base"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" onClick={() => handleEditNote(note.idx)} disabled={!editText.trim()}>
+                            Guardar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-gray-500 text-sm text-center py-4">No hay comentarios disponibles.</p>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+            </TabsContent>
 
+            <TabsContent value="feedbacks" className="mt-4">
+              <div className="bg-gray-50 p-4 rounded-md mb-4">
+                <h4 className="text-sm font-medium mb-2">Historial de comentarios</h4>
+                <p className="text-xs text-gray-600">
+                  Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores.
+                </p>
+              </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : feedbacks.length > 0 ? (
+                <div className="space-y-4">
+                  {feedbacks.map((f) => (
+                    <div key={f.id} className="border-b pb-4">
+                      <div className="flex justify-between mb-2">
+                        <div className="font-medium">
+                          {f.nombreReclutador} - {f.empresaReclutador}
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-500 text-sm">
+                          {formatDate(f.fecha)}
+                          {currentUserId && f.usuarioId && currentUserId === f.usuarioId && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingFeedback(f);
+                                  setEditText(f.texto);
+                                }}
+                                className="p-1 hover:text-blue-600 transition-colors"
+                                title="Editar comentario"
+                              >
+                                <Pencil className="h-4 w-4 text-gray-500" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFeedback(f.id)}
+                                className="p-1 hover:text-red-600 transition-colors"
+                                title="Eliminar comentario"
+                              >
+                                <Trash2 className="h-4 w-4 text-gray-500" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{f.texto}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">No hay comentarios disponibles.</p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
       {/* Modal de edición */}
       <Dialog open={!!editingFeedback} onOpenChange={() => {
         setEditingFeedback(null);
@@ -436,3 +546,4 @@ export function CandidateDetails({
     </div>
   )
 }
+ 

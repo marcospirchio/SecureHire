@@ -1,5 +1,6 @@
 import { Calendar, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react'
 import { Candidate } from "@/types/job-offer"
+import { useState } from 'react'
 
 interface CandidateCardProps {
   candidate: Candidate

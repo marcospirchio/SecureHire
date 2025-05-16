@@ -2,6 +2,7 @@ package com.securehire.backend.controller;
 
 import com.securehire.backend.dto.ConteoPostulacionesDTO;
 import com.securehire.backend.dto.PostulacionRequest;
+import com.securehire.backend.dto.AnotacionPrivadaRequest;
 import com.securehire.backend.model.Postulacion;
 import com.securehire.backend.model.Postulacion.AnotacionPrivada;
 import com.securehire.backend.model.Usuario;
@@ -22,7 +23,7 @@ import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.repository.PostulacionRepository;
 import com.securehire.backend.model.Candidato;
-
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/postulaciones")
@@ -195,16 +196,100 @@ public class PostulacionController {
 
 
     @GetMapping("/busqueda/{busquedaId}/completas")
-public List<PostulacionRequest> obtenerPostulacionesCompletasPorBusqueda(@PathVariable String busquedaId) {
-    List<Postulacion> postulaciones = postulacionService.obtenerPorBusqueda(busquedaId);
+    public List<PostulacionRequest> obtenerPostulacionesCompletasPorBusqueda(@PathVariable String busquedaId) {
+        List<Postulacion> postulaciones = postulacionService.obtenerPorBusqueda(busquedaId);
 
-    return postulaciones.stream().map(p -> {
-        Candidato candidato = candidatoService.obtenerPorId(p.getCandidatoId());
-        PostulacionRequest dto = new PostulacionRequest();
-        dto.setPostulacion(p);
-        dto.setCandidato(candidato);
-        return dto;
-    }).toList();
+        return postulaciones.stream().map(p -> {
+            Candidato candidato = candidatoService.obtenerPorId(p.getCandidatoId());
+            PostulacionRequest dto = new PostulacionRequest();
+            dto.setPostulacion(p);
+            dto.setCandidato(candidato);
+            return dto;
+        }).toList();
+    }
+
+
+    @PostMapping("/{postulacionId}/anotaciones")
+    public ResponseEntity<?> crearAnotacionPrivada(
+            @PathVariable String postulacionId,
+            @RequestBody AnotacionPrivadaRequest request,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        try {
+            Postulacion actualizada = postulacionService.agregarAnotacionPrivada(
+                postulacionId,
+                usuario.getId(),
+                request.getComentario()
+            );
+            return ResponseEntity.ok(actualizada);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    
+
+    @PutMapping("/{postulacionId}/anotaciones/{indice}")
+    public ResponseEntity<?> editarAnotacionPrivada(
+            @PathVariable String postulacionId,
+            @PathVariable int indice,
+            @RequestBody AnotacionPrivadaRequest request,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        try {
+            Postulacion actualizada = postulacionService.editarAnotacionPrivada(postulacionId, indice, usuario.getId(), request.getComentario());
+            return ResponseEntity.ok(actualizada);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+
+    @DeleteMapping("/{postulacionId}/anotaciones/{index}")
+    public ResponseEntity<?> eliminarAnotacionPrivada(
+            @PathVariable String postulacionId,
+            @PathVariable int index,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        try {
+            Postulacion actualizada = postulacionService.eliminarAnotacionPrivada(postulacionId, usuario.getId(), index);
+            return ResponseEntity.ok(actualizada);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/anotaciones/postulacion/{postulacionId}")
+public ResponseEntity<?> obtenerAnotacionesPrivadasPorPostulacion(
+        @PathVariable String postulacionId,
+        @AuthenticationPrincipal Usuario usuario
+) {
+    Optional<Postulacion> postulacionOpt = postulacionRepository.findById(postulacionId);
+
+    if (postulacionOpt.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Postulación no encontrada");
+    }
+
+    Postulacion postulacion = postulacionOpt.get();
+
+    // 🔍 Buscar la búsqueda para verificar que el usuario es el dueño
+    Optional<Busqueda> busquedaOpt = busquedaRepository.findById(postulacion.getBusquedaId());
+    if (busquedaOpt.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Búsqueda no encontrada");
+    }
+
+    if (!busquedaOpt.get().getUsuarioId().equals(usuario.getId())) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para ver anotaciones de esta postulación");
+    }
+
+    // Filtrar solo las anotaciones del reclutador logueado
+    List<Postulacion.AnotacionPrivada> propias = postulacion.getAnotacionesPrivadas() != null
+        ? postulacion.getAnotacionesPrivadas().stream()
+            .filter(a -> a.getUsuarioId().equals(usuario.getId()))
+            .toList()
+        : List.of();
+
+    return ResponseEntity.ok(propias);
 }
-
+    
 }

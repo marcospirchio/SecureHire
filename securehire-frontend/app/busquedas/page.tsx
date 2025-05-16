@@ -185,15 +185,15 @@ export default function BusquedasPage() {
       .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
       .filter((offer) => offer.archivada === showArchived)
       .sort((a, b) => {
-        if (sortBy === "recent") {
-          const dateA = a.createdAt.split("/").reverse().join("")
-          const dateB = b.createdAt.split("/").reverse().join("")
-          return dateB.localeCompare(dateA)
-        } else if (sortBy === "candidates") {
-          return b.candidates - a.candidates
-        }
-        return 0
-      })
+    if (sortBy === "recent") {
+      const dateA = a.createdAt.split("/").reverse().join("")
+      const dateB = b.createdAt.split("/").reverse().join("")
+      return dateB.localeCompare(dateA)
+    } else if (sortBy === "candidates") {
+      return b.candidates - a.candidates
+    }
+    return 0
+  })
   }, [jobOffers, searchQuery, showArchived, sortBy])
 
   // Calcular paginación
@@ -312,7 +312,7 @@ export default function BusquedasPage() {
 
         <div className="mt-6"></div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-20">
           {currentOffers.map((offer) => (
             <div
               key={offer.id}
@@ -361,49 +361,50 @@ export default function BusquedasPage() {
           ))}
         </div>
 
-        {/* Paginación */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              Anterior
-            </Button>
-            
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        {/* Contenedor de paginación */}
+        <div className="sticky bottom-0 py-4">
+          <div className="flex justify-center items-center gap-2">
+            {filteredOffers.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">
+                No se encontraron búsquedas que coincidan con los criterios seleccionados.
+              </div>
+            ) : (
+              <>
                 <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page)}
-                  className="w-8 h-8"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
                 >
-                  {page}
+                  Anterior
                 </Button>
-              ))}
-            </div>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page)}
+                      className="w-8 h-8"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              Siguiente
-            </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente
+                </Button>
+              </>
+            )}
           </div>
-        )}
-
-        {/* Mensaje cuando no hay resultados */}
-        {filteredOffers.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No se encontraron búsquedas que coincidan con los criterios seleccionados.
-          </div>
-        )}
+        </div>
       </DashboardLayout>
     </Sidebar>
   )

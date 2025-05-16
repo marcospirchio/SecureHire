@@ -434,7 +434,7 @@ export default function JobOfferPage({ params }: PageProps) {
       <div className="flex flex-1 gap-3 overflow-hidden">
         {/* Lista de candidatos */}
         <div
-          className={`flex flex-col ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
+          className={`flex flex-col h-[90vh] ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
         >
           <div className="mb-3 flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
@@ -449,7 +449,7 @@ export default function JobOfferPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {filteredCandidates.map((candidate) => (
                   <CandidateCard
                 key={candidate.id}
