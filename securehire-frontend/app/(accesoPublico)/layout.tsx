@@ -10,7 +10,8 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       {/* Header público */}
       <header className="bg-white shadow-sm py-4 px-6 mb-8">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2">
+          {/* Logo sin hipervínculo */}
+          <div className="flex items-center gap-2">
             <div className="relative h-10 w-10">
               <Image src="/logo-securehire.png" alt="SecureHire Logo" fill style={{ objectFit: "contain" }} />
             </div>
@@ -18,7 +19,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
               <h1 className="font-bold text-xl">SecureHire</h1>
               <p className="text-xs text-gray-500">Plataforma de reclutamiento</p>
             </div>
-          </Link>
+          </div>
 
           <Button variant="ghost" size="icon" aria-label="Cambiar tema">
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

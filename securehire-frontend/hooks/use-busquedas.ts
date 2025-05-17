@@ -62,3 +62,4 @@ export function useBusquedas() {
 
   return { busquedas, loading, error }
 }
+ 

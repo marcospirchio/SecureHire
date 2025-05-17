@@ -550,38 +550,52 @@ export default function OfertaPage({ params }: PageProps) {
                     </div>
                   </div>
 
-                  {/* Curriculum */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Currículum <span className="text-red-500">*</span>
-                    </label>
-                    <div className="border border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="file"
-                        id="curriculum"
-                        className="hidden"
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
-                            setCurriculum(e.target.files[0])
+                {/* Curriculum */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Currículum <span className="text-red-500">*</span>
+                  </label>
+                  <div className="border border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="file"
+                      id="curriculum"
+                      className="hidden"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          if (file.type !== "application/pdf") {
+                            alert("Por favor, seleccioná un archivo PDF.")
+                            e.target.value = ""
+                            return
                           }
-                        }}
-                      />
-                      <label htmlFor="curriculum" className="cursor-pointer flex flex-col items-center">
-                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                        {curriculum ? (
-                          <span className="text-blue-600 font-medium">{curriculum.name}</span>
-                        ) : (
-                          <>
-                            <span className="text-gray-700 font-medium">Seleccionar archivo</span>
-                            <span className="text-gray-500 text-sm mt-1">
-                              Único formato permitido: PDF Tamaño máximo: 5MB
-                            </span>
-                          </>
-                        )}
-                      </label>
-                    </div>
+
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert("El archivo excede el tamaño máximo de 10MB.")
+                            e.target.value = ""
+                            return
+                          }
+
+                          setCurriculum(file)
+                        }
+                      }}
+                    />
+                    <label htmlFor="curriculum" className="cursor-pointer flex flex-col items-center">
+                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                      {curriculum ? (
+                        <span className="text-blue-600 font-medium">{curriculum.name}</span>
+                      ) : (
+                        <>
+                          <span className="text-gray-700 font-medium">Seleccionar archivo</span>
+                          <span className="text-gray-500 text-sm mt-1">
+                            Único formato permitido: PDF. Tamaño máximo: 10MB
+                          </span>
+                        </>
+                      )}
+                    </label>
                   </div>
+                </div>
+
 
                   {/* Términos y condiciones */}
                   <div className="mb-6">

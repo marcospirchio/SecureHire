@@ -90,7 +90,7 @@ export default function JobOfferPage({ params }: PageProps) {
               lastName: p.candidato.apellido,
               email: p.candidato.email,
               phone: p.candidato.telefono,
-              countryCode: "+54",
+        countryCode: "+54",
               dni: p.candidato.dni,
               gender: p.candidato.genero || "No especificado",
               nationality: p.candidato.nacionalidad,

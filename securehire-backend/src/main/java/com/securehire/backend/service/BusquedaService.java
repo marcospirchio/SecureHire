@@ -86,7 +86,7 @@ public class BusquedaService {
             if (id == null || id.trim().isEmpty()) {
                 throw new IllegalArgumentException("El ID de la búsqueda no puede ser nulo o vacío");
             }
-            return busquedaRepository.findById(id);
+        return busquedaRepository.findById(id);
         } catch (Exception e) {
             System.err.println("Error al obtener búsqueda por ID: " + e.getMessage());
             e.printStackTrace();
