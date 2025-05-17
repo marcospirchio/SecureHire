@@ -56,14 +56,20 @@ export function CandidateDetails({
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/usuarios/me', {
+        const response = await fetch('http://localhost:8080/api/auth/me', {
           credentials: "include",
-          headers: { 'Accept': 'application/json' }
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
         });
+        
         if (response.ok) {
           const userData = await response.json();
           console.log("Usuario actual obtenido:", userData);
           setCurrentUserId(userData.id);
+        } else {
+          console.warn("No se pudo obtener el usuario actual:", response.status);
         }
       } catch (error) {
         console.error("Error al obtener el usuario actual:", error);
@@ -323,41 +329,127 @@ const anotacionesOrdenadas = [...anotaciones]
     return 0;
   });
 
-  // Mostrar el resumen guardado si existe
+  // Cargar el resumen del CV al montar el componente o cambiar de candidato
   useEffect(() => {
-    if (candidate.postulacion && candidate.postulacion.resumenCv) {
-      setIaSummary(candidate.postulacion.resumenCv)
-    }
-  }, [candidate.postulacion])
+    const fetchResumenCv = async () => {
+      if (candidate.postulacion?.id) {
+        try {
+          const response = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
+            credentials: "include",
+            headers: { 'Accept': 'application/json' }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.resumenCv) {
+              setIaSummary(data.resumenCv);
+            } else {
+              setIaSummary(null);
+            }
+          } else {
+            setIaSummary(null);
+          }
+        } catch (error) {
+          setIaSummary(null);
+          console.error('Error al obtener el resumen del CV:', error);
+        }
+      }
+    };
+    fetchResumenCv();
+  }, [candidate.postulacion?.id]);
 
   // Función para obtener el resumen IA
   const handleIASummary = async () => {
-    if (!candidate.cvUrl) return
-    setIaLoading(true)
-    try {
-      // Descargar el PDF del CV
-      const response = await fetch(candidate.cvUrl)
-      const blob = await response.blob()
-      const file = new File([blob], 'cv.pdf', { type: blob.type })
-      // Armar formData
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('postulacionId', candidate.postulacion?.id || "")
-      formData.append('busquedaId', candidate.postulacion?.busquedaId || "")
-      // Llamar al endpoint IA de postulaciones
-      const iaRes = await fetch('http://localhost:8080/api/postulaciones/extraer-cv-y-resumir', {
-        method: 'POST',
-        body: formData
-      })
-      if (!iaRes.ok) throw new Error('Error al obtener resumen IA')
-      const resumen = await iaRes.text()
-      setIaSummary(resumen)
-    } catch (e) {
-      setIaSummary('No se pudo obtener el resumen IA.')
-    } finally {
-      setIaLoading(false)
+    if (!candidate.postulacion?.id) {
+      console.error('No hay ID de postulación disponible');
+      setIaSummary('No se puede generar el resumen: ID de postulación no disponible');
+      return;
     }
-  }
+
+    setIaLoading(true);
+    try {
+      // Obtener el CV usando el endpoint de postulación
+      const cvResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, {
+        credentials: "include",
+        headers: {
+          'Accept': 'application/pdf'
+        }
+      });
+      if (!cvResponse.ok) {
+        const errorText = await cvResponse.text();
+        throw new Error(`Error al obtener CV: ${cvResponse.status} ${errorText}`);
+      }
+      const blob = await cvResponse.blob();
+      if (blob.size === 0) {
+        throw new Error('El archivo CV está vacío');
+      }
+      const file = new File([blob], 'cv.pdf', { type: 'application/pdf' });
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('postulacionId', candidate.postulacion.id);
+      formData.append('busquedaId', candidate.postulacion.busquedaId || "");
+
+      // Llamar al endpoint IA de postulaciones
+      const iaRes = await fetch(`http://localhost:8080/api/geminiIA/extraer-cv-y-resumir`, {
+        method: 'POST',
+        credentials: "include",
+        body: formData
+      });
+      if (!iaRes.ok) {
+        const errorText = await iaRes.text();
+        throw new Error(`Error al obtener resumen IA: ${iaRes.status} ${errorText}`);
+      }
+      const resumen = await iaRes.text();
+      // Validar que el resumen sea JSON válido y no vacío
+      let parsedResumen: any = null;
+      try {
+        parsedResumen = JSON.parse(resumen);
+      } catch (e) {
+        setIaSummary(null);
+        toast({
+          title: "Error en el resumen IA",
+          description: "El resumen generado no es válido. Intenta nuevamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+      if (!parsedResumen || Object.keys(parsedResumen).length === 0) {
+        setIaSummary(null);
+        toast({
+          title: "Resumen vacío",
+          description: "El resumen generado está vacío. Intenta nuevamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setIaSummary(resumen);
+      // Intentar guardar el resumen solo si es válido
+      const updateResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
+        method: 'PATCH',
+        credentials: "include",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ resumenCv: resumen })
+      });
+      if (!updateResponse.ok) {
+        toast({
+          title: "Error al guardar el resumen",
+          description: "No se pudo guardar el resumen en la postulación.",
+          variant: "destructive"
+        });
+      }
+    } catch (e) {
+      setIaSummary(null);
+      toast({
+        title: "Error IA",
+        description: e instanceof Error ? e.message : 'No se pudo obtener el resumen IA. Por favor, intente nuevamente.',
+        variant: "destructive"
+      });
+    } finally {
+      setIaLoading(false);
+    }
+  };
 
   return (
     <div className="w-1/2 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
@@ -403,15 +495,31 @@ const anotacionesOrdenadas = [...anotaciones]
           </Button>
         </div>
 
-        <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Button className="h-8 text-xs flex items-center gap-1 mb-4 w-full" variant="outline">
+        <div className="mt-4 pt-4 border-t">
+          <Button 
+            className="h-8 text-xs flex items-center gap-1 mb-4 w-full" 
+            variant="outline"
+            onClick={() => {
+              if (candidate.postulacion?.id) {
+                window.open(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, '_blank');
+              }
+            }}
+          >
             <FileText className="h-3 w-3" /> Ver CV Completo
           </Button>
+
           <div className="bg-gray-50 p-3 rounded-md">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-medium text-gray-700">Resumen del CV</h4>
               {!iaSummary && (
-                <Button size="icon" variant="ghost" onClick={handleIASummary} disabled={iaLoading} title="Generar resumen IA">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={handleIASummary} 
+                  disabled={iaLoading} 
+                  title="Generar resumen IA"
+                  className="hover:bg-purple-100"
+                >
                   <Sparkles className="h-4 w-4 text-purple-500" />
                 </Button>
               )}
@@ -419,7 +527,81 @@ const anotacionesOrdenadas = [...anotaciones]
             {iaLoading ? (
               <p className="text-xs text-gray-500">Generando resumen IA...</p>
             ) : iaSummary ? (
-              <pre className="text-xs text-gray-700 whitespace-pre-wrap">{iaSummary}</pre>
+              (() => {
+                try {
+                  const resumenRaw = typeof iaSummary === 'string' ? JSON.parse(iaSummary) : iaSummary;
+
+                  // Paso 1: acceder al contenido crudo
+                  const rawText = resumenRaw?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                  if (!rawText) throw new Error("No se encontró el resumen IA dentro de la estructura");
+
+                  // Paso 2: quitar los ```json\n ... ```
+                  const cleanedJson = rawText
+                    .replace(/^```json\s*/, '') // quitar ```json o ```json\n
+                    .replace(/```$/, '')        // quitar ```
+
+                  // Paso 3: parsear el JSON verdadero
+                  const summaryData = JSON.parse(cleanedJson);
+
+                  return (
+                    <div className="space-y-4 text-sm bg-white p-4 rounded-lg shadow min-h-[200px] max-h-[600px] overflow-y-auto w-full">
+                      {summaryData.experienciaLaboral?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-gray-900 text-base">🧑‍💻 Experiencia laboral</p>
+                          <p className="text-gray-700 leading-relaxed">
+                            {summaryData.experienciaLaboral.join(', ')}
+                          </p>
+                        </div>
+                      )}
+                      {summaryData.habilidades?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-gray-900 text-base">🛠️ Habilidades</p>
+                          <p className="text-gray-700 leading-relaxed">
+                            {summaryData.habilidades.join(', ')}
+                          </p>
+                        </div>
+                      )}
+                      {summaryData.educacion?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-gray-900 text-base">🎓 Educación</p>
+                          <p className="text-gray-700 leading-relaxed">
+                            {summaryData.educacion.join(', ')}
+                          </p>
+                        </div>
+                      )}
+                      {summaryData.idiomas?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-gray-900 text-base">🌐 Idiomas</p>
+                          <p className="text-gray-700 leading-relaxed">
+                            {summaryData.idiomas.map((i: any) =>
+                              i.idioma ? `${i.idioma} (${i.nivel})` : i
+                            ).join(', ')}
+                          </p>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <p className="font-semibold text-gray-900 text-base">✅ ¿Tiene experiencia?</p>
+                        <p className="text-gray-700 leading-relaxed">
+                          {summaryData.tieneExperiencia ? 'Sí' : 'No'}
+                        </p>
+                      </div>
+                      {summaryData.comentarioGeneral && (
+                        <div className="space-y-2">
+                          <p className="font-semibold text-gray-900 text-base">📝 Comentario general</p>
+                          <p className="text-gray-700 leading-relaxed">{summaryData.comentarioGeneral}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch (error) {
+                  return (
+                    <p className="text-red-500 text-sm">
+                      Error al procesar el resumen. Por favor, intente generar el resumen nuevamente.
+                    </p>
+                  );
+                }
+              })()
             ) : (
               <p className="text-xs text-gray-400 italic">Haz click en el botón de IA para generar el resumen del CV.</p>
             )}

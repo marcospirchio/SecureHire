@@ -36,7 +36,7 @@ export const jobOfferService = {
   },
 
   async getCandidates(jobOfferId: string): Promise<PostulacionRequest[]> {
-    return fetchWithAuth(`${API_URL}/postulaciones/busqueda/${jobOfferId}/completas`)
+    return fetchWithAuth(`${API_URL}/postulaciones/busqueda/${jobOfferId}`)
   },
 
   async getTimeSlots(date: string): Promise<TimeSlot[]> {

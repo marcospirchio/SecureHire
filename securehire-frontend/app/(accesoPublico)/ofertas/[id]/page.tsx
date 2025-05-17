@@ -19,6 +19,39 @@ interface PageProps {
   }>
 }
 
+interface SuccessMessageProps {
+  jobTitle: string
+  onBackToHome?: () => void
+}
+
+export function SuccessMessage({ jobTitle, onBackToHome }: SuccessMessageProps) {
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-sm">
+      <div className="text-center py-10">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+          <svg
+            className="w-8 h-8 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold mb-4">¡Postulación enviada con éxito!</h1>
+        <p className="text-gray-600 mb-8">
+          Gracias por postularte al puesto de {jobTitle}. Hemos recibido tu información y la revisaremos a la brevedad.
+          Te contactaremos pronto con novedades sobre tu postulación.
+        </p>
+        <Button onClick={onBackToHome || (() => window.location.href = "/")}>
+          Volver al inicio
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function OfertaPage({ params }: PageProps) {
   const resolvedParams = use(params)
   const { jobOffer, loading, error } = usePublicJobOffer(resolvedParams.id)
@@ -38,12 +71,14 @@ export default function OfertaPage({ params }: PageProps) {
   const [emailConfirmacion, setEmailConfirmacion] = useState("")
   const [telefono, setTelefono] = useState("")
   const [codigoPais, setCodigoPais] = useState("")
+  const [cvUrl, setCvUrl] = useState("")
   const [curriculum, setCurriculum] = useState<File | null>(null)
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [termsRead, setTermsRead] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [respuestasAdicionales, setRespuestasAdicionales] = useState<Record<string, string | string[]>>({})
+  const [subiendo, setSubiendo] = useState(false)
 
   const termsRef = useRef<HTMLDivElement>(null)
 
@@ -146,70 +181,56 @@ export default function OfertaPage({ params }: PageProps) {
 
   // Función para manejar el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
+    e.preventDefault();
+    setIsSubmitting(true);
+  
+    // Construir respuestas válidas antes del envío
+    const respuestas = (jobOffer?.camposAdicionales || [])
+      .map((campo: any) => {
+        const respuesta = respuestasAdicionales[campo.nombre];
+        if (!respuesta || (typeof respuesta === 'string' && respuesta.trim() === '')) {
+          return null;
+        }
+        return { campo: campo.nombre, respuesta };
+      })
+      .filter(Boolean);
+  
     try {
-      // Crear el objeto de candidato
-      const candidato = {
-        nombre,
-        apellido,
-        dni: documento,
-        fechaNacimiento,
-        genero,
-        nacionalidad,
-        paisResidencia: pais,
-        provincia,
-        direccion,
-        email,
-        telefono: `${codigoPais}${telefono}`,
-        cvUrl: "", // Esto se manejará en el backend
+      const formData = new FormData();
+      formData.append("busquedaId", resolvedParams.id);
+      formData.append("nombre", nombre);
+      formData.append("apellido", apellido);
+      formData.append("email", email);
+      formData.append("telefono", telefono);
+      formData.append("dni", documento);
+      formData.append("codigoPais", codigoPais);
+      formData.append("fechaNacimiento", fechaNacimiento); // en formato YYYY-MM-DD
+      formData.append("genero", genero);
+      formData.append("nacionalidad", nacionalidad);
+      formData.append("paisResidencia", pais);
+      formData.append("provincia", provincia);
+      formData.append("direccion", direccion);
+      formData.append("respuestas", JSON.stringify(respuestas));
+      
+      if (curriculum) {
+        formData.append("cv", curriculum); // archivo PDF
       }
-
-      // Crear el objeto de postulación
-      const postulacion = {
-        busquedaId: resolvedParams.id,
-        estado: "PENDIENTE",
-        fase: "Nueva",
-        requisitosExcluyentes: [],
-        notas: []
-      }
-
-      // Crear el objeto de request
-      const postulacionRequest = {
-        candidato,
-        postulacion
-      }
-
-      // Enviar la postulación al backend
+  
       const response = await fetch("http://localhost:8080/api/postulaciones", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify(postulacionRequest)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-        throw new Error(errorData || "Error al enviar la postulación")
-      }
-
-      // Si todo salió bien, mostrar el mensaje de éxito
-      setSuccess(true)
-    } catch (error) {
-      console.error("Error al enviar la postulación:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Error al enviar la postulación",
-        variant: "destructive",
-      })
+        body: formData // no pongas headers manualmente
+      });
+  
+      if (!response.ok) throw new Error("Error en la postulación");
+      setSuccess(true);
+    } catch (err) {
+      console.error(err);
+      alert("Hubo un error al enviar la postulación.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
+  
 
   // Si está cargando, mostrar un indicador de carga
   if (loading) {
@@ -246,29 +267,7 @@ export default function OfertaPage({ params }: PageProps) {
 
   // Si la postulación fue exitosa, mostrar mensaje de confirmación
   if (success) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-sm">
-        <div className="text-center py-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-            <svg
-              className="w-8 h-8 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold mb-4">¡Postulación enviada con éxito!</h1>
-          <p className="text-gray-600 mb-8">
-            Gracias por postularte al puesto de {jobOffer.titulo}. Hemos recibido tu información y la revisaremos a la
-            brevedad. Te contactaremos pronto con novedades sobre tu postulación.
-          </p>
-          <Button onClick={() => (window.location.href = "/")}>Volver al inicio</Button>
-        </div>
-      </div>
-    )
+    return <SuccessMessage jobTitle={jobOffer.titulo} />
   }
 
   return (
@@ -333,7 +332,13 @@ export default function OfertaPage({ params }: PageProps) {
               </TabsList>
 
               <TabsContent value="datos" className="pt-4">
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={(e) => {
+                  e.preventDefault()
+                  // Si los datos personales están completos, cambiar a la pestaña de preguntas
+                  if (nombre && apellido && documento && fechaNacimiento && genero && nacionalidad && pais && provincia && direccion && email && emailConfirmacion && email === emailConfirmacion && codigoPais && telefono && curriculum && aceptaTerminos) {
+                    setTab("preguntas")
+                  }
+                }}>
                   {/* Nombre y Apellido */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -562,22 +567,22 @@ export default function OfertaPage({ params }: PageProps) {
                       className="hidden"
                       accept=".pdf"
                       onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          if (file.type !== "application/pdf") {
-                            alert("Por favor, seleccioná un archivo PDF.")
-                            e.target.value = ""
-                            return
-                          }
+                        const file = e.target.files?.[0];
+                        if (!file) return;
 
-                          if (file.size > 10 * 1024 * 1024) {
-                            alert("El archivo excede el tamaño máximo de 10MB.")
-                            e.target.value = ""
-                            return
-                          }
-
-                          setCurriculum(file)
+                        if (file.type !== "application/pdf") {
+                          alert("Por favor, seleccioná un archivo PDF.");
+                          e.target.value = "";
+                          return;
                         }
+
+                        if (file.size > 10 * 1024 * 1024) {
+                          alert("El archivo excede el tamaño máximo de 10MB.");
+                          e.target.value = "";
+                          return;
+                        }
+
+                        setCurriculum(file); // curriculum es un estado tipo File
                       }}
                     />
                     <label htmlFor="curriculum" className="cursor-pointer flex flex-col items-center">
@@ -595,6 +600,7 @@ export default function OfertaPage({ params }: PageProps) {
                     </label>
                   </div>
                 </div>
+
 
 
                   {/* Términos y condiciones */}

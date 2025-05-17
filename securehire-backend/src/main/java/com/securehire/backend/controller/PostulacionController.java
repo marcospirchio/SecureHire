@@ -24,6 +24,14 @@ import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.repository.PostulacionRepository;
 import com.securehire.backend.model.Candidato;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Arrays;
+import java.util.ArrayList;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+
 
 @RestController
 @RequestMapping("/api/postulaciones")
@@ -45,15 +53,93 @@ public class PostulacionController {
     private PostulacionRepository postulacionRepository;
 
     //FUNCIONA
-    @PostMapping
-    public ResponseEntity<?> crearPostulacion(@RequestBody PostulacionRequest request) {
-        Postulacion postulacion = request.getPostulacion();
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> crearPostulacion(
+            @RequestParam("cv") MultipartFile archivoCV,
+            @RequestParam("busquedaId") String busquedaId,
+            @RequestParam("nombre") String nombre,
+            @RequestParam("apellido") String apellido,
+            @RequestParam("email") String email,
+            @RequestParam("telefono") String telefono,
+            @RequestParam("dni") String dni,
+            @RequestParam("codigoPais") String codigoPais,
+            @RequestParam("fechaNacimiento") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date fechaNacimiento,
+            @RequestParam("genero") String genero,
+            @RequestParam("nacionalidad") String nacionalidad,
+            @RequestParam("paisResidencia") String paisResidencia,
+            @RequestParam("provincia") String provincia,
+            @RequestParam("direccion") String direccion,
+            @RequestParam(value = "respuestas", required = false) String respuestasJson
+    ) {
+        // Construir candidato con los datos recibidos
+        Candidato candidato = Candidato.builder()
+                .nombre(nombre)
+                .apellido(apellido)
+                .email(email)
+                .telefono(telefono)
+                .dni(dni)
+                .codigoPais(codigoPais)
+                .fechaNacimiento(fechaNacimiento)
+                .genero(genero)
+                .nacionalidad(nacionalidad)
+                .paisResidencia(paisResidencia)
+                .provincia(provincia)
+                .direccion(direccion)
+                .fechaRegistro(new Date())
+                .build();
+    
+        // Parsear las respuestas (si vienen)
+        List<Postulacion.RespuestaFormulario> respuestas = new ArrayList<>();
+        if (respuestasJson != null && !respuestasJson.isEmpty()) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                respuestas = Arrays.asList(mapper.readValue(respuestasJson, Postulacion.RespuestaFormulario[].class));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body("Error al parsear respuestas del formulario");
+            }
+        }
+    
+        // Crear la instancia de Postulacion
+        Postulacion postulacion = new Postulacion();
+        postulacion.setBusquedaId(busquedaId);
+        postulacion.setRespuestas(respuestas);
+    
+        // Llamar al service original
         try {
-            return ResponseEntity.ok(postulacionService.crearPostulacion(postulacion, request.getCandidato()));
+            return ResponseEntity.ok(postulacionService.crearPostulacion(postulacion, candidato, archivoCV));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+    
+    @GetMapping("/{id}/cv")
+    public ResponseEntity<byte[]> obtenerCvDePostulacion(
+            @PathVariable String id,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Postulacion> postulacionOpt = postulacionRepository.findById(id);
+
+        if (postulacionOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Postulacion postulacion = postulacionOpt.get();
+
+        // Verificar que el usuario logueado sea el dueño de la búsqueda asociada
+        if (!postulacion.getUsuarioId().equals(usuario.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        if (postulacion.getCvArchivo() == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"cv.pdf\"")
+                .body(postulacion.getCvArchivo());
+    }
+
     //FUNCIONA  
     // para asociar manual, pero no hace falta
     @PostMapping("/asociar-candidato")

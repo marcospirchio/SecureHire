@@ -21,14 +21,8 @@ export function useJobOffer(id: string) {
       try {
         console.log('Fetching data for busqueda ID:', id)
         
-        const [busquedaRes, postulacionesRes, entrevistasRes] = await Promise.all([
+        const [busquedaRes, entrevistasRes] = await Promise.all([
           fetch(`http://localhost:8080/api/busquedas/${id}`, { 
-            credentials: "include",
-            headers: {
-              'Accept': 'application/json'
-            }
-          }),
-          fetch(`http://localhost:8080/api/postulaciones/busqueda/${id}/completas`, { 
             credentials: "include",
             headers: {
               'Accept': 'application/json'
@@ -42,12 +36,11 @@ export function useJobOffer(id: string) {
           })
         ])
 
-        if (!busquedaRes.ok || !postulacionesRes.ok || !entrevistasRes.ok) {
+        if (!busquedaRes.ok) {
           throw new Error('Error al obtener los datos')
         }
 
         const busquedaData = await busquedaRes.json()
-        const postulacionesData: PostulacionRequest[] = await postulacionesRes.json()
         const entrevistasData = await entrevistasRes.json()
         console.log('Datos de entrevistas:', entrevistasData)
 
@@ -63,49 +56,12 @@ export function useJobOffer(id: string) {
           fechaCreacion: new Date(busquedaData.fechaCreacion).toLocaleDateString("es-AR"),
           descripcion: busquedaData.descripcion || "",
           beneficios: busquedaData.beneficios || [],
-          candidates: postulacionesData
-            .filter(p => p.candidato && p.postulacion)
-            .map(p => {
-              // Buscar la entrevista correspondiente
-              const entrevista = entrevistasData.find(
-                (e: any) => e.postulacionId === p.postulacion.id
-              )
-
-              return {
-                id: p.postulacion.id,
-                name: p.candidato.nombre,
-                lastName: p.candidato.apellido,
-                age: calcularEdad(p.candidato.fechaNacimiento),
-                gender: p.candidato.genero || "No especificado",
-                location: p.candidato.provincia || "No especificada",
-                email: p.candidato.email,
-                phone: p.candidato.telefono,
-                countryCode: "+54",
-                dni: p.candidato.dni,
-                birthDate: new Date(p.candidato.fechaNacimiento).toLocaleDateString("es-AR"),
-                nationality: p.candidato.nacionalidad,
-                residenceCountry: p.candidato.paisResidencia,
-                province: p.candidato.provincia,
-                address: p.candidato.direccion,
-                cvUrl: p.candidato.cvUrl || "",
-                postulacion: {
-                  id: p.postulacion.id,
-                  candidatoId: p.candidato.id,
-                  busquedaId: busquedaData.id,
-                  requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
-                  notas: p.postulacion.notas || [],
-                  ...(p.postulacion as any).estado && { estado: (p.postulacion as any).estado },
-                  ...(p.postulacion as any).resumenCv && { resumenCv: (p.postulacion as any).resumenCv }
-                },
-                entrevista: entrevista ? {
-                  id: entrevista.id,
-                  fechaProgramada: entrevista.fechaProgramada,
-                  horaProgramada: entrevista.horaProgramada,
-                  estado: entrevista.estado,
-                  linkEntrevista: entrevista.linkEntrevista || ""
-                } : undefined
-              }
-            })
+          candidates: busquedaData.candidates || [],
+          camposAdicionales: busquedaData.camposAdicionales || [],
+          camposPorDefecto: busquedaData.camposPorDefecto || [],
+          fases: busquedaData.fases || [],
+          usuarioId: busquedaData.usuarioId || "",
+          archivada: busquedaData.archivada || false
         }
         setJobOffer(jobOfferData)
       } catch (error) {

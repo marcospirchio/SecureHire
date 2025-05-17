@@ -1,10 +1,10 @@
 package com.securehire.backend.model;
 
-import org.springframework.data.annotation.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -18,6 +18,7 @@ import java.util.List;
 public class Postulacion {
     @Id
     private String id;
+
     private String candidatoId;
     private String busquedaId;
     private String usuarioId;
@@ -29,7 +30,10 @@ public class Postulacion {
     private String motivoFinalizacion; // "NINGUNO", "DESAPARECIO", "NO_ASISTIO", "NO_CUMPLE"
     private List<AnotacionPrivada> anotacionesPrivadas;
     private Date fechaPostulacion;
-    private String resumenCv;
+
+    private String resumenCv; // Texto generado por IA (opcional)
+
+    private byte[] cvArchivo; // Archivo PDF binario
 
     @Data
     @Builder

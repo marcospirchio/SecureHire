@@ -53,82 +53,207 @@ export default function JobOfferPage({ params }: PageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [busquedaData, postulacionesData, entrevistasData] = await Promise.all([
-          jobOfferService.getJobOffer(resolvedParams.id),
-          jobOfferService.getCandidates(resolvedParams.id),
-          fetch('http://localhost:8080/api/entrevistas/mis-entrevistas-con-candidato', {
-            credentials: "include",
-            headers: {
-              'Accept': 'application/json'
-            }
-          }).then(res => res.json())
-        ])
+        // Primero obtener la búsqueda
+        const busquedaResponse = await fetch(`http://localhost:8080/api/busquedas/${resolvedParams.id}`, {
+          credentials: "include",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
 
-        setEntrevistas(entrevistasData)
+        if (!busquedaResponse.ok) {
+          throw new Error(`Error al obtener la búsqueda: ${busquedaResponse.status}`);
+        }
+
+        const busquedaData = await busquedaResponse.json();
+
+        // Luego obtener las postulaciones
+        const postulacionesResponse = await fetch(`http://localhost:8080/api/postulaciones/busqueda/${resolvedParams.id}`, {
+          credentials: "include",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!postulacionesResponse.ok) {
+          throw new Error(`Error al obtener las postulaciones: ${postulacionesResponse.status}`);
+        }
+
+        const postulacionesData = await postulacionesResponse.json();
+
+        // Obtener las entrevistas
+        const entrevistasResponse = await fetch('http://localhost:8080/api/entrevistas/mis-entrevistas-con-candidato', {
+          credentials: "include",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!entrevistasResponse.ok) {
+          throw new Error(`Error al obtener las entrevistas: ${entrevistasResponse.status}`);
+        }
+
+        const entrevistasData = await entrevistasResponse.json();
+        setEntrevistas(entrevistasData);
+
+        // Asegura que busquedaData puede tener _id y fechaCreacion.$date
+        const busqId = busquedaData.id || busquedaData._id || "";
+        const busqFecha = busquedaData.fechaCreacion?.$date || busquedaData.fechaCreacion || "";
+
+        // Obtener los datos completos de cada candidato para cada postulación
+        const candidates = await Promise.all(
+          (Array.isArray(postulacionesData) ? postulacionesData : []).map(async (p: any) => {
+            try {
+              // Fetch candidato
+              const candidatoRes = await fetch(`http://localhost:8080/api/candidatos/${p.candidatoId}`, {
+                credentials: "include",
+                headers: { 
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              if (!candidatoRes.ok) {
+                console.warn(`No se pudo obtener el candidato ${p.candidatoId}:`, candidatoRes.status);
+                // Retornar un objeto con datos mínimos en lugar de undefined
+                return {
+                  id: p.id,
+                  name: "Candidato no disponible",
+                  lastName: "",
+                  email: p.email || "",
+                  phone: "",
+                  countryCode: "+54",
+                  dni: "",
+                  gender: "No especificado",
+                  nationality: "",
+                  residenceCountry: "",
+                  province: "",
+                  address: "",
+                  birthDate: "",
+                  age: 0,
+                  location: "",
+                  cvUrl: "",
+                  postulacion: {
+                    id: p.id,
+                    candidatoId: p.candidatoId,
+                    busquedaId: p.busquedaId,
+                    estado: p.estado || "",
+                    requisitosExcluyentes: p.requisitosExcluyentes || [],
+                    notas: p.notas || [],
+                    ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                  },
+                  entrevista: undefined
+                } as Candidate;
+              }
+
+              const candidato = await candidatoRes.json();
+
+              // Buscar entrevista correspondiente
+              const entrevista = Array.isArray(entrevistasData)
+                ? entrevistasData.find(
+                    (e: any) => e.candidatoId === p.candidatoId
+                  )
+                : undefined;
+
+              return {
+                id: p.id,
+                name: candidato.nombre || "",
+                lastName: candidato.apellido || "",
+                email: candidato.email || "",
+                phone: candidato.telefono || "",
+                countryCode: candidato.codigoPais || "+54",
+                dni: candidato.dni || "",
+                gender: candidato.genero || "No especificado",
+                nationality: candidato.nacionalidad || "",
+                residenceCountry: candidato.paisResidencia || "",
+                province: candidato.provincia || "",
+                address: candidato.direccion || "",
+                birthDate: candidato.fechaNacimiento || "",
+                age: candidato.fechaNacimiento ? calcularEdad(candidato.fechaNacimiento) : 0,
+                location: candidato.provincia || "",
+                cvUrl: candidato.cvUrl || "",
+                postulacion: {
+                  id: p.id,
+                  candidatoId: p.candidatoId,
+                  busquedaId: p.busquedaId,
+                  estado: p.estado || "",
+                  requisitosExcluyentes: p.requisitosExcluyentes || [],
+                  notas: p.notas || [],
+                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                },
+                entrevista: entrevista ? {
+                  id: entrevista.id,
+                  fechaProgramada: entrevista.fechaProgramada,
+                  horaProgramada: entrevista.horaProgramada,
+                  estado: entrevista.estado,
+                  linkEntrevista: entrevista.linkEntrevista
+                } : undefined
+              } as Candidate;
+            } catch (err) {
+              console.warn("Error al mapear candidato para postulación:", p, err);
+              // Retornar un objeto con datos mínimos en lugar de undefined
+              return {
+                id: p.id,
+                name: "Error al cargar candidato",
+                lastName: "",
+                email: p.email || "",
+                phone: "",
+                countryCode: "+54",
+                dni: "",
+                gender: "No especificado",
+                nationality: "",
+                residenceCountry: "",
+                province: "",
+                address: "",
+                birthDate: "",
+                age: 0,
+                location: "",
+                cvUrl: "",
+                postulacion: {
+                  id: p.id,
+                  candidatoId: p.candidatoId,
+                  busquedaId: p.busquedaId,
+                  estado: p.estado || "",
+                  requisitosExcluyentes: p.requisitosExcluyentes || [],
+                  notas: p.notas || [],
+                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                },
+                entrevista: undefined
+              } as Candidate;
+            }
+          })
+        );
 
         const jobOfferData: JobOffer = {
-          id: busquedaData.id,
-          titulo: busquedaData.titulo,
+          id: busqId,
+          titulo: busquedaData.titulo || "",
           empresa: busquedaData.empresa || "",
           ubicacion: busquedaData.ubicacion || "",
           modalidad: busquedaData.modalidad || "",
           tipoContrato: busquedaData.tipoContrato || "No especificado",
           salario: busquedaData.salario || "No especificado",
-          fechaCreacion: busquedaData.fechaCreacion,
+          fechaCreacion: busqFecha,
           descripcion: busquedaData.descripcion || "",
           beneficios: busquedaData.beneficios || [],
-          candidates: postulacionesData.map((p: PostulacionRequest) => {
-            const entrevista = entrevistasData.find(
-              (e: EntrevistaConCandidato) => 
-                e.nombreCandidato === p.candidato.nombre && 
-                e.apellidoCandidato === p.candidato.apellido
-            )
-
-            return {
-              id: p.postulacion.id,
-              name: p.candidato.nombre,
-              lastName: p.candidato.apellido,
-              email: p.candidato.email,
-              phone: p.candidato.telefono,
-        countryCode: "+54",
-              dni: p.candidato.dni,
-              gender: p.candidato.genero || "No especificado",
-              nationality: p.candidato.nacionalidad,
-              residenceCountry: p.candidato.paisResidencia,
-              province: p.candidato.provincia,
-              address: p.candidato.direccion,
-              birthDate: p.candidato.fechaNacimiento,
-              age: calcularEdad(p.candidato.fechaNacimiento),
-              location: p.candidato.provincia,
-              cvUrl: p.candidato.cvUrl || "",
-              postulacion: {
-                id: p.postulacion.id,
-                candidatoId: p.candidato.id,
-                busquedaId: busquedaData.id,
-                estado: p.postulacion.estado,
-                requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
-                notas: p.postulacion.notas || [],
-                ...(p.postulacion as any).resumenCv && { resumenCv: (p.postulacion as any).resumenCv }
-              },
-              entrevista: entrevista ? {
-                id: entrevista.id,
-                fechaProgramada: entrevista.fechaProgramada,
-                horaProgramada: entrevista.horaProgramada,
-                estado: entrevista.estado,
-                linkEntrevista: entrevista.linkEntrevista
-              } : undefined
-            } as Candidate
-          })
+          candidates: candidates.filter((c): c is Candidate => !!c),
         }
 
         setJobOffer(jobOfferData)
       } catch (error) {
         console.error("Error fetching data:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos. Por favor, intente nuevamente.",
+          variant: "destructive",
+        })
       }
     }
 
     fetchData()
-  }, [resolvedParams.id])
+  }, [resolvedParams.id, toast])
 
   const handleBack = () => {
     router.back()
@@ -270,44 +395,78 @@ export default function JobOfferPage({ params }: PageProps) {
           jobOfferService.getCandidates(resolvedParams.id)
         ])
 
-        const jobOfferData: JobOffer = {
-          id: busquedaData.id,
-          titulo: busquedaData.titulo,
-          empresa: busquedaData.empresa || "",
-          ubicacion: busquedaData.ubicacion || "",
-          modalidad: busquedaData.modalidad || "",
-          tipoContrato: busquedaData.tipoContrato || "No especificado",
-          salario: busquedaData.salario || "No especificado",
-          fechaCreacion: busquedaData.fechaCreacion,
-          descripcion: busquedaData.descripcion || "",
-          beneficios: busquedaData.beneficios || [],
-          candidates: postulacionesData.map((p: PostulacionRequest) => ({
-            id: p.postulacion.id,
-            name: p.candidato.nombre,
-            lastName: p.candidato.apellido,
-            email: p.candidato.email,
-            phone: p.candidato.telefono,
-            countryCode: "+54",
-            dni: p.candidato.dni,
-            gender: p.candidato.genero || "No especificado",
-            nationality: p.candidato.nacionalidad,
-            residenceCountry: p.candidato.paisResidencia,
-            province: p.candidato.provincia,
-            address: p.candidato.direccion,
-            birthDate: p.candidato.fechaNacimiento,
-            age: calcularEdad(p.candidato.fechaNacimiento),
-            location: p.candidato.provincia,
-            cvUrl: p.candidato.cvUrl || "",
-            postulacion: {
-              id: p.postulacion.id,
-              candidatoId: p.candidato.id,
-              busquedaId: busquedaData.id,
-              estado: p.postulacion.estado,
-              requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
-              notas: p.postulacion.notas || [],
-              ...(p.postulacion as any).resumenCv && { resumenCv: (p.postulacion as any).resumenCv }
+        // Obtener los datos completos de cada candidato para cada postulación
+        const candidates = await Promise.all(
+          (Array.isArray(postulacionesData) ? postulacionesData : []).map(async (p: any) => {
+            try {
+              // Fetch candidato
+              const candidatoRes = await fetch(`http://localhost:8080/api/candidatos/${p.candidatoId}`, {
+                credentials: "include",
+                headers: { 'Accept': 'application/json' }
+              });
+              if (!candidatoRes.ok) throw new Error("No se pudo obtener el candidato");
+              const candidato = await candidatoRes.json();
+
+              // Buscar entrevista correspondiente
+              const entrevista = Array.isArray(entrevistas)
+                ? entrevistas.find(
+                    (e: any) => e.candidatoId === p.candidatoId
+                  )
+                : undefined;
+
+              return {
+                id: p.id,
+                name: candidato.nombre || "",
+                lastName: candidato.apellido || "",
+                email: candidato.email || "",
+                phone: candidato.telefono || "",
+                countryCode: candidato.codigoPais || "+54",
+                dni: candidato.dni || "",
+                gender: candidato.genero || "No especificado",
+                nationality: candidato.nacionalidad || "",
+                residenceCountry: candidato.paisResidencia || "",
+                province: candidato.provincia || "",
+                address: candidato.direccion || "",
+                birthDate: candidato.fechaNacimiento || "",
+                age: candidato.fechaNacimiento ? calcularEdad(candidato.fechaNacimiento) : 0,
+                location: candidato.provincia || "",
+                cvUrl: candidato.cvUrl || "",
+                postulacion: {
+                  id: p.id,
+                  candidatoId: p.candidatoId,
+                  busquedaId: p.busquedaId,
+                  estado: p.estado || "",
+                  requisitosExcluyentes: p.requisitosExcluyentes || [],
+                  notas: p.notas || [],
+                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                },
+                entrevista: entrevista ? {
+                  id: entrevista.id,
+                  fechaProgramada: entrevista.fechaProgramada,
+                  horaProgramada: entrevista.horaProgramada,
+                  estado: entrevista.estado,
+                  linkEntrevista: entrevista.linkEntrevista
+                } : undefined
+              } as Candidate;
+            } catch (err) {
+              console.warn("No se pudo mapear candidato para postulación:", p, err);
+              return undefined;
             }
-          }))
+          })
+        );
+
+        const jobOfferData: JobOffer = {
+          id: (busquedaData as any).id || "",
+          titulo: (busquedaData as any).titulo || "",
+          empresa: (busquedaData as any).empresa || "",
+          ubicacion: (busquedaData as any).ubicacion || "",
+          modalidad: (busquedaData as any).modalidad || "",
+          tipoContrato: (busquedaData as any).tipoContrato || "No especificado",
+          salario: (busquedaData as any).salario || "No especificado",
+          fechaCreacion: (busquedaData as any).fechaCreacion || "",
+          descripcion: (busquedaData as any).descripcion || "",
+          beneficios: (busquedaData as any).beneficios || [],
+          candidates: candidates.filter((c): c is Candidate => !!c),
         }
 
         setJobOffer(jobOfferData)

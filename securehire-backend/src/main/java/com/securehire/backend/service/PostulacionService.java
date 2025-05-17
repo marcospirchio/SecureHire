@@ -30,6 +30,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 @Service
 public class PostulacionService {
@@ -46,35 +48,44 @@ public class PostulacionService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public Postulacion crearPostulacion(Postulacion postulacion, Candidato candidatoDatos) {
+    public Postulacion crearPostulacion(Postulacion postulacion, Candidato candidatoDatos, MultipartFile archivoCV) {
         Optional<Candidato> candidatoOpt = candidatoRepository.findByEmail(candidatoDatos.getEmail());
+    
         if (candidatoOpt.isEmpty()) {
             candidatoOpt = candidatoRepository.findByDni(candidatoDatos.getDni());
         }
-
+    
         Candidato candidato = candidatoOpt.orElseGet(() -> {
             candidatoDatos.setFechaRegistro(new Date());
             return candidatoRepository.save(candidatoDatos);
         });
-
+    
         if (postulacionRepository.existsByCandidatoIdAndBusquedaId(candidato.getId(), postulacion.getBusquedaId())) {
             throw new IllegalStateException("El candidato ya está postulado a esta búsqueda");
         }
-
+    
         busquedaRepository.findById(postulacion.getBusquedaId()).ifPresentOrElse(
             busqueda -> postulacion.setUsuarioId(busqueda.getUsuarioId()),
             () -> {
                 throw new IllegalStateException("La búsqueda asociada no existe");
             }
         );
-
+    
+        try {
+            postulacion.setCvArchivo(archivoCV.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException("Error al leer el archivo CV", e);
+        }
+    
         postulacion.setCandidatoId(candidato.getId());
         postulacion.setFechaPostulacion(new Date());
         postulacion.setEstado("pendiente");
         postulacion.setFaseActual("inicial");
-
+    
         return postulacionRepository.save(postulacion);
     }
+    
+    
 
     public String asociarCandidatoABusqueda(String candidatoId, String busquedaId) {
         Optional<Candidato> candidatoOpt = candidatoRepository.findById(candidatoId);
