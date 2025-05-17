@@ -90,7 +90,7 @@ export default function JobOfferPage({ params }: PageProps) {
               lastName: p.candidato.apellido,
               email: p.candidato.email,
               phone: p.candidato.telefono,
-        countryCode: "+54",
+              countryCode: "+54",
               dni: p.candidato.dni,
               gender: p.candidato.genero || "No especificado",
               nationality: p.candidato.nacionalidad,
@@ -104,9 +104,11 @@ export default function JobOfferPage({ params }: PageProps) {
               postulacion: {
                 id: p.postulacion.id,
                 candidatoId: p.candidato.id,
+                busquedaId: busquedaData.id,
                 estado: p.postulacion.estado,
                 requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
-                notas: p.postulacion.notas || []
+                notas: p.postulacion.notas || [],
+                ...(p.postulacion as any).resumenCv && { resumenCv: (p.postulacion as any).resumenCv }
               },
               entrevista: entrevista ? {
                 id: entrevista.id,
@@ -299,9 +301,11 @@ export default function JobOfferPage({ params }: PageProps) {
             postulacion: {
               id: p.postulacion.id,
               candidatoId: p.candidato.id,
+              busquedaId: busquedaData.id,
               estado: p.postulacion.estado,
               requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
-              notas: p.postulacion.notas || []
+              notas: p.postulacion.notas || [],
+              ...(p.postulacion as any).resumenCv && { resumenCv: (p.postulacion as any).resumenCv }
             }
           }))
         }

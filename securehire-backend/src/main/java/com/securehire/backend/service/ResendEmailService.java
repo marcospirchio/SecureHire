@@ -30,7 +30,7 @@ public class ResendEmailService {
 
     public void enviarCorreo(String destinatario, String asunto, String mensaje) {
     Map<String, Object> payload = new HashMap<>();
-    payload.put("from", "Acme <onboarding@resend.dev>");
+    payload.put("from", "SecureHire <onboarding@resend.dev>");
     payload.put("to", destinatario);
     payload.put("subject", asunto);
     payload.put("text", mensaje);

@@ -29,6 +29,7 @@ public class Postulacion {
     private String motivoFinalizacion; // "NINGUNO", "DESAPARECIO", "NO_ASISTIO", "NO_CUMPLE"
     private List<AnotacionPrivada> anotacionesPrivadas;
     private Date fechaPostulacion;
+    private String resumenCv;
 
     @Data
     @Builder

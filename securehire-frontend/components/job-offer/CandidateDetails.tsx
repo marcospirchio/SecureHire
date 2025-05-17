@@ -1,4 +1,4 @@
-import { X, AlertTriangle, Calendar, FileText, Pencil, Trash2 } from 'lucide-react'
+import { X, AlertTriangle, Calendar, FileText, Pencil, Trash2, Sparkles } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -49,6 +49,8 @@ export function CandidateDetails({
   const [editText, setEditText] = useState("")
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const { toast } = useToast()
+  const [iaSummary, setIaSummary] = useState<string | null>(null)
+  const [iaLoading, setIaLoading] = useState(false)
 
   // Obtener el ID del usuario logueado
   useEffect(() => {
@@ -321,6 +323,42 @@ const anotacionesOrdenadas = [...anotaciones]
     return 0;
   });
 
+  // Mostrar el resumen guardado si existe
+  useEffect(() => {
+    if (candidate.postulacion && candidate.postulacion.resumenCv) {
+      setIaSummary(candidate.postulacion.resumenCv)
+    }
+  }, [candidate.postulacion])
+
+  // Función para obtener el resumen IA
+  const handleIASummary = async () => {
+    if (!candidate.cvUrl) return
+    setIaLoading(true)
+    try {
+      // Descargar el PDF del CV
+      const response = await fetch(candidate.cvUrl)
+      const blob = await response.blob()
+      const file = new File([blob], 'cv.pdf', { type: blob.type })
+      // Armar formData
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('postulacionId', candidate.postulacion?.id || "")
+      formData.append('busquedaId', candidate.postulacion?.busquedaId || "")
+      // Llamar al endpoint IA de postulaciones
+      const iaRes = await fetch('http://localhost:8080/api/postulaciones/extraer-cv-y-resumir', {
+        method: 'POST',
+        body: formData
+      })
+      if (!iaRes.ok) throw new Error('Error al obtener resumen IA')
+      const resumen = await iaRes.text()
+      setIaSummary(resumen)
+    } catch (e) {
+      setIaSummary('No se pudo obtener el resumen IA.')
+    } finally {
+      setIaLoading(false)
+    }
+  }
+
   return (
     <div className="w-1/2 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
       <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
@@ -370,10 +408,21 @@ const anotacionesOrdenadas = [...anotaciones]
             <FileText className="h-3 w-3" /> Ver CV Completo
           </Button>
           <div className="bg-gray-50 p-3 rounded-md">
-            <h4 className="text-xs font-medium text-gray-700 mb-2">Resumen del CV</h4>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Profesional con 5 años de experiencia en desarrollo de software. Especializado en tecnologías frontend como React y TypeScript. Experiencia en proyectos de e-commerce y aplicaciones financieras. Graduado en Ingeniería Informática. Certificaciones en React Advanced y TypeScript. Inglés nivel avanzado. Disponibilidad inmediata.
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-medium text-gray-700">Resumen del CV</h4>
+              {!iaSummary && (
+                <Button size="icon" variant="ghost" onClick={handleIASummary} disabled={iaLoading} title="Generar resumen IA">
+                  <Sparkles className="h-4 w-4 text-purple-500" />
+                </Button>
+              )}
+            </div>
+            {iaLoading ? (
+              <p className="text-xs text-gray-500">Generando resumen IA...</p>
+            ) : iaSummary ? (
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap">{iaSummary}</pre>
+            ) : (
+              <p className="text-xs text-gray-400 italic">Haz click en el botón de IA para generar el resumen del CV.</p>
+            )}
           </div>
         </div>
 

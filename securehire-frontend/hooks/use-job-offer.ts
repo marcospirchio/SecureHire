@@ -91,8 +91,11 @@ export function useJobOffer(id: string) {
                 postulacion: {
                   id: p.postulacion.id,
                   candidatoId: p.candidato.id,
+                  busquedaId: busquedaData.id,
                   requisitosExcluyentes: p.postulacion.requisitosExcluyentes || [],
-                  notas: p.postulacion.notas || []
+                  notas: p.postulacion.notas || [],
+                  ...(p.postulacion as any).estado && { estado: (p.postulacion as any).estado },
+                  ...(p.postulacion as any).resumenCv && { resumenCv: (p.postulacion as any).resumenCv }
                 },
                 entrevista: entrevista ? {
                   id: entrevista.id,

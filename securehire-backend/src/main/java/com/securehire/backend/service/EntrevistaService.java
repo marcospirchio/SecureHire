@@ -39,51 +39,62 @@ public class EntrevistaService {
 
     public Entrevista crearEntrevista(Entrevista entrevista) {
         Entrevista creada = entrevistaRepository.save(entrevista);
-
+    
         try {
             var candidato = candidatoService.obtenerCandidatoPorId(creada.getCandidatoId())
                     .orElseThrow(() -> new RuntimeException("Candidato no encontrado"));
             String email = candidato.getEmail();
-
-            String nombreProceso = busquedaRepository.findById(creada.getBusquedaId())
-                    .map(Busqueda::getTitulo)
-                    .orElse("Proceso desconocido");
-
-            String nombreReclutador = usuarioRepository.findById(creada.getUsuarioId())
-                    .map(Usuario::getNombre)
-                    .orElse("Reclutador desconocido");
-
+    
+            var busquedaOpt = busquedaRepository.findById(creada.getBusquedaId());
+            String nombreProceso = busquedaOpt.map(Busqueda::getTitulo).orElse("Proceso desconocido");
+    
+            var usuarioOpt = usuarioRepository.findById(creada.getUsuarioId());
+            String nombreReclutador = usuarioOpt.map(u -> u.getNombre() + " " + u.getApellido()).orElse("Reclutador desconocido");
+            String empresa = usuarioOpt.map(Usuario::getEmpresa).orElse("Empresa desconocida");
+    
             // Formatear la fecha
             SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             String fechaFormateada = formatoFecha.format(creada.getFechaProgramada());
-
+    
             // Preparar asunto y mensaje
             String asunto = "Entrevista agendada para el proceso: " + nombreProceso;
             String mensaje = String.format("""
-                    Hola %s,
+                Estimado/a %s,
 
-                    Has sido invitado a una entrevista como parte del proceso "%s".
+                Te confirmamos que has sido convocado/a a una entrevista para el proceso de selección "%s" en %s.
 
-                    🧑 Reclutador: %s
-                    📅 Fecha: %s
-                    🔗 Enlace a la entrevista: %s
+                📅 Fecha y hora: %s  
+                🧑 Reclutador asignado: %s  
+                🔗 Dirección: Avenida Siempre Viva 123
 
-                    Por favor, confirmá tu asistencia aquí:
-                    https://securehire.com/confirmar-entrevista/%s
+                Para confirmar tu asistencia, hacé clic en el siguiente enlace:
+                👉 https://securehire.com/confirmar-entrevista/%s
 
-                    ¡Éxitos!
+                ¡Muchos éxitos!
 
-                    -- SecureHire
-                    """, candidato.getNombre(), nombreProceso, nombreReclutador, fechaFormateada, creada.getLinkEntrevista(), creada.getId());
+                Saludos cordiales,  
+                Equipo de %s
+                """,
+                candidato.getNombre(),
+                nombreProceso,
+                empresa,
+                fechaFormateada,
+                nombreReclutador,
+                creada.getId(), // Usado solo para el link
+                empresa
+            );
 
+    
             resendEmailService.enviarCorreo(email, asunto, mensaje);
             System.out.println("✅ Correo enviado exitosamente a " + email);
+    
         } catch (Exception e) {
             System.out.println("⚠️ No se pudo enviar el correo de entrevista: " + e.getMessage());
         }
-
+    
         return creada;
     }
+    
 
     public Optional<Entrevista> obtenerEntrevistaPorId(String id) {
         return entrevistaRepository.findById(id);

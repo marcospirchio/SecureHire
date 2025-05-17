@@ -31,7 +31,7 @@ export function useEventosCalendario() {
           credentials: "include"
         })
         if (!res.ok) throw new Error("No se pudieron obtener los eventos")
-        const data = await res.json()
+        const data: EventoCalendario[] = await res.json()
         setEventos(data)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al obtener eventos")

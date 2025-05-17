@@ -18,6 +18,7 @@ export interface Candidate {
   postulacion: {
     id: string
     candidatoId: string
+    busquedaId: string
     estado?: string
     requisitosExcluyentes?: string[]
     notas?: {
@@ -26,6 +27,7 @@ export interface Candidate {
       date: string
       content: string
     }[]
+    resumenCv?: string
   }
   entrevista?: {
     id: string
