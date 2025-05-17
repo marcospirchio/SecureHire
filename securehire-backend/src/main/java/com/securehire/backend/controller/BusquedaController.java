@@ -52,17 +52,31 @@ public class BusquedaController {
             @PathVariable String id,
             @AuthenticationPrincipal Usuario usuario
     ) {
-        Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
+        try {
+            Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
 
-        if (busquedaOpt.isPresent()) {
+            if (busquedaOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
             Busqueda busqueda = busquedaOpt.get();
-            if (busqueda.getUsuarioId().equals(usuario.getId())) {
-                return ResponseEntity.ok(busqueda);
-            } else {
+            
+            // Verificar que el usuario esté autenticado
+            if (usuario == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            // Verificar que el usuario tenga acceso a la búsqueda
+            if (!busqueda.getUsuarioId().equals(usuario.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
-        } else {
-            return ResponseEntity.notFound().build();
+
+            return ResponseEntity.ok(busqueda);
+        } catch (Exception e) {
+            // Log del error para debugging
+            System.err.println("Error al obtener búsqueda: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

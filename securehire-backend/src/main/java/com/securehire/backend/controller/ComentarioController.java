@@ -5,6 +5,10 @@ import com.securehire.backend.model.Usuario;
 import com.securehire.backend.service.AuthService;
 import com.securehire.backend.service.ComentarioService;
 import com.securehire.backend.service.PostulacionService;
+import com.securehire.backend.service.CandidatoService;
+import com.securehire.backend.service.BusquedaService;
+import com.securehire.backend.service.ResendEmailService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,7 +19,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-
+import com.securehire.backend.model.Candidato;
+import com.securehire.backend.model.Postulacion;
+import com.securehire.backend.model.Busqueda;
+import com.securehire.backend.service.CandidatoService;
+import com.securehire.backend.service.BusquedaService;
+import com.securehire.backend.service.ResendEmailService;
 // ESTA CLASE ES FEEDBACK NO COMENTARIO.
 
 
@@ -24,6 +33,15 @@ import java.util.Optional;
 public class ComentarioController {
     @Autowired
     private ComentarioService comentarioService;
+
+    @Autowired
+    private CandidatoService candidatoService;
+
+    @Autowired
+    private BusquedaService busquedaService;
+
+    @Autowired
+    private ResendEmailService resendEmailService;
 
     @Autowired
     private AuthService authService;
@@ -39,24 +57,63 @@ public class ComentarioController {
             @RequestBody Comentario comentario,
             @AuthenticationPrincipal Usuario usuario
     ) {
-    comentario.setUsuarioId(usuario.getId());
-
-    if (comentario.getPostulacionId() != null) {
-        var postulacion = postulacionService.obtenerPostulacionPorId(comentario.getPostulacionId())
-                .orElseThrow(() -> new RuntimeException("Postulación no encontrada"));
-
+        comentario.setUsuarioId(usuario.getId());
+        System.out.println("📥 Recibido comentario de usuario: " + usuario.getEmail());
+    
+        if (comentario.getPostulacionId() == null) {
+            System.out.println("⛔ No se envió postulaciónId");
+            return ResponseEntity.badRequest().build();
+        }
+    
+        Optional<Postulacion> postulacionOpt = postulacionService.obtenerPostulacionPorId(comentario.getPostulacionId());
+    
+        if (postulacionOpt.isEmpty()) {
+            System.out.println("⛔ No se encontró postulación con ID: " + comentario.getPostulacionId());
+            return ResponseEntity.badRequest().build();
+        }
+    
+        Postulacion postulacion = postulacionOpt.get();
+    
         // Validar que la postulación esté finalizada
         if (!"FINALIZADA".equalsIgnoreCase(postulacion.getEstado())) {
-            return ResponseEntity.badRequest().build(); // o un error más descriptivo
+            System.out.println("⛔ La postulación no está finalizada.");
+            return ResponseEntity.badRequest().build();
         }
-
+    
         comentario.setCandidatoId(postulacion.getCandidatoId());
-    } else {
-        return ResponseEntity.badRequest().build(); // No se puede comentar sin una postulación
+    
+        Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(postulacion.getBusquedaId());
+        String tituloBusqueda = busquedaOpt.map(Busqueda::getTitulo).orElse("una de tus postulaciones");
+    
+        Comentario comentarioGuardado = comentarioService.crearComentario(comentario);
+        System.out.println("✅ Comentario guardado correctamente en la BDD con ID: " + comentarioGuardado.getId());
+    
+        // Enviar correo
+        try {
+            System.out.println("📩 Iniciando proceso de envío de correo...");
+            Candidato candidato = candidatoService.obtenerCandidatoPorId(comentario.getCandidatoId())
+                    .orElseThrow(() -> new RuntimeException("Candidato no encontrado"));
+    
+            System.out.println("✅ Candidato encontrado: " + candidato.getEmail());
+    
+            String asunto = "Nuevo comentario sobre tu postulación";
+            String mensaje = String.format(
+                "Hola %s,\n\nHas recibido un nuevo comentario sobre tu postulación a \"%s\":\n\n\"%s\"\n\nSaludos,\nSecureHire",
+                candidato.getNombre(),
+                tituloBusqueda,
+                comentario.getTexto()
+            );
+    
+            System.out.println("📤 Enviando correo a: " + candidato.getEmail());
+            resendEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+            System.out.println("✅ Solicitud de envío de correo completada.");
+        } catch (Exception e) {
+            System.out.println("⚠️ No se pudo enviar el correo al candidato: " + e.getMessage());
+        }
+    
+        return ResponseEntity.ok(comentarioGuardado);
     }
-
-    return ResponseEntity.ok(comentarioService.crearComentario(comentario));
-    }
+    
 
 
     // ✅ Obtener comentarios por candidato.

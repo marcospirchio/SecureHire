@@ -12,7 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import com.securehire.backend.service.ResendEmailService;
 import java.util.Date;
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-
+    private final ResendEmailService emailService;
     public AuthResponse register(AuthRequest request) {
         if (usuarioRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
@@ -43,6 +43,12 @@ public class AuthService {
                 .puestosPublicados(List.of())
                 .fechaCreacion(new Date())
                 .build();
+                
+              emailService.enviarCorreo(
+                usuario.getEmail(),
+                "¡Bienvenido a SecureHire!",
+                "Hola " + usuario.getNombre() + ", gracias por registrarte en nuestra plataforma."
+            );
         
         usuarioRepository.save(usuario);
         var jwtToken = jwtService.generateToken((UserDetails) usuario);

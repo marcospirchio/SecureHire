@@ -241,7 +241,7 @@ export default function JobOfferPage({ params }: PageProps) {
         const comentarioData = {
           postulacionId: selectedCandidate.postulacion.id,
           candidatoId: selectedCandidate.id,
-          texto: `${finalizationReason} - ${feedback}`
+          texto: `${feedback}`
         }
 
         console.log("Enviando comentario:", comentarioData)

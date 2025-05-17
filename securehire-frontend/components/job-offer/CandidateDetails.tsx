@@ -70,87 +70,71 @@ export function CandidateDetails({
 
     fetchCurrentUser();
   }, []);
+// 1. Obtener comentarios con datos del reclutador
+useEffect(() => {
+  const fetchFeedbacks = async () => {
+    if (activeTab !== "feedbacks" || !candidate?.postulacion?.candidatoId) return;
 
-  useEffect(() => {
-    const fetchFeedbacks = async () => {
-      if (activeTab === "feedbacks") {
-        setLoading(true)
-        try {
-          console.log("Buscando comentarios para candidato:", candidate.postulacion.candidatoId);
-          const response = await fetch(`http://localhost:8080/api/comentarios/candidato/${candidate.postulacion.candidatoId}`, {
-            credentials: "include",
-            headers: { 'Accept': 'application/json' }
-          })
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/comentarios/candidato/${candidate.postulacion.candidatoId}`, {
+        credentials: "include",
+        headers: { 'Accept': 'application/json' }
+      });
 
-          if (!response.ok) throw new Error("Error al cargar los comentarios")
-          const data = await response.json()
-          console.log("Comentarios recibidos del backend:", data);
-          
-          // Obtener información de los reclutadores
-          const feedbacksWithRecruiterInfo = await Promise.all(
-            data.map(async (f: any) => {
-              try {
-                const recruiterResponse = await fetch(`http://localhost:8080/api/usuarios/${f.usuarioId}`, {
-                  credentials: "include",
-                  headers: { 'Accept': 'application/json' }
-                });
-                
-                let recruiterInfo = { nombre: 'Reclutador', apellido: '', empresa: 'Empresa' };
-                if (recruiterResponse.ok) {
-                  const recruiterData: Usuario = await recruiterResponse.json();
-                  recruiterInfo = {
-                    nombre: recruiterData.nombre,
-                    apellido: recruiterData.apellido,
-                    empresa: recruiterData.empresa
-                  };
-                }
+      if (!response.ok) throw new Error("Error al cargar los comentarios");
 
-                const feedback = {
-                  id: f.id,
-                  texto: f.texto,
-                  fecha: f.fecha,
-                  usuarioId: f.usuarioId,
-                  candidatoId: f.candidatoId,
-                  postulacionId: f.postulacionId,
-                  nombreReclutador: `${recruiterInfo.nombre} ${recruiterInfo.apellido}`,
-                  empresaReclutador: recruiterInfo.empresa
-                };
+      const data = await response.json();
 
-                console.log("Feedback procesado:", feedback);
-                console.log("Comparación de IDs - Usuario actual:", currentUserId, "Usuario del comentario:", f.usuarioId);
-                return feedback;
-              } catch (error) {
-                console.error("Error al procesar feedback:", error);
-                return null;
-              }
-            })
-          );
+      const feedbacksWithInfo = await Promise.all(
+        data.map(async (f: any) => {
+          try {
+            const recruiterRes = await fetch(`http://localhost:8080/api/usuarios/${f.usuarioId}`, {
+              credentials: "include",
+              headers: { 'Accept': 'application/json' }
+            });
 
-          const validFeedbacks = feedbacksWithRecruiterInfo.filter(f => f !== null);
-          console.log("Feedbacks finales:", validFeedbacks);
-          setFeedbacks(validFeedbacks);
-        } catch (error) {
-          console.error("Error al cargar comentarios:", error);
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los comentarios",
-            variant: "destructive"
-          })
-        } finally {
-          setLoading(false)
-        }
-      }
+            const recruiterData: Usuario = recruiterRes.ok
+              ? await recruiterRes.json()
+              : { nombre: "Reclutador", apellido: "", empresa: "Empresa" };
+
+            return {
+              id: f.id,
+              texto: f.texto,
+              fecha: f.fecha,
+              usuarioId: f.usuarioId,
+              candidatoId: f.candidatoId,
+              postulacionId: f.postulacionId,
+              nombreReclutador: `${recruiterData.nombre} ${recruiterData.apellido}`,
+              empresaReclutador: recruiterData.empresa
+            };
+          } catch (e) {
+            console.error("Error al cargar reclutador:", e);
+            return null;
+          }
+        })
+      );
+
+      // Ordenar los feedbacks por fecha de más reciente a más antiguo
+      const feedbacksOrdenados = feedbacksWithInfo
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+      setFeedbacks(feedbacksOrdenados);
+    } catch (error) {
+      console.error("Error al cargar comentarios:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los comentarios",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchFeedbacks()
-  }, [activeTab, candidate.postulacion.candidatoId, toast, currentUserId])
-
-  useEffect(() => {
-    if (activeTab === "feedbacks") {
-      setActiveTab("notes")
-      setTimeout(() => setActiveTab("feedbacks"), 0)
-    }
-  }, [candidate.id])
+  fetchFeedbacks();
+}, [activeTab, candidate?.postulacion?.candidatoId, currentUserId, toast]);
 
   
 

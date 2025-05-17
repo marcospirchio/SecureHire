@@ -6,6 +6,7 @@ export interface Busqueda {
   fechaCreacion: string // ISO
   faseActual?: string
   cantidadCandidatos?: number
+  archivada?: boolean
 }
 
 export interface ConteoPostulaciones {

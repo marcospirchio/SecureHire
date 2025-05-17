@@ -2,6 +2,7 @@ import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 
 interface JobListing {
+  id: string
   title: string
   subtitle?: string
   phase: string
@@ -11,9 +12,10 @@ interface JobListing {
 
 interface JobListingsProps {
   listings: JobListing[]
+  onJobClick?: (id: string) => void
 }
 
-export function JobListings({ listings }: JobListingsProps) {
+export function JobListings({ listings, onJobClick }: JobListingsProps) {
   return (
     <div className="rounded-lg border bg-white p-3 w-full">
       <div className="mb-3 flex items-center justify-between">
@@ -30,8 +32,12 @@ export function JobListings({ listings }: JobListingsProps) {
         </Link>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {listings.map((listing, index) => (
-          <div key={index} className="rounded-lg border p-3 hover:shadow-sm transition-shadow">
+        {listings.map((listing) => (
+          <div
+            key={listing.id}
+            className="rounded-lg border p-3 hover:shadow-sm transition-shadow cursor-pointer"
+            onClick={() => onJobClick && onJobClick(listing.id)}
+          >
             <h3 className="text-sm font-bold mb-2">{listing.title}</h3>
             {listing.subtitle && <p className="text-xs font-medium mb-2">{listing.subtitle}</p>}
 

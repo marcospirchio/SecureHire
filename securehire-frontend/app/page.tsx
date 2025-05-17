@@ -86,10 +86,12 @@ export default function DashboardReclutamiento() {
   ]
 
   const jobListings = busquedas
+    .filter(b => !b.archivada)
     .slice()
     .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
     .slice(0, 3)
     .map(b => ({
+      id: b.id,
       title: b.titulo,
       subtitle: b.faseActual ?? "",
       phase: b.faseActual ?? "",
@@ -199,7 +201,7 @@ export default function DashboardReclutamiento() {
             ))}
           </div>
         ) : (
-        <JobListings listings={jobListings} />
+        <JobListings listings={jobListings} onJobClick={id => router.push(`/busquedas/${id}`)} />
         )}
 
         <Dialog open={isEventDetailsModalOpen} onOpenChange={setIsEventDetailsModalOpen}>
