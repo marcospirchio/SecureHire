@@ -35,6 +35,8 @@ public class Postulacion {
 
     private byte[] cvArchivo; // Archivo PDF binario
 
+    private String opinionComentariosIA; // Texto generado por IA (opcional)
+
     @Data
     @Builder
     @NoArgsConstructor

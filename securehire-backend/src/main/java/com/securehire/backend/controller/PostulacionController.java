@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
-
+import java.io.IOException; 
 
 @RestController
 @RequestMapping("/api/postulaciones")
@@ -346,36 +346,76 @@ public class PostulacionController {
     }
 
     @GetMapping("/anotaciones/postulacion/{postulacionId}")
-public ResponseEntity<?> obtenerAnotacionesPrivadasPorPostulacion(
-        @PathVariable String postulacionId,
-        @AuthenticationPrincipal Usuario usuario
-) {
-    Optional<Postulacion> postulacionOpt = postulacionRepository.findById(postulacionId);
+    public ResponseEntity<?> obtenerAnotacionesPrivadasPorPostulacion(
+            @PathVariable String postulacionId,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Postulacion> postulacionOpt = postulacionRepository.findById(postulacionId);
 
-    if (postulacionOpt.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Postulación no encontrada");
+        if (postulacionOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Postulación no encontrada");
+        }
+
+        Postulacion postulacion = postulacionOpt.get();
+
+        // 🔍 Buscar la búsqueda para verificar que el usuario es el dueño
+        Optional<Busqueda> busquedaOpt = busquedaRepository.findById(postulacion.getBusquedaId());
+        if (busquedaOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Búsqueda no encontrada");
+        }
+
+        if (!busquedaOpt.get().getUsuarioId().equals(usuario.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para ver anotaciones de esta postulación");
+        }
+
+        // Filtrar solo las anotaciones del reclutador logueado
+        List<Postulacion.AnotacionPrivada> propias = postulacion.getAnotacionesPrivadas() != null
+            ? postulacion.getAnotacionesPrivadas().stream()
+                .filter(a -> a.getUsuarioId().equals(usuario.getId()))
+                .toList()
+            : List.of();
+
+        return ResponseEntity.ok(propias);
+    }
+// Para cambiar el cv de la postulacion manualmente (solo postman)
+    @PutMapping("/{postulacionId}/actualizar-cv")
+    public ResponseEntity<String> actualizarCv(
+            @PathVariable String postulacionId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        try {
+            Optional<Postulacion> postulacionOpt = postulacionRepository.findById(postulacionId);
+            if (postulacionOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Postulacion postulacion = postulacionOpt.get();
+            postulacion.setCvArchivo(file.getBytes());
+            postulacionRepository.save(postulacion);
+
+            return ResponseEntity.ok("CV actualizado correctamente");
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("Error al actualizar el CV: " + e.getMessage());
+        }
     }
 
-    Postulacion postulacion = postulacionOpt.get();
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> actualizarOpinionIA(
+            @PathVariable String id,
+            @RequestBody Map<String, String> body
+    ) {
+        Optional<Postulacion> postulacionOpt = postulacionRepository.findById(id);
+        if (postulacionOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
 
-    // 🔍 Buscar la búsqueda para verificar que el usuario es el dueño
-    Optional<Busqueda> busquedaOpt = busquedaRepository.findById(postulacion.getBusquedaId());
-    if (busquedaOpt.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Búsqueda no encontrada");
+        Postulacion postulacion = postulacionOpt.get();
+
+        if (body.containsKey("opinionComentariosIA")) {
+            postulacion.setOpinionComentariosIA(body.get("opinionComentariosIA"));
+        }
+
+        postulacionRepository.save(postulacion);
+        return ResponseEntity.ok().build();
     }
-
-    if (!busquedaOpt.get().getUsuarioId().equals(usuario.getId())) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para ver anotaciones de esta postulación");
-    }
-
-    // Filtrar solo las anotaciones del reclutador logueado
-    List<Postulacion.AnotacionPrivada> propias = postulacion.getAnotacionesPrivadas() != null
-        ? postulacion.getAnotacionesPrivadas().stream()
-            .filter(a -> a.getUsuarioId().equals(usuario.getId()))
-            .toList()
-        : List.of();
-
-    return ResponseEntity.ok(propias);
-}
-    
 }

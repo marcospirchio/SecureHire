@@ -119,9 +119,22 @@ public class ComentarioController {
     // ✅ Obtener comentarios por candidato.
     // Útil para mostrar los comentarios de un candidato en la vista de candidato.
     @GetMapping("/candidato/{candidatoId}")
-    public ResponseEntity<List<Comentario>> obtenerComentariosPorCandidato(@PathVariable String candidatoId) {
-        return ResponseEntity.ok(comentarioService.obtenerComentariosPorCandidato(candidatoId));
+    public ResponseEntity<List<Comentario>> obtenerComentariosPorCandidato(
+            @PathVariable String candidatoId,
+            @RequestParam(required = false) String postulacionId
+    ) {
+        List<Comentario> comentarios;
+
+        if (postulacionId != null && !postulacionId.isBlank()) {
+            comentarios = comentarioService.obtenerComentariosPorCandidatoYPostulacion(candidatoId, postulacionId);
+        } else {
+            comentarios = comentarioService.obtenerComentariosPorCandidato(candidatoId);
+        }
+
+        return ResponseEntity.ok(comentarios);
     }
+
+
     @PutMapping("/{id}")
     public ResponseEntity<Comentario> actualizarComentario(
             @PathVariable String id,

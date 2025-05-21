@@ -58,4 +58,9 @@ public class ComentarioService {
     public void eliminarComentario(String id) {
         comentarioRepository.deleteById(id);
     }
+
+    public List<Comentario> obtenerComentariosPorCandidatoYPostulacion(String candidatoId, String postulacionId) {
+        return comentarioRepository.findByCandidatoIdAndPostulacionId(candidatoId, postulacionId);
+    }
+    
 } 

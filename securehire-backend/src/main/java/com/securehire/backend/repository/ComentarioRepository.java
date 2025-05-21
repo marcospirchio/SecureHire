@@ -11,4 +11,6 @@ public interface ComentarioRepository extends MongoRepository<Comentario, String
     List<Comentario> findByCandidatoId(String candidatoId);
     List<Comentario> findByUsuarioId(String usuarioId);
     List<Comentario> findByCandidatoIdAndUsuarioId(String candidatoId, String usuarioId);
+    List<Comentario> findByCandidatoIdAndPostulacionId(String candidatoId, String postulacionId);
+
 } 

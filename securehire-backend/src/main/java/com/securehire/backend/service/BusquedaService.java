@@ -30,53 +30,39 @@ public class BusquedaService {
         busqueda.setFechaCreacion(new Date());
         busqueda.setArchivada(false);
     
-        // Debug logs
-        System.out.println("📝 Datos de la búsqueda a guardar:");
-        System.out.println("🔹 Título: " + busqueda.getTitulo());
-        System.out.println("🔹 Empresa: " + busqueda.getEmpresa());
-        System.out.println("🔹 Ubicación: " + busqueda.getUbicacion());
-        System.out.println("🔹 Modalidad: " + busqueda.getModalidad());
-        System.out.println("🔹 Tipo de contrato: " + busqueda.getTipoContrato());
-        System.out.println("🔹 Salario: " + busqueda.getSalario());
-    
-        // 1. Guardar la búsqueda
+        // 1. Guardar sin URL para obtener el ID generado
         Busqueda guardada = busquedaRepository.save(busqueda);
     
-        // Debug logs después de guardar
-        System.out.println("✅ Búsqueda guardada:");
-        System.out.println("🔹 ID: " + guardada.getId());
-        System.out.println("🔹 Empresa: " + guardada.getEmpresa());
-        System.out.println("🔹 Ubicación: " + guardada.getUbicacion());
-        System.out.println("🔹 Modalidad: " + guardada.getModalidad());
-        System.out.println("🔹 Tipo de contrato: " + guardada.getTipoContrato());
-        System.out.println("🔹 Salario: " + guardada.getSalario());
+        // 2. Ahora que tenemos el ID, generamos la URL
+        String url = "http://localhost:3000/ofertas/" + guardada.getId();
+        guardada.setUrlPublica(url);
     
-        // 2. Buscar el usuario
+        // 3. Guardar nuevamente con la URL ya seteada
+        guardada = busquedaRepository.save(guardada);
+    
+        // Log de confirmación
+        System.out.println("🔗 URL Pública generada: " + url);
+    
+        // 4. Asociar al usuario
         Optional<Usuario> optUsuario = usuarioRepository.findById(guardada.getUsuarioId());
         if (optUsuario.isPresent()) {
             Usuario usuario = optUsuario.get();
-    
-            // DEBUG extra
-            System.out.println("🟢 Usuario encontrado: " + usuario.getEmail());
-            System.out.println("🔹 ID de búsqueda: " + guardada.getId());
     
             if (usuario.getPuestosPublicados() == null) {
                 usuario.setPuestosPublicados(new ArrayList<>());
             }
     
-            usuario.getPuestosPublicados().add(guardada.getId().toString());
+            usuario.getPuestosPublicados().add(guardada.getId());
     
-            // DEBUG extra
-            System.out.println("📌 Nuevo array puestosPublicados: " + usuario.getPuestosPublicados());
-    
-            usuarioRepository.save(usuario); // 🔥 Esto DEBE ejecutar un save visible en el log
-            System.out.println("✅ Usuario actualizado y guardado.");
+            usuarioRepository.save(usuario);
+            System.out.println("✅ Usuario actualizado con nueva búsqueda.");
         } else {
             System.out.println("❌ Usuario no encontrado con ID: " + guardada.getUsuarioId());
         }
     
         return guardada;
     }
+    
     
     
     

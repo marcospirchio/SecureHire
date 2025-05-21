@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { DashboardLayout } from "@/components/dashboard/layout"
 
 interface EntrevistaConCandidato {
   id: string
@@ -125,7 +126,7 @@ export default function JobOfferPage({ params }: PageProps) {
                   lastName: "",
                   email: p.email || "",
                   phone: "",
-                  countryCode: "+54",
+        countryCode: "+54",
                   dni: "",
                   gender: "No especificado",
                   nationality: "",
@@ -201,7 +202,7 @@ export default function JobOfferPage({ params }: PageProps) {
                 lastName: "",
                 email: p.email || "",
                 phone: "",
-                countryCode: "+54",
+        countryCode: "+54",
                 dni: "",
                 gender: "No especificado",
                 nationality: "",
@@ -239,6 +240,7 @@ export default function JobOfferPage({ params }: PageProps) {
           descripcion: busquedaData.descripcion || "",
           beneficios: busquedaData.beneficios || [],
           candidates: candidates.filter((c): c is Candidate => !!c),
+          urlPublica: busquedaData.urlPublica
         }
 
         setJobOffer(jobOfferData)
@@ -583,119 +585,116 @@ export default function JobOfferPage({ params }: PageProps) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar onToggle={handleSidebarToggle} />
-      <div className={`flex-1 transition-all duration-300 ease-in-out ${isSidebarExpanded ? 'ml-64' : 'ml-20'}`}>
-        <div className="container mx-auto p-4">
-          <JobOfferHeader
-            title={jobOffer.titulo}
-            onBack={handleBack}
-            onOpenJobDetails={handleOpenJobDetails}
-            busquedaId={resolvedParams.id}
-          />
-
-      <div className="flex flex-1 gap-3 overflow-hidden">
-        {/* Lista de candidatos */}
-        <div
-          className={`flex flex-col h-[90vh] ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
-        >
-          <div className="mb-3 flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Búsqueda de candidatos"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-            {filteredCandidates.map((candidate) => (
-                  <CandidateCard
-                key={candidate.id}
-                    candidate={candidate}
-                    isSelected={selectedCandidate?.id === candidate.id}
-                    onClick={setSelectedCandidate}
-                  />
-            ))}
-          </div>
-        </div>
-
-        {/* Panel de detalles del candidato */}
-        {selectedCandidate && (
-              <CandidateDetails
-                candidate={selectedCandidate}
-                onClose={() => setSelectedCandidate(null)}
-                onOpenInterviewModal={() => setIsInterviewModalOpen(true)}
-                onOpenFeedbackModal={handleEndProcess}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Modal para agendar entrevista */}
-      {selectedCandidate && (
-        <InterviewModal
-          isOpen={isInterviewModalOpen}
-          onClose={() => setIsInterviewModalOpen(false)}
-          candidate={selectedCandidate}
-          onConfirm={handleConfirmInterview}
+    <Sidebar>
+      <DashboardLayout>
+        <JobOfferHeader
+          title={jobOffer.titulo}
+          onBack={handleBack}
+          onOpenJobDetails={handleOpenJobDetails}
+          busquedaId={resolvedParams.id}
+          urlPublica={jobOffer.urlPublica}
         />
-      )}
 
-      {/* Modal para finalizar proceso */}
-      <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              Finalizar proceso de {selectedCandidate?.name} {selectedCandidate?.lastName}
-            </DialogTitle>
-            <DialogDescription>
-              Por favor, ingrese su feedback y el motivo de finalización del proceso.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Motivo de finalización</label>
-              <Input
-                placeholder="Ingrese el motivo de finalización..."
-                value={finalizationReason}
-                onChange={(e) => setFinalizationReason(e.target.value)}
-              />
+        <div className="flex flex-1 gap-3 overflow-hidden">
+          {/* Lista de candidatos */}
+          <div className={`flex flex-col h-[90vh] ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}>
+            <div className="mb-3 flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Búsqueda de candidatos"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Feedback</label>
-            <Textarea
-              placeholder="Ingrese su feedback sobre el candidato..."
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              className="min-h-[120px]"
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {filteredCandidates.map((candidate) => (
+                <CandidateCard
+                  key={candidate.id}
+                  candidate={candidate}
+                  isSelected={selectedCandidate?.id === candidate.id}
+                  onClick={setSelectedCandidate}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Panel de detalles del candidato */}
+          {selectedCandidate && (
+            <CandidateDetails
+              candidate={selectedCandidate}
+              onClose={() => setSelectedCandidate(null)}
+              onOpenInterviewModal={() => setIsInterviewModalOpen(true)}
+              onOpenFeedbackModal={handleEndProcess}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
             />
+          )}
+        </div>
+
+        {/* Modal para agendar entrevista */}
+        {selectedCandidate && (
+          <InterviewModal
+            isOpen={isInterviewModalOpen}
+            onClose={() => setIsInterviewModalOpen(false)}
+            candidate={selectedCandidate}
+            onConfirm={handleConfirmInterview}
+          />
+        )}
+
+        {/* Modal para finalizar proceso */}
+        <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                Finalizar proceso de {selectedCandidate?.name} {selectedCandidate?.lastName}
+              </DialogTitle>
+              <DialogDescription>
+                Por favor, ingrese su feedback y el motivo de finalización del proceso.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Motivo de finalización</label>
+                <Input
+                  placeholder="Ingrese el motivo de finalización..."
+                  value={finalizationReason}
+                  onChange={(e) => setFinalizationReason(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Feedback</label>
+                <Textarea
+                  placeholder="Ingrese su feedback sobre el candidato..."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  className="min-h-[120px]"
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setIsFeedbackModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleFinishProcess} 
-              disabled={!feedback.trim() || !finalizationReason.trim()} 
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Finalizar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setIsFeedbackModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleFinishProcess} 
+                disabled={!feedback.trim() || !finalizationReason.trim()} 
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Finalizar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </DashboardLayout>
+    </Sidebar>
   )
 }
+
 
 function calcularEdad(fechaNacimiento: string): number {
   const hoy = new Date()

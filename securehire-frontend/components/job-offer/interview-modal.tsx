@@ -9,7 +9,7 @@ import { es } from "date-fns/locale";
 interface InterviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  candidate: Candidate;
+  candidate: Candidate | null;
   onConfirm: (date: string, time: string) => void;
 }
 
@@ -141,8 +141,8 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
     "18:00", "18:30", "19:00", "19:30"
   ];
 
-  const isConfirmed = candidate.entrevista?.estado.toLowerCase() === "confirmada"
-  const isPending = candidate.entrevista?.estado.toLowerCase() === "pendiente de confirmación"
+  const isConfirmed = candidate?.entrevista?.estado.toLowerCase() === "confirmada"
+  const isPending = candidate?.entrevista?.estado.toLowerCase() === "pendiente de confirmación"
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -159,9 +159,9 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
           <DialogHeader>
             <DialogTitle>Agendar entrevista</DialogTitle>
             <DialogDescription>
-              Seleccione una fecha y horario para la entrevista con {candidate.name} {candidate.lastName}
+              Seleccione una fecha y horario para la entrevista con {candidate?.name} {candidate?.lastName}
             </DialogDescription>
-            {candidate.entrevista && (
+            {candidate?.entrevista && (
               <div className="mt-2">
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full flex items-center w-fit ${

@@ -1,18 +1,38 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Copy } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useState } from "react"
+import { toast } from "@/components/ui/use-toast"
 
 interface JobOfferHeaderProps {
   title: string
   onBack: () => void
   onOpenJobDetails: () => void
   busquedaId: string
+  urlPublica?: string
 }
 
-export function JobOfferHeader({ title, onBack, onOpenJobDetails, busquedaId }: JobOfferHeaderProps) {
+export function JobOfferHeader({ title, onBack, onOpenJobDetails, busquedaId, urlPublica }: JobOfferHeaderProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [jobDetails, setJobDetails] = useState<any>(null)
+
+  const handleCopyLink = async () => {
+    if (!urlPublica) return
+    
+    try {
+      await navigator.clipboard.writeText(urlPublica)
+      toast({
+        title: "Link copiado",
+        description: "El link de la publicación ha sido copiado al portapapeles.",
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "No se pudo copiar el link.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleTitleClick = async () => {
     try {
@@ -45,13 +65,24 @@ export function JobOfferHeader({ title, onBack, onOpenJobDetails, busquedaId }: 
           >
             <ArrowLeft className="h-3 w-3" />
           </Button>
-          <div>
+          <div className="flex items-center gap-2">
             <h1
               className="text-lg font-bold cursor-pointer hover:text-blue-600 transition-colors"
               onClick={handleTitleClick}
             >
               {title}
             </h1>
+            {urlPublica && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={handleCopyLink}
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copiar link
+              </Button>
+            )}
           </div>
         </div>
       </div>

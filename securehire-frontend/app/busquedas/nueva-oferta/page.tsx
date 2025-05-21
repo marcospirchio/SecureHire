@@ -121,6 +121,9 @@ export default function NuevaOfertaPage() {
         valoresExcluyentes: preg.opciones.filter(op => op.excluyente).map(op => op.valor),
       }));
 
+    const uuid = crypto.randomUUID()
+    const urlPublica = `https://securehire.com/postulacion/${uuid}`
+
     const body = {
       titulo: jobTitle,
       descripcion: description,
@@ -132,7 +135,7 @@ export default function NuevaOfertaPage() {
       camposPorDefecto,
       camposAdicionales,
       fases: phases,
-      urlPublica: urlPublica || undefined
+      urlPublica: urlPublica
     };
 
     try {

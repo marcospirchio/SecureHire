@@ -128,6 +128,8 @@ public class BusquedaController {
         }
     }
 
+
+    
     // // NUEVO: Agregar una fase a la búsqueda
     // @PatchMapping("/{id}/agregar-fase")
     // public ResponseEntity<?> agregarFase(

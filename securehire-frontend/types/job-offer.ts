@@ -102,6 +102,7 @@ export interface JobOffer {
   fases?: string[]
   usuarioId?: string
   archivada?: boolean
+  urlPublica?: string
 }
 
 export interface TimeSlot {

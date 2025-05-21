@@ -63,6 +63,8 @@ export default function BusquedasPage() {
   const [jobOffers, setJobOffers] = useState<JobOffer[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 9
+  const uuid = crypto.randomUUID()
+  const urlPublica = `https://securehire.com/postulacion/${uuid}`
 
   useEffect(() => {
     const fetchJobOffers = async () => {
