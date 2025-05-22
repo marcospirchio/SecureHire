@@ -15,6 +15,7 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
   const [iaOpinion, setIaOpinion] = useState<string | null>(null)
   const [iaOpinionLoading, setIaOpinionLoading] = useState(false)
   const [showOpinionModal, setShowOpinionModal] = useState(false)
+  const [iaOpinionError, setIaOpinionError] = useState<string | null>(null)
   const { toast } = useToast()
 
   const hasInterview = candidate.entrevista && candidate.entrevista.fechaProgramada && candidate.entrevista.horaProgramada
@@ -48,10 +49,10 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
     e.preventDefault();
     e.stopPropagation();
     
-    if (!candidate.postulacion?.candidatoId) {
+    if (!candidate?.postulacion?.id || !candidate?.postulacion?.candidatoId) {
       toast({
-        title: "Error",
-        description: "No se puede generar la opinión: ID de candidato no disponible",
+        title: "Faltan datos",
+        description: "No se puede generar la opinión. Postulación o candidato no válidos.",
         variant: "destructive"
       });
       return;
@@ -61,8 +62,6 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
     setShowOpinionModal(true);
 
     try {
-      console.log('Enviando solicitud para candidato:', candidate.postulacion.candidatoId);
-      
       const response = await fetch('http://localhost:8080/api/geminiIA/generar-opinion-candidato', {
         method: 'POST',
         credentials: "include",
@@ -78,6 +77,12 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
 
       if (!response.ok) {
         const errorText = await response.text();
+        if (errorText.includes("No hay comentarios")) {
+          setIaOpinionError("No se puede generar la opinión IA porque el candidato no tiene comentarios/feedbacks.");
+          setIaOpinion(null);
+          setIaOpinionLoading(false);
+          return;
+        }
         console.error('Error en la respuesta:', {
           status: response.status,
           statusText: response.statusText,
@@ -130,10 +135,7 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
     setShowOpinionModal(true);
   };
 
-  // Si el candidato está finalizado, no mostramos la tarjeta
-  if (!isActive) {
-    return null
-  }
+  if (!isActive) return null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -167,7 +169,7 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
                 }`}
               >
                 <Calendar className="h-3 w-3 mr-1" />
-                ENTREVISTA {formatDate(candidate.entrevista.fechaProgramada)} | {candidate.entrevista.horaProgramada}
+                ENTREVISTA {formatDate(candidate.entrevista?.fechaProgramada)} | {candidate.entrevista?.horaProgramada}
                 {isConfirmed ? (
                   <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />
                 ) : isPending ? (
@@ -226,26 +228,13 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                 <span className="ml-3 text-sm text-gray-600">Generando opinión...</span>
               </div>
+            ) : iaOpinionError ? (
+              <div className="text-center py-8">
+                <p className="text-red-600">{iaOpinionError}</p>
+              </div>
             ) : iaOpinion ? (
-              <div className="bg-white p-4 rounded-lg space-y-4">
-                {iaOpinion.split('\n').map((line, index) => {
-                  if (line.startsWith('Opinión general:')) {
-                    return (
-                      <div key={index} className="space-y-2">
-                        <h3 className="text-lg font-bold text-gray-900">Opinión general:</h3>
-                        <p className="text-gray-700">{line.replace('Opinión general:', '').trim()}</p>
-                      </div>
-                    );
-                  } else if (line.startsWith('Recomendación final:')) {
-                    return (
-                      <div key={index} className="space-y-2">
-                        <h3 className="text-lg font-bold text-gray-900">Recomendación final:</h3>
-                        <p className="text-gray-700">{line.replace('Recomendación final:', '').trim()}</p>
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
+              <div className="bg-white p-4 rounded-lg">
+                <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans">{iaOpinion}</pre>
               </div>
             ) : (
               <div className="text-center py-8">
@@ -263,4 +252,4 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
       </Dialog>
     </>
   )
-} 
+}

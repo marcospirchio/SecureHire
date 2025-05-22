@@ -71,7 +71,7 @@ public class PostulacionController {
             @RequestParam("direccion") String direccion,
             @RequestParam(value = "respuestas", required = false) String respuestasJson
     ) {
-        // Construir candidato con los datos recibidos
+        // Crear candidato
         Candidato candidato = Candidato.builder()
                 .nombre(nombre)
                 .apellido(apellido)
@@ -87,8 +87,8 @@ public class PostulacionController {
                 .direccion(direccion)
                 .fechaRegistro(new Date())
                 .build();
-    
-        // Parsear las respuestas (si vienen)
+
+        // Parsear respuestas si las hay
         List<Postulacion.RespuestaFormulario> respuestas = new ArrayList<>();
         if (respuestasJson != null && !respuestasJson.isEmpty()) {
             try {
@@ -98,19 +98,25 @@ public class PostulacionController {
                 return ResponseEntity.badRequest().body("Error al parsear respuestas del formulario");
             }
         }
-    
-        // Crear la instancia de Postulacion
+
+        // Validar búsqueda
+        Optional<Busqueda> busquedaOpt = busquedaRepository.findById(busquedaId);
+        if (busquedaOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("La búsqueda indicada no existe");
+        }
+
+        // Crear postulación
         Postulacion postulacion = new Postulacion();
         postulacion.setBusquedaId(busquedaId);
         postulacion.setRespuestas(respuestas);
-    
-        // Llamar al service original
+
         try {
             return ResponseEntity.ok(postulacionService.crearPostulacion(postulacion, candidato, archivoCV));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
     
     @GetMapping("/{id}/cv")
     public ResponseEntity<byte[]> obtenerCvDePostulacion(
@@ -125,8 +131,15 @@ public class PostulacionController {
 
         Postulacion postulacion = postulacionOpt.get();
 
-        // Verificar que el usuario logueado sea el dueño de la búsqueda asociada
-        if (!postulacion.getUsuarioId().equals(usuario.getId())) {
+        // Buscar búsqueda para validar dueño
+        Optional<Busqueda> busquedaOpt = busquedaRepository.findById(postulacion.getBusquedaId());
+        if (busquedaOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        Busqueda busqueda = busquedaOpt.get();
+
+        if (!busqueda.getUsuarioId().equals(usuario.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 

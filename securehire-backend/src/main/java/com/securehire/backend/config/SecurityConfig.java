@@ -36,14 +36,16 @@ public class SecurityConfig {
                 // Público: autenticación y documentación
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/api-docs/**").permitAll()
 
-                // Público: creación de candidatos y postulaciones desde la web (solo raíz)
+                // Público: creación de candidatos y postulaciones desde la web
                 .requestMatchers(HttpMethod.POST, "/api/candidatos").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/asociar-candidato").permitAll()
 
-                // Público: confirmación o reprogramación de entrevista por link
-                .requestMatchers(HttpMethod.PATCH, "/api/entrevistas/confirmar/**").permitAll()
-                .requestMatchers(HttpMethod.PATCH, "/api/entrevistas/reprogramar/**").permitAll()
+                // Público: endpoints de entrevista pública
+                .requestMatchers("/api/entrevistas/publica/**").permitAll()
+                .requestMatchers("/api/entrevistas/confirmar/**").permitAll()
+                .requestMatchers("/api/entrevistas/reprogramar/**").permitAll()
+                .requestMatchers("/api/ofertas/**").permitAll()
 
                 // Protegido: cualquier acción debajo de /api/postulaciones requiere token
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/**").authenticated()
@@ -64,7 +66,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // o "*" para todos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

@@ -16,8 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.bind.annotation.*;   
+import java.util.Map;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -245,4 +245,72 @@ public class EntrevistaController {
         entrevistaService.eliminarEntrevista(id);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/publica/{id}")
+    public ResponseEntity<?> verEntrevistaPublica(@PathVariable String id) {
+        Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
+        if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        Entrevista entrevista = entrevistaOpt.get();
+
+        // Devolver solo lo esencial
+        return ResponseEntity.ok(Map.of(
+            "fecha", entrevista.getFechaProgramada(),
+            "hora", entrevista.getHoraProgramada(),
+            "estado", entrevista.getEstado(),
+            "candidatoId", entrevista.getCandidatoId()
+        ));
+    }
+
+    @PostMapping("/publica/{id}/cancelar")
+    public ResponseEntity<?> cancelarPublicamente(
+            @PathVariable String id,
+            @RequestParam(required = false) String motivo
+    ) {
+        Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
+        if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
+    
+        Entrevista entrevista = entrevistaOpt.get();
+    
+        if (!entrevista.getEstado().equalsIgnoreCase("pendiente de confirmación")
+                && !entrevista.getEstado().equalsIgnoreCase("confirmada")) {
+            return ResponseEntity.badRequest().body("La entrevista ya fue cancelada, finalizada o reprogramada.");
+        }
+    
+        entrevista.setEstado("Cancelada por el candidato");
+    
+        if (motivo != null && !motivo.isBlank()) {
+            entrevista.setMotivoCancelacion(motivo.trim());
+        }
+    
+        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+    }
+    
+    
+    @PostMapping("/publica/{id}/solicitar-reprogramacion")
+    public ResponseEntity<?> solicitarReprogramacionPublica(
+            @PathVariable String id,
+            @RequestParam(required = false) String motivo
+    ) {
+        Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
+        if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
+    
+        Entrevista entrevista = entrevistaOpt.get();
+    
+        if (!entrevista.getEstado().equalsIgnoreCase("pendiente de confirmación")
+                && !entrevista.getEstado().equalsIgnoreCase("confirmada")) {
+            return ResponseEntity.badRequest().body("La entrevista ya fue cancelada, finalizada o reprogramada.");
+        }
+    
+        entrevista.setEstado("Cancelada por solicitud de reprogramación");
+    
+        if (motivo != null && !motivo.isBlank()) {
+            entrevista.setMotivoReprogramacion(motivo.trim());
+        }
+    
+        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+    }
+    
+
+
 }

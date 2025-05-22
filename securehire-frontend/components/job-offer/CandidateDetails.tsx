@@ -330,7 +330,7 @@ const anotacionesOrdenadas = [...anotaciones]
     return 0;
   });
 
-  // Cargar el resumen del CV al montar el componente o cambiar de candidato
+  // Cargar el resumen d  el CV al montar el componente o cambiar de candidato
   useEffect(() => {
     const fetchResumenCv = async () => {
       if (candidate.postulacion?.id) {
@@ -359,9 +359,12 @@ const anotacionesOrdenadas = [...anotaciones]
   }, [candidate.postulacion?.id]);
   
   const handleIASummary = async () => {
-    if (!candidate.postulacion?.id) {
-      console.error('No hay ID de postulación disponible');
-      setIaSummary('No se puede generar el resumen: ID de postulación no disponible');
+    if (!candidate?.postulacion?.id || !candidate?.postulacion?.candidatoId) {
+      toast({
+        title: "Faltan datos",
+        description: "No se puede generar el resumen. Postulación o candidato no válidos.",
+        variant: "destructive"
+      });
       return;
     }
   
@@ -504,41 +507,40 @@ const anotacionesOrdenadas = [...anotaciones]
               <h4 className="text-xs font-medium text-gray-700">Resumen del CV</h4>
               {iaLoading ? (
                 <p className="text-xs text-gray-500">Generando resumen IA...</p>
-              ) : iaSummary ? (
+                  ) : iaSummary ? (
                 <div className="flex items-center gap-2">
                   <p 
                     className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
-                    onClick={() => setShowFullSummary(true)}
                     title="Ver resumen completo"
+                    onClick={() => iaSummary && setShowFullSummary(true)}
                   >
                     Abrir resumen del CV de {candidate.name} {candidate.lastName}
                   </p>
                   <Button 
                     size="icon" 
                     variant="ghost" 
-                    onClick={handleIASummary} 
-                    disabled={iaLoading} 
-                    title="Generar resumen IA"
-                    className="hover:bg-purple-100"
+                    disabled
+                    title="Ya existe un resumen generado"
+                    className="bg-transparent cursor-default"
                   >
                     <Sparkles className="h-4 w-4 text-purple-500" />
                   </Button>
                 </div>
-              ) : (
+                  ) : (
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-gray-400 italic">
-                    Haz click en el botón de IA para generar el resumen del CV.
-                  </p>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={handleIASummary} 
-                    disabled={iaLoading} 
-                    title="Generar resumen IA"
-                    className="hover:bg-purple-100"
-                  >
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                  </Button>
+                      Haz click en el botón de IA para generar el resumen del CV.
+                    </p>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={handleIASummary} 
+                  disabled={iaLoading} 
+                  title="Generar resumen IA"
+                  className="hover:bg-purple-100"
+                >
+                  <Sparkles className="h-4 w-4 text-purple-500" />
+                </Button>
                 </div>
               )}
             </div>

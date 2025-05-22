@@ -28,4 +28,5 @@ public class Entrevista {
     private String linkEntrevista;
     private List<String> comentarios;
     private String motivoCancelacion;
+    private String motivoReprogramacion;
 }

@@ -1,42 +1,131 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, use } from "react"
 import { Calendar, Briefcase, User, Building } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
+
+interface EntrevistaPublica {
+  fecha: string;
+  hora: string;
+  estado: string;
+  candidatoId: string;
+}
+
+interface Oferta {
+  titulo: string;
+  empresa: {
+    nombre: string;
+  };
+  reclutador: {
+    nombre: string;
+    apellido: string;
+  };
+}
 
 export default function EntrevistaPage({ params }: { params: { token: string } }) {
-  const [action, setAction] = useState<"cancelar" | "reprogramar" | null>(null)
+  const token = use(Promise.resolve(params.token))
+  const [action, setAction] = useState<"confirmar" | "cancelar" | "reprogramar" | null>(null)
   const [motivo, setMotivo] = useState("")
   const [motivoCancelacion, setMotivoCancelacion] = useState("")
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [entrevista, setEntrevista] = useState<EntrevistaPublica | null>(null)
+  const [oferta, setOferta] = useState<Oferta | null>(null)
+  const { toast } = useToast()
 
-  // Datos de ejemplo de la entrevista (en una aplicación real, estos datos vendrían de una API)
-  const entrevista = {
-    puesto: "Desarrollador Frontend",
-    fecha: "jueves, 15 de mayo de 2025",
-    hora: "10:00",
-    reclutador: "Carlos Rodríguez",
-    empresa: "SecureHire",
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Obtener datos de la entrevista
+        const entrevistaResponse = await fetch(`http://localhost:8080/api/entrevistas/publica/${token}`)
+        if (!entrevistaResponse.ok) throw new Error('Error al cargar la entrevista')
+        const entrevistaData = await entrevistaResponse.json()
+        setEntrevista(entrevistaData)
+
+        // Obtener datos de la oferta
+        const ofertaResponse = await fetch(`http://localhost:8080/api/ofertas/${entrevistaData.candidatoId}`)
+        if (!ofertaResponse.ok) throw new Error('Error al cargar la oferta')
+        const ofertaData = await ofertaResponse.json()
+        setOferta(ofertaData)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo cargar la información",
+          variant: "destructive"
+        })
+      }
+    }
+    fetchData()
+  }, [token, toast])
 
   const handleSubmit = async () => {
+    if (!entrevista) return
     setLoading(true)
 
-    // Simulación de envío de datos a un servidor
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      let response
+      if (action === "confirmar") {
+        response = await fetch(`http://localhost:8080/api/entrevistas/confirmar/${token}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      } else if (action === "cancelar") {
+        response = await fetch(`http://localhost:8080/api/entrevistas/publica/${token}/cancelar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ motivo: motivoCancelacion })
+        })
+      } else if (action === "reprogramar") {
+        response = await fetch(`http://localhost:8080/api/entrevistas/publica/${token}/solicitar-reprogramacion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ motivo })
+        })
+      }
 
-    setSuccess(true)
-    setLoading(false)
+      if (!response?.ok) {
+        throw new Error('Error al procesar la solicitud')
+      }
+
+      setSuccess(true)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo procesar la solicitud",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!entrevista || !oferta) {
+    return (
+      <div className="mx-auto max-w-3xl p-6 bg-white rounded-lg shadow-sm">
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Cargando información...</span>
+        </div>
+      </div>
+    )
   }
 
   if (success) {
     return (
       <div className="mx-auto max-w-3xl p-6 bg-white rounded-lg shadow-sm">
         <h1 className="text-2xl font-bold mb-6">Solicitud procesada</h1>
+
+        {action === "confirmar" && (
+          <div className="p-4 bg-green-50 rounded-md mb-6">
+            <p className="text-green-800">
+              Tu entrevista ha sido confirmada correctamente.
+            </p>
+          </div>
+        )}
 
         {action === "cancelar" && (
           <div className="p-4 bg-green-50 rounded-md mb-6">
@@ -61,11 +150,21 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
     )
   }
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  }
+
   return (
     <div className="mx-auto max-w-3xl p-6 bg-white rounded-lg shadow-sm">
       <h1 className="text-2xl font-bold mb-2">Gestionar entrevista</h1>
       <p className="text-gray-600 mb-8">
-        Puedes cancelar o solicitar reprogramar tu entrevista para el puesto de {entrevista.puesto}
+        Puedes confirmar, cancelar o solicitar reprogramar tu entrevista para el puesto de {oferta.titulo}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -74,7 +173,7 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
           <div>
             <p className="font-medium text-gray-700">Fecha y hora</p>
             <p className="text-gray-600">
-              {entrevista.fecha} a las {entrevista.hora}
+              {formatDate(entrevista.fecha)} a las {entrevista.hora}
             </p>
           </div>
         </div>
@@ -83,7 +182,7 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
           <Briefcase className="h-5 w-5 text-gray-500 mt-0.5" />
           <div>
             <p className="font-medium text-gray-700">Puesto</p>
-            <p className="text-gray-600">{entrevista.puesto}</p>
+            <p className="text-gray-600">{oferta.titulo}</p>
           </div>
         </div>
 
@@ -91,7 +190,9 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
           <User className="h-5 w-5 text-gray-500 mt-0.5" />
           <div>
             <p className="font-medium text-gray-700">Reclutador</p>
-            <p className="text-gray-600">{entrevista.reclutador}</p>
+            <p className="text-gray-600">
+              {oferta.reclutador.nombre} {oferta.reclutador.apellido}
+            </p>
           </div>
         </div>
 
@@ -99,7 +200,7 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
           <Building className="h-5 w-5 text-gray-500 mt-0.5" />
           <div>
             <p className="font-medium text-gray-700">Empresa</p>
-            <p className="text-gray-600">{entrevista.empresa}</p>
+            <p className="text-gray-600">{oferta.empresa.nombre}</p>
           </div>
         </div>
       </div>
@@ -109,6 +210,14 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-4">¿Qué deseas hacer con esta entrevista?</h2>
         <RadioGroup value={action || ""} onValueChange={(value) => setAction(value as any)}>
+          {entrevista.estado.toLowerCase() === "pendiente de confirmación" && (
+            <div className="flex items-center space-x-2 mb-3">
+              <RadioGroupItem value="confirmar" id="confirmar" />
+              <label htmlFor="confirmar" className="text-base cursor-pointer">
+                Confirmar entrevista
+              </label>
+            </div>
+          )}
           <div className="flex items-center space-x-2 mb-3">
             <RadioGroupItem value="cancelar" id="cancelar" />
             <label htmlFor="cancelar" className="text-base cursor-pointer">
@@ -171,12 +280,17 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
         <Button
           onClick={handleSubmit}
           disabled={
-            !action || (action === "cancelar" && !motivoCancelacion) || (action === "reprogramar" && !motivo) || loading
+            !action || 
+            (action === "cancelar" && !motivoCancelacion) || 
+            (action === "reprogramar" && !motivo) || 
+            loading
           }
           className={
-            action === "cancelar"
-              ? "bg-red-600 hover:bg-red-700 text-white"
-              : "bg-blue-600 hover:bg-blue-700 text-white"
+            action === "confirmar"
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : action === "cancelar"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
           }
         >
           {loading ? (
@@ -184,6 +298,8 @@ export default function EntrevistaPage({ params }: { params: { token: string } }
               <span className="animate-spin mr-2">⟳</span>
               Procesando...
             </>
+          ) : action === "confirmar" ? (
+            "Confirmar entrevista"
           ) : action === "cancelar" ? (
             "Confirmar cancelación"
           ) : (

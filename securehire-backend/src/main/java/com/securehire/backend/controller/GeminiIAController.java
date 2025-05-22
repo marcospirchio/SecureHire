@@ -51,6 +51,11 @@ public class GeminiIAController {
 
             Busqueda busqueda = busquedaOpt.get();
 
+            // Validar que el archivo no esté vacío
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body("El archivo CV está vacío o no fue enviado.");
+            }
+
             // Leer el contenido del PDF
             PDDocument document = PDDocument.load(file.getInputStream());
             PDFTextStripper stripper = new PDFTextStripper();
@@ -118,8 +123,8 @@ public class GeminiIAController {
         String candidatoId = postulacion.getCandidatoId();
         List<Comentario> comentarios = comentarioService.obtenerComentariosPorCandidato(candidatoId);
 
-        if (comentarios.isEmpty()) {
-            return ResponseEntity.badRequest().body("No hay comentarios disponibles para este candidato.");
+        if (comentarios == null || comentarios.isEmpty()) {
+            return ResponseEntity.badRequest().body("No hay comentarios suficientes para generar una opinión.");
         }
 
         StringBuilder textoComentarios = new StringBuilder();
