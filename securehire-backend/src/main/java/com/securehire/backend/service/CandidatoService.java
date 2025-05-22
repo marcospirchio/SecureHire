@@ -6,10 +6,12 @@ import com.securehire.backend.model.Candidato;
 import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.model.Comentario;
 import com.securehire.backend.model.Postulacion;
+import com.securehire.backend.model.Usuario;
 import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.repository.CandidatoRepository;
 import com.securehire.backend.repository.ComentarioRepository;
 import com.securehire.backend.repository.PostulacionRepository;
+import com.securehire.backend.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class CandidatoService {
     @Autowired private ComentarioRepository comentarioRepository;
     @Autowired private PostulacionRepository postulacionRepository;
     @Autowired private BusquedaRepository busquedaRepository;
+    @Autowired private UsuarioRepository usuarioRepository; 
     
     public Candidato crearCandidato(CandidatoDTO dto) {
         Optional<Candidato> porEmail = candidatoRepository.findByEmail(dto.getEmail());
@@ -143,6 +146,8 @@ public class CandidatoService {
         return Optional.of(new CandidatoConComentariosDTO(candidato, comentarios));
     }
 
+
+
     public Page<Candidato> obtenerCandidatosFiltradosPorReclutador(String usuarioId, int page, int size, String nombre) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("fechaRegistro").descending());
         Set<String> idsPermitidos = obtenerIdsCandidatosDeReclutador(usuarioId);
@@ -197,4 +202,9 @@ public class CandidatoService {
 
         return Optional.of(new CandidatoConComentariosDTO(candidato, comentarios));
     }
+
+    public Optional<Usuario> obtenerUsuarioPorId(String id) {
+        return usuarioRepository.findById(id); // Asegurate de tener el repositorio y dependencia
+    }
+    
 }
