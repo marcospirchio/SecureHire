@@ -142,9 +142,10 @@ export default function JobOfferPage({ params }: PageProps) {
                     candidatoId: p.candidatoId,
                     busquedaId: p.busquedaId,
                     estado: p.estado || "",
-                    requisitosExcluyentes: p.requisitosExcluyentes || [],
+                    requisitosExcluyentes: [],
                     notas: p.notas || [],
-                    ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                    ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                    respuestas: p.respuestas || []
                   },
                   entrevista: undefined
                 } as Candidate;
@@ -158,6 +159,32 @@ export default function JobOfferPage({ params }: PageProps) {
                     (e: any) => e.candidatoId === p.candidatoId
                   )
                 : undefined;
+
+              // Calcular requisitos excluyentes no cumplidos
+              let requisitosExcluyentes: { campo: string, respuesta: string | string[] }[] = [];
+              if (busquedaData.camposAdicionales && Array.isArray(busquedaData.camposAdicionales)) {
+                requisitosExcluyentes = busquedaData.camposAdicionales
+                  .filter((campo: any) => campo.valoresExcluyentes && campo.valoresExcluyentes.length > 0)
+                  .map((campo: any) => {
+                    const respuesta = (p.respuestas || []).find((r: any) => r.campo === campo.nombre);
+                    if (!respuesta) return { campo: campo.nombre, respuesta: "No respondió" };
+                    if (campo.tipo === "checkbox") {
+                      const respuestasCandidato = Array.isArray(respuesta.respuesta) ? respuesta.respuesta : [respuesta.respuesta];
+                      const valoresExcluyentes = campo.valoresExcluyentes || [];
+                      const noCumple = valoresExcluyentes.some((valor: string) => !respuestasCandidato.includes(valor));
+                      if (noCumple) {
+                        return { campo: campo.nombre, respuesta: respuestasCandidato.join(", ") };
+                      }
+                    } else {
+                      const valoresExcluyentes = campo.valoresExcluyentes || [];
+                      if (valoresExcluyentes.length > 0 && !valoresExcluyentes.includes(respuesta.respuesta)) {
+                        return { campo: campo.nombre, respuesta: respuesta.respuesta };
+                      }
+                    }
+                    return null;
+                  })
+                  .filter((req: { campo: string, respuesta: string | string[] } | null) => req !== null) as { campo: string, respuesta: string | string[] }[];
+              }
 
               return {
                 id: p.id,
@@ -181,9 +208,10 @@ export default function JobOfferPage({ params }: PageProps) {
                   candidatoId: p.candidatoId,
                   busquedaId: p.busquedaId,
                   estado: p.estado || "",
-                  requisitosExcluyentes: p.requisitosExcluyentes || [],
+                  requisitosExcluyentes: requisitosExcluyentes,
                   notas: p.notas || [],
-                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                  respuestas: p.respuestas || []
                 },
                 entrevista: entrevista ? {
                   id: entrevista.id,
@@ -218,9 +246,10 @@ export default function JobOfferPage({ params }: PageProps) {
                   candidatoId: p.candidatoId,
                   busquedaId: p.busquedaId,
                   estado: p.estado || "",
-                  requisitosExcluyentes: p.requisitosExcluyentes || [],
+                  requisitosExcluyentes: [],
                   notas: p.notas || [],
-                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                  respuestas: p.respuestas || []
                 },
                 entrevista: undefined
               } as Candidate;
@@ -438,9 +467,10 @@ export default function JobOfferPage({ params }: PageProps) {
                   candidatoId: p.candidatoId,
                   busquedaId: p.busquedaId,
                   estado: p.estado || "",
-                  requisitosExcluyentes: p.requisitosExcluyentes || [],
+                  requisitosExcluyentes: [],
                   notas: p.notas || [],
-                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv }
+                  ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                  respuestas: p.respuestas || []
                 },
                 entrevista: entrevista ? {
                   id: entrevista.id,
@@ -597,31 +627,15 @@ export default function JobOfferPage({ params }: PageProps) {
 
         <div className="flex flex-1 gap-3 overflow-hidden">
           {/* Lista de candidatos */}
-          <div className={`flex flex-col h-[90vh] ${selectedCandidate ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}>
-            <div className="mb-3 flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Búsqueda de candidatos"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {filteredCandidates.map((candidate) => (
-                <CandidateCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  isSelected={selectedCandidate?.id === candidate.id}
-                  onClick={setSelectedCandidate}
-                />
-              ))}
-            </div>
-          </div>
+          <CandidatesList
+            candidates={filteredCandidates}
+            selectedCandidate={selectedCandidate}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onCandidateClick={setSelectedCandidate}
+            isCollapsed={!!selectedCandidate}
+            jobOffer={jobOffer}
+          />
 
           {/* Panel de detalles del candidato */}
           {selectedCandidate && (

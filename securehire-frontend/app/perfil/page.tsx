@@ -5,9 +5,10 @@ import type React from "react"
 import { useState } from "react"
 import { Camera, Save, X } from "lucide-react"
 import Image from "next/image"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function PerfilPage() {
-  const [profileImage, setProfileImage] = useState("/diverse-avatars.png")
+  const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -15,28 +16,50 @@ export default function PerfilPage() {
     confirmPassword: "",
   })
   const [passwordError, setPasswordError] = useState("")
+  const { user, loading } = useAuth();
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [refreshUser, setRefreshUser] = useState(0);
 
-  // Datos del reclutador (simulados)
-  const recruiterData = {
-    nombre: "Carlos",
-    apellido: "Rodríguez",
-    email: "carlos.rodriguez@securehire.com",
-    telefono: "+34 612 345 678",
-    puesto: "Reclutador Senior",
-    departamento: "Recursos Humanos",
-    fechaIngreso: "15/03/2023",
-  }
+  // Refrescar datos de usuario tras subir foto
+  const { user: refreshedUser, loading: refreshedLoading } = useAuth();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result as string)
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Subir imagen al backend
+      const formData = new FormData();
+      formData.append("imagen", file);
+      setUploading(true);
+      setUploadError("");
+      setSuccessMsg("");
+      try {
+        const res = await fetch("http://localhost:8080/api/usuarios/foto-perfil", {
+          method: "PUT",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          setUploadError(msg || "Error al subir la imagen");
+        } else {
+          setSuccessMsg("Foto de perfil actualizada");
+          setRefreshUser((r) => r + 1); // Forzar refresco
+        }
+      } catch (err) {
+        setUploadError("Error de red al subir la imagen");
+      } finally {
+        setUploading(false);
       }
-      reader.readAsDataURL(file)
     }
-  }
+  };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -81,7 +104,11 @@ export default function PerfilPage() {
             <div className="relative group">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-100">
                 <Image
-                  src={profileImage || "/placeholder.svg"}
+                  src={profileImage || (refreshedUser?.fotoPerfil
+                    ? refreshedUser.fotoPerfil.startsWith("data:image")
+                      ? refreshedUser.fotoPerfil
+                      : `data:image/png;base64,${refreshedUser.fotoPerfil}`
+                    : "/diverse-avatars.png")}
                   alt="Foto de perfil"
                   width={128}
                   height={128}
@@ -96,9 +123,8 @@ export default function PerfilPage() {
             </div>
 
             <div className="flex-1">
-              <h2 className="text-2xl font-semibold">{`${recruiterData.nombre} ${recruiterData.apellido}`}</h2>
-              <p className="text-gray-600">{recruiterData.puesto}</p>
-              <p className="text-gray-600">{recruiterData.departamento}</p>
+              <h2 className="text-2xl font-semibold">{refreshedUser ? `${refreshedUser.nombre} ${refreshedUser.apellido}` : ""}</h2>
+              <p className="text-gray-600">{refreshedUser?.rol}</p>
             </div>
           </div>
         </div>
@@ -112,27 +138,15 @@ export default function PerfilPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <p className="text-sm text-gray-500 mb-1">Nombre</p>
-              <p className="font-medium">{recruiterData.nombre}</p>
+              <p className="font-medium">{refreshedUser?.nombre}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Apellido</p>
-              <p className="font-medium">{recruiterData.apellido}</p>
+              <p className="font-medium">{refreshedUser?.apellido}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Email</p>
-              <p className="font-medium">{recruiterData.email}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Teléfono</p>
-              <p className="font-medium">{recruiterData.telefono}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Puesto</p>
-              <p className="font-medium">{recruiterData.puesto}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Fecha de ingreso</p>
-              <p className="font-medium">{recruiterData.fechaIngreso}</p>
+              <p className="font-medium">{refreshedUser?.email}</p>
             </div>
           </div>
         </div>

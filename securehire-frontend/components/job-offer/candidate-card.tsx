@@ -9,9 +9,19 @@ interface CandidateCardProps {
   candidate: Candidate
   isSelected: boolean
   onClick: (candidate: Candidate) => void
+  jobOffer?: {
+    camposAdicionales?: {
+      nombre: string
+      tipo: string
+      esExcluyente: boolean
+      opciones: string[]
+      valoresExcluyentes: string[]
+      obligatorio: boolean
+    }[]
+  }
 }
 
-export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardProps) {
+export function CandidateCard({ candidate, isSelected, onClick, jobOffer }: CandidateCardProps) {
   const [iaOpinion, setIaOpinion] = useState<string | null>(null)
   const [iaOpinionLoading, setIaOpinionLoading] = useState(false)
   const [showOpinionModal, setShowOpinionModal] = useState(false)
@@ -22,6 +32,44 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
   const isConfirmed = candidate.entrevista?.estado.toLowerCase() === "confirmada"
   const isPending = candidate.entrevista?.estado.toLowerCase() === "pendiente de confirmación"
   const isActive = candidate.postulacion.estado?.toUpperCase() !== "FINALIZADA"
+
+  // Detectar si el candidato no cumple requisitos excluyentes
+  const requisitosNoCumplidos = jobOffer?.camposAdicionales
+    ?.filter(campo => campo.valoresExcluyentes && campo.valoresExcluyentes.length > 0)
+    .map(campo => {
+      const respuesta = candidate.postulacion.respuestas?.find((r: { campo: string; respuesta: string | string[] }) => r.campo === campo.nombre)
+      if (!respuesta) return { campo: campo.nombre, motivo: "No respondió" }
+      
+      // Para campos tipo checkbox (múltiples valores)
+      if (campo.tipo === "checkbox") {
+        const respuestasCandidato = Array.isArray(respuesta.respuesta) 
+          ? respuesta.respuesta 
+          : [respuesta.respuesta]
+        
+        const valoresExcluyentes = campo.valoresExcluyentes || []
+        const noCumple = valoresExcluyentes.some(valor => !respuestasCandidato.includes(valor))
+        if (noCumple) {
+          return { 
+            campo: campo.nombre, 
+            motivo: `No seleccionó: ${valoresExcluyentes.join(", ")}`
+          }
+        }
+      }
+      // Para campos tipo select o texto
+      else {
+        const valoresExcluyentes = campo.valoresExcluyentes || []
+        if (valoresExcluyentes.length > 0 && !valoresExcluyentes.includes(respuesta.respuesta as string)) {
+          return { 
+            campo: campo.nombre, 
+            motivo: `Debe ser: ${valoresExcluyentes.join(", ")}`
+          }
+        }
+      }
+      return null
+    })
+    .filter((req): req is { campo: string; motivo: string } => req !== null) || []
+
+  const isExcluido = candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0
 
   useEffect(() => {
     const fetchIAOpinion = async () => {
@@ -150,11 +198,11 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
       <div
         className={`rounded-lg border p-3 cursor-pointer hover:border-gray-300 transition-colors ${
           isSelected ? "border-blue-300 bg-blue-50" : ""
-        }`}
+        } ${isExcluido ? "border-amber-400 bg-amber-50" : ""}`}
         onClick={() => onClick(candidate)}
       >
         <div className="flex justify-between items-start">
-          <h3 className="text-sm font-bold">
+          <h3 className="text-sm font-bold flex items-center gap-2">
             {candidate.name} {candidate.lastName}
           </h3>
           <div className="flex items-center gap-2">
@@ -223,6 +271,24 @@ export function CandidateCard({ candidate, isSelected, onClick }: CandidateCardP
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
+            {isExcluido && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">
+                    El candidato no cumple con el/los siguientes requisitos excluyentes:
+                  </p>
+                  <ul className="mt-2 ml-5 list-disc">
+                    {candidate.postulacion.requisitosExcluyentes?.map((req, i) => (
+                      <li key={i} className="text-sm text-amber-700">
+                        <span className="font-medium">{req.campo}</span><br />
+                        Respuesta: <span className="italic">{Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             {iaOpinionLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>

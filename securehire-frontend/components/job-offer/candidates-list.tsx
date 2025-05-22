@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { Candidate } from "@/types/job-offer"
+import { Candidate, JobOffer } from "@/types/job-offer"
 import { CandidateCard } from "./candidate-card"
 
 interface CandidatesListProps {
@@ -9,6 +9,7 @@ interface CandidatesListProps {
   setSearchQuery: (query: string) => void
   onCandidateClick: (candidate: Candidate) => void
   isCollapsed: boolean
+  jobOffer?: JobOffer
 }
 
 export function CandidatesList({
@@ -17,7 +18,8 @@ export function CandidatesList({
   searchQuery,
   setSearchQuery,
   onCandidateClick,
-  isCollapsed
+  isCollapsed,
+  jobOffer
 }: CandidatesListProps) {
   // Filtrar candidatos que no estén finalizados (case insensitive)
   const activeCandidates = candidates.filter(candidate => {
@@ -55,6 +57,7 @@ export function CandidatesList({
             candidate={candidate}
             isSelected={selectedCandidate?.id === candidate.id}
             onClick={onCandidateClick}
+            jobOffer={jobOffer}
           />
         ))}
       </div>

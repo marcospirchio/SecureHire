@@ -123,6 +123,24 @@ export default function EntrevistaPage({ token }: { token: string }) {
     )
   }
 
+  if (entrevista.estado && entrevista.estado.toLowerCase() === "cancelada") {
+    return (
+      <div className="mx-auto max-w-md p-8 bg-white rounded-xl shadow-lg flex flex-col items-center justify-center mt-24">
+        <div className="flex flex-col items-center">
+          <div className="bg-red-100 rounded-full p-4 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#fee2e2" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 9l-6 6m0-6l6 6" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-red-700 mb-2">Entrevista cancelada</h2>
+          <p className="text-gray-700 text-center mb-6">La entrevista ya se encuentra cancelada.<br />No es posible realizar ninguna acción sobre esta entrevista.</p>
+          <Button onClick={() => window.close()} className="bg-gray-100 text-gray-800 hover:bg-gray-200">Cerrar ventana</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="mx-auto max-w-3xl p-6 bg-white rounded-lg shadow-sm">

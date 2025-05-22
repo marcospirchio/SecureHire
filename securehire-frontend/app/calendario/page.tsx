@@ -63,6 +63,9 @@ export default function CalendarioPage() {
     tipo: "evento"
   })
   const [eventos, setEventos] = useState<CalendarEvent[]>([])
+  const [mostrarCanceladas, setMostrarCanceladas] = useState(false)
+  const [entrevistasCanceladas, setEntrevistasCanceladas] = useState<any[]>([])
+  const [loadingCanceladas, setLoadingCanceladas] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -109,20 +112,80 @@ export default function CalendarioPage() {
     fetchEventos()
   }, [])
 
+  useEffect(() => {
+    // Si mostrarCanceladas está activo, hacer fetch solo de las entrevistas canceladas
+    const estadosCancelacion = [
+      "Cancelada por solicitud de reprogramación",
+      "Cancelada por el candidato",
+      "cancelada",
+      "cancelada por el reclutador"
+    ];
+    if (mostrarCanceladas) {
+      setLoadingCanceladas(true);
+      Promise.all(
+        estadosCancelacion.map(estado =>
+          fetch(`http://localhost:8080/api/entrevistas/mis-entrevistas?estado=${encodeURIComponent(estado)}`, {
+            credentials: 'include'
+          })
+            .then(res => res.ok ? res.json() : { content: [] })
+            .then(data => data.content || [])
+        )
+      ).then(results => {
+        // Unir todos los resultados y quitar duplicados por id
+        const todas = results.flat();
+        const unicas = Object.values(
+          todas.reduce((acc, curr) => {
+            acc[curr.id] = curr;
+            return acc;
+          }, {} as Record<string, any>)
+        );
+        setEntrevistasCanceladas(unicas);
+        setLoadingCanceladas(false);
+      });
+    }
+  }, [mostrarCanceladas]);
+
   const events: CalendarEvent[] = [
-    ...entrevistas.map(entrevista => ({
-      id: entrevista.id,
-      date: entrevista.fechaProgramada.split('T')[0],
-      time: entrevista.horaProgramada || "-",
-      title: "Entrevista",
-      person: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
-      link: entrevista.linkEntrevista || "",
-      candidateName: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
-      jobTitle: entrevista.tituloPuesto || "-",
-      estado: entrevista.estado,
-      tipo: "entrevista"
-    })),
-    ...eventos
+    ...(
+      mostrarCanceladas
+        ? entrevistasCanceladas.map(entrevista => ({
+            id: entrevista.id,
+            date: (entrevista.fechaProgramada || '').split('T')[0],
+            time: entrevista.horaProgramada || "-",
+            title: "Entrevista",
+            person: `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim(),
+            link: entrevista.linkEntrevista || "",
+            candidateName: `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim(),
+            jobTitle: entrevista.tituloPuesto || "-",
+            estado: entrevista.estado,
+            tipo: "entrevista"
+          }))
+        : [
+            ...entrevistas
+              .filter(entrevista => {
+                const estado = (entrevista.estado || "").toLowerCase();
+                return ![
+                  "cancelada por solicitud de reprogramación",
+                  "cancelada por el candidato",
+                  "cancelada",
+                  "cancelada por el reclutador"
+                ].includes(estado);
+              })
+              .map(entrevista => ({
+                id: entrevista.id,
+                date: entrevista.fechaProgramada.split('T')[0],
+                time: entrevista.horaProgramada || "-",
+                title: "Entrevista",
+                person: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
+                link: entrevista.linkEntrevista || "",
+                candidateName: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
+                jobTitle: entrevista.tituloPuesto || "-",
+                estado: entrevista.estado,
+                tipo: "entrevista"
+              })),
+            ...eventos
+          ]
+    )
   ]
 
   const generateCalendarDays = (date: Date) => {
@@ -157,9 +220,36 @@ export default function CalendarioPage() {
     setCurrentDate(prev => addMonths(prev, 1))
   }
 
-  const handleOpenEventDetailsModal = (event: CalendarEvent) => {
-    setSelectedEvent(event)
-    setIsEventDetailsModalOpen(true)
+  const handleOpenEventDetailsModal = async (event: CalendarEvent) => {
+    // Si es entrevista y faltan datos, buscar candidato y búsqueda
+    if (event.tipo === "entrevista" && (event.candidateName === '-' || !event.candidateName || event.jobTitle === '-' || !event.jobTitle)) {
+      let candidateName = event.candidateName || '';
+      let jobTitle = event.jobTitle || '';
+      // Buscar datos si hay ids
+      try {
+        if ((event as any).candidatoId) {
+          const res = await fetch(`http://localhost:8080/api/candidatos/${(event as any).candidatoId}`, { credentials: 'include' });
+          if (res.ok) {
+            const candidato = await res.json();
+            candidateName = `${candidato.nombre || ''} ${candidato.apellido || ''}`.trim();
+          }
+        }
+        if ((event as any).busquedaId) {
+          const res = await fetch(`http://localhost:8080/api/busquedas/${(event as any).busquedaId}`, { credentials: 'include' });
+          if (res.ok) {
+            const busqueda = await res.json();
+            jobTitle = busqueda.titulo || '';
+          }
+        }
+      } catch (e) {
+        // Si falla, dejar los valores por defecto
+      }
+      setSelectedEvent({ ...event, candidateName, jobTitle });
+      setIsEventDetailsModalOpen(true);
+    } else {
+      setSelectedEvent(event);
+      setIsEventDetailsModalOpen(true);
+    }
   }
 
   const formatDateInSpanish = (dateStr: string) => {
@@ -237,7 +327,7 @@ export default function CalendarioPage() {
           const createdEvent = await response.json()
           setEventos([...eventos, createdEvent])
           setIsNewEventModalOpen(false)
-  }
+        }
       } catch (error) {
         console.error('Error al crear evento:', error)
       }
@@ -255,14 +345,14 @@ export default function CalendarioPage() {
 
       if (response.ok) {
         setEventos(eventos.filter(e => e.id !== selectedEvent.id))
-      setIsEventDetailsModalOpen(false)
-    }
+        setIsEventDetailsModalOpen(false)
+      }
     } catch (error) {
       console.error('Error al eliminar evento:', error)
     }
   }
 
-  if (loading || authLoading) {
+  if (loading || authLoading || (mostrarCanceladas && loadingCanceladas)) {
     return (
       <Sidebar>
         <DashboardLayout>
@@ -301,9 +391,19 @@ export default function CalendarioPage() {
             </Button>
             <h1 className="text-lg font-bold">Calendario</h1>
           </div>
-          <Button size="sm" className="bg-gray-900 hover:bg-gray-800 h-7 text-xs" onClick={handleOpenNewEventModal}>
-            <Plus className="mr-1 h-3 w-3" /> Nuevo Evento
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={mostrarCanceladas ? "default" : "outline"}
+              size="sm"
+              className={`h-7 text-xs ${mostrarCanceladas ? "bg-red-100 text-red-700 border-red-300" : ""}`}
+              onClick={() => setMostrarCanceladas(v => !v)}
+            >
+              {mostrarCanceladas ? "Ocultar canceladas" : "Mostrar canceladas"}
+            </Button>
+            <Button size="sm" className="bg-gray-900 hover:bg-gray-800 h-7 text-xs" onClick={handleOpenNewEventModal}>
+              <Plus className="mr-1 h-3 w-3" /> Nuevo Evento
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-lg border bg-white p-2 w-full">
@@ -350,22 +450,29 @@ export default function CalendarioPage() {
                     </div>
 
                     <div className="mt-0.5 overflow-y-auto max-h-[calc(100%-16px)]">
-                      {dayEvents.map((event, eventIndex) => (
-                        <div
-                          key={eventIndex}
-                          className={`mt-1 rounded p-1 text-[10px] truncate cursor-pointer ${
-                            event.tipo === "evento"
-                              ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
-                              : event.estado === "Pendiente de confirmación"
-                                ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                                : "bg-green-100 text-green-900 hover:bg-green-200"
-                          }`}
-                          onClick={() => handleOpenEventDetailsModal(event)}
-                        >
-                          {event.time} - {event.title}
-                          {event.person && `: ${event.person}`}
-                        </div>
-                      ))}
+                      {dayEvents.map((event, eventIndex) => {
+                        let colorClass = "";
+                        if (mostrarCanceladas && event.tipo === "entrevista") {
+                          // Si estamos mostrando solo canceladas, todas son canceladas
+                          colorClass = "bg-red-100 text-red-900 hover:bg-red-200";
+                        } else if (event.tipo === "evento") {
+                          colorClass = "bg-blue-100 text-blue-900 hover:bg-blue-200";
+                        } else if (event.estado === "Pendiente de confirmación") {
+                          colorClass = "bg-amber-100 text-amber-900 hover:bg-amber-200";
+                        } else {
+                          colorClass = "bg-green-100 text-green-900 hover:bg-green-200";
+                        }
+                        return (
+                          <div
+                            key={eventIndex}
+                            className={`mt-1 rounded p-1 text-[10px] truncate cursor-pointer ${colorClass}`}
+                            onClick={() => handleOpenEventDetailsModal(event)}
+                          >
+                            {event.time} - {event.title}
+                            {event.person && `: ${event.person}`}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )

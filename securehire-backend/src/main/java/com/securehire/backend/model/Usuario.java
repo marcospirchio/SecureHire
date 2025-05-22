@@ -32,6 +32,7 @@ public class Usuario implements UserDetails {
     private String dni;
     private List<String> puestosPublicados;
     private List<Notificacion> notificaciones;
+    private byte[] fotoPerfil;
 
     @Data
     @Builder

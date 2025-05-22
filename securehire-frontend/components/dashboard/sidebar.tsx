@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Home, Calendar, Users, Bell, MoreVertical, ChevronLeft, ChevronRight, Menu, User, LogOut } from "lucide-react"
 import React from "react"
 import Image from "next/image"
+import { useAuth } from "@/hooks/use-auth"
 
 // Crear contexto para el estado de la sidebar
 interface SidebarContextType {
@@ -36,6 +37,8 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const { user, loading } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -82,9 +85,16 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
     }
   }, [])
 
-  const handleLogout = () => {
-    // Redirigir al usuario a la página de login
-    router.push("/login")
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("http://localhost:8080/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (e) {}
+    setLoggingOut(false);
+    router.push("/login");
   }
 
   return (
@@ -170,11 +180,19 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
-                <img src="/diverse-avatars.png" alt="Carlos Rodríguez" className="h-full w-full object-cover" />
+                <img
+                  src={user?.fotoPerfil
+                    ? user.fotoPerfil.startsWith("data:image")
+                      ? user.fotoPerfil
+                      : `data:image/png;base64,${user.fotoPerfil}`
+                    : "/diverse-avatars.png"}
+                  alt={user ? `${user.nombre} ${user.apellido}` : "Avatar"}
+                  className="h-full w-full object-cover"
+                />
               </div>
               {!collapsed && (
                 <div>
-                  <p className="text-sm font-medium">Carlos Rodríguez</p>
+                  <p className="text-sm font-medium">{user ? `${user.nombre} ${user.apellido}` : ""}</p>
                 </div>
               )}
             </div>

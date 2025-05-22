@@ -472,7 +472,10 @@ const anotacionesOrdenadas = [...anotaciones]
                 </p>
                 <ul className="mt-2 ml-5 list-disc">
                   {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
-                    <li key={i} className="text-sm text-amber-700">{req}</li>
+                    <li key={i} className="text-sm text-amber-700">
+                      <span className="font-medium">{req.campo}</span><br />
+                      Respuesta: <span className="italic">{Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta}</span>
+                    </li>
                   ))}
                 </ul>
               </div>

@@ -20,7 +20,7 @@ export interface Candidate {
     candidatoId: string
     busquedaId: string
     estado?: string
-    requisitosExcluyentes?: string[]
+    requisitosExcluyentes?: { campo: string, respuesta: string | string[] }[]
     notas?: {
       author: string
       company: string
@@ -28,6 +28,10 @@ export interface Candidate {
       content: string
     }[]
     resumenCv?: string
+    respuestas?: {
+      campo: string
+      respuesta: string | string[]
+    }[]
   }
   entrevista?: {
     id: string

@@ -34,4 +34,9 @@ public class UsuarioService {
     public boolean existeUsuarioConEmail(String email) {
         return usuarioRepository.existsByEmail(email);
     }
+
+    public Usuario actualizarUsuario(Usuario usuario) {
+        return usuarioRepository.save(usuario);
+    }
+    
 } 
