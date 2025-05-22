@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DashboardLayout } from "@/components/dashboard/layout"
+import { useEntrevistas } from "@/hooks/use-entrevistas"
 
 interface EntrevistaConCandidato {
   id: string
@@ -45,11 +46,11 @@ export default function JobOfferPage({ params }: PageProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true)
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false)
-  const [entrevistas, setEntrevistas] = useState<EntrevistaConCandidato[]>([])
   const [activeTab, setActiveTab] = useState("notes")
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const [feedback, setFeedback] = useState("")
   const [finalizationReason, setFinalizationReason] = useState("")
+  const { entrevistas: entrevistasHook, loading: entrevistasLoading } = useEntrevistas();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -84,21 +85,8 @@ export default function JobOfferPage({ params }: PageProps) {
 
         const postulacionesData = await postulacionesResponse.json();
 
-        // Obtener las entrevistas
-        const entrevistasResponse = await fetch('http://localhost:8080/api/entrevistas/mis-entrevistas-con-candidato', {
-          credentials: "include",
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!entrevistasResponse.ok) {
-          throw new Error(`Error al obtener las entrevistas: ${entrevistasResponse.status}`);
-        }
-
-        const entrevistasData = await entrevistasResponse.json();
-        setEntrevistas(entrevistasData);
+        // Usar entrevistasHook en vez de fetch manual
+        const entrevistasData = entrevistasHook;
 
         // Asegura que busquedaData puede tener _id y fechaCreacion.$date
         const busqId = busquedaData.id || busquedaData._id || "";
@@ -153,10 +141,12 @@ export default function JobOfferPage({ params }: PageProps) {
 
               const candidato = await candidatoRes.json();
 
-              // Buscar entrevista correspondiente
+              // Buscar entrevista correspondiente SOLO si está pendiente o confirmada
               const entrevista = Array.isArray(entrevistasData)
                 ? entrevistasData.find(
-                    (e: any) => e.candidatoId === p.candidatoId
+                    (e: any) =>
+                      e.candidatoId === p.candidatoId &&
+                      ["pendiente de confirmación", "confirmada"].includes((e.estado || "").toLowerCase())
                   )
                 : undefined;
 
@@ -286,6 +276,32 @@ export default function JobOfferPage({ params }: PageProps) {
     fetchData()
   }, [resolvedParams.id, toast])
 
+  useEffect(() => {
+    if (!jobOffer || entrevistasLoading) return;
+  
+    const candidatesWithEntrevistas = jobOffer.candidates.map(candidate => {
+      const entrevista = entrevistasHook.find(
+        (e: any) =>
+          e.candidatoId === candidate.id ||
+          e.candidatoId === candidate.postulacion?.candidatoId
+      );
+  
+      return {
+        ...candidate,
+        entrevista: entrevista ? {
+          id: entrevista.id,
+          fechaProgramada: entrevista.fechaProgramada,
+          horaProgramada: entrevista.horaProgramada ?? "", // corregido
+          estado: entrevista.estado,
+          linkEntrevista: entrevista.linkEntrevista ?? ""   // corregido
+        } : undefined
+      };
+    });
+  
+    setJobOffer(prev => prev ? { ...prev, candidates: candidatesWithEntrevistas } : null);
+  }, [entrevistasHook, entrevistasLoading]);
+  
+  
   const handleBack = () => {
     router.back()
   }
@@ -439,9 +455,11 @@ export default function JobOfferPage({ params }: PageProps) {
               const candidato = await candidatoRes.json();
 
               // Buscar entrevista correspondiente
-              const entrevista = Array.isArray(entrevistas)
-                ? entrevistas.find(
-                    (e: any) => e.candidatoId === p.candidatoId
+              const entrevista = Array.isArray(entrevistasHook)
+                ? entrevistasHook.find(
+                    (e: any) =>
+                      e.candidatoId === p.candidatoId &&
+                      ["pendiente de confirmación", "confirmada"].includes((e.estado || "").toLowerCase())
                   )
                 : undefined;
 
@@ -533,7 +551,7 @@ export default function JobOfferPage({ params }: PageProps) {
     try {
       // Formatear la fecha para el backend (YYYY-MM-DD)
       const [day, month, year] = date.split("/")
-      const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${time}:00.000Z`
+      const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${time}:00`
 
       const entrevistaData = {
         busquedaId: resolvedParams.id,
@@ -635,6 +653,7 @@ export default function JobOfferPage({ params }: PageProps) {
             onCandidateClick={setSelectedCandidate}
             isCollapsed={!!selectedCandidate}
             jobOffer={jobOffer}
+            entrevistas={entrevistasHook}
           />
 
           {/* Panel de detalles del candidato */}

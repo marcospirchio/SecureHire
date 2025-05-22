@@ -10,6 +10,7 @@ interface CandidatesListProps {
   onCandidateClick: (candidate: Candidate) => void
   isCollapsed: boolean
   jobOffer?: JobOffer
+  entrevistas?: any[]
 }
 
 export function CandidatesList({
@@ -19,7 +20,8 @@ export function CandidatesList({
   setSearchQuery,
   onCandidateClick,
   isCollapsed,
-  jobOffer
+  jobOffer,
+  entrevistas
 }: CandidatesListProps) {
   // Filtrar candidatos que no estén finalizados (case insensitive)
   const activeCandidates = candidates.filter(candidate => {
@@ -58,6 +60,7 @@ export function CandidatesList({
             isSelected={selectedCandidate?.id === candidate.id}
             onClick={onCandidateClick}
             jobOffer={jobOffer}
+            entrevistas={entrevistas}
           />
         ))}
       </div>

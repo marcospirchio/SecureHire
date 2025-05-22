@@ -16,6 +16,7 @@ import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.model.Usuario;
 import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.repository.UsuarioRepository;
+import java.text.ParseException;
 
 @Service
 public class EntrevistaService {
@@ -38,25 +39,38 @@ public class EntrevistaService {
     private ResendEmailService resendEmailService;
 
     public Entrevista crearEntrevista(Entrevista entrevista) {
-        Entrevista creada = entrevistaRepository.save(entrevista);
-    
         try {
+            // Combinar fechaProgramada (fecha sin hora) y horaProgramada para construir Date completo
+            if (entrevista.getFechaProgramada() == null || entrevista.getHoraProgramada() == null) {
+                throw new IllegalArgumentException("Faltan datos de fecha u hora");
+            }
+
+            SimpleDateFormat formatoCompleto = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
+            String fechaYHora = new SimpleDateFormat("yyyy-MM-dd").format(entrevista.getFechaProgramada())
+                                + "T" + entrevista.getHoraProgramada(); // Ejemplo: 2025-05-23T14:00
+            Date fechaConHora = formatoCompleto.parse(fechaYHora);
+            entrevista.setFechaProgramada(fechaConHora);
+
+            // Guardar en base de datos
+            Entrevista creada = entrevistaRepository.save(entrevista);
+
+            // Obtener datos relacionados
             var candidato = candidatoService.obtenerCandidatoPorId(creada.getCandidatoId())
                     .orElseThrow(() -> new RuntimeException("Candidato no encontrado"));
             String email = candidato.getEmail();
-    
+
             var busquedaOpt = busquedaRepository.findById(creada.getBusquedaId());
             String nombreProceso = busquedaOpt.map(Busqueda::getTitulo).orElse("Proceso desconocido");
-    
+
             var usuarioOpt = usuarioRepository.findById(creada.getUsuarioId());
             String nombreReclutador = usuarioOpt.map(u -> u.getNombre() + " " + u.getApellido()).orElse("Reclutador desconocido");
             String empresa = usuarioOpt.map(Usuario::getEmpresa).orElse("Empresa desconocida");
-    
-            // Formatear la fecha
+
+            // Formatear fecha y hora para el correo
             SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             String fechaFormateada = formatoFecha.format(creada.getFechaProgramada());
-    
-            // Preparar asunto y mensaje
+
+            // Preparar mensaje
             String asunto = "Entrevista agendada para el proceso: " + nombreProceso;
             String mensaje = String.format("""
                 Estimado/a %s,
@@ -80,19 +94,21 @@ public class EntrevistaService {
                 empresa,
                 fechaFormateada,
                 nombreReclutador,
-                creada.getId(), // Usado solo para el link
+                creada.getId(),
                 empresa
             );
 
-    
             resendEmailService.enviarCorreo(email, asunto, mensaje);
             System.out.println("✅ Correo enviado exitosamente a " + email);
-    
+
+            return creada;
+
+        } catch (ParseException e) {
+            throw new RuntimeException("Formato de fecha/hora incorrecto: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("⚠️ No se pudo enviar el correo de entrevista: " + e.getMessage());
+            System.out.println("⚠️ No se pudo crear la entrevista: " + e.getMessage());
+            throw new RuntimeException("Error al crear la entrevista: " + e.getMessage());
         }
-    
-        return creada;
     }
     
 

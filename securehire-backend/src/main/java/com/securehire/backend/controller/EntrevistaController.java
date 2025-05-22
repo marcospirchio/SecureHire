@@ -62,6 +62,7 @@ public class EntrevistaController {
             @AuthenticationPrincipal Usuario usuario
     ) {
         String usuarioId = usuario.getId();
+
         if (entrevista.getBusquedaId() == null || entrevista.getPostulacionId() == null) {
             return ResponseEntity.badRequest().body("Faltan datos: búsqueda o postulación");
         }
@@ -90,7 +91,7 @@ public class EntrevistaController {
 
         return ResponseEntity.ok(entrevistaService.crearEntrevista(entrevista));
     }
-
+    
     @PatchMapping("/confirmar/{id}")
     public ResponseEntity<?> confirmarEntrevista(@PathVariable String id) {
         Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);

@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react"
 
-interface Entrevista {
+interface Entrevista {  
   id: string
+  candidatoId: string // 👈 necesario
   fechaProgramada: string
   horaProgramada: string | null
   estado: string
   linkEntrevista: string | null
   nombreCandidato: string
   apellidoCandidato: string
-  tituloPuesto: string // nuevo campo
+  tituloPuesto: string
 }
-
 
 export function useEntrevistas() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([])
@@ -28,8 +28,28 @@ export function useEntrevistas() {
           throw new Error("Error al obtener las entrevistas")
         }
 
-        const data: Entrevista[] = await response.json()
-        setEntrevistas(data)
+        const data = await response.json()
+
+        // 🔧 Asumimos que cada objeto entrevista tiene un `postulacionId`, desde donde obtenemos `candidatoId`
+        const entrevistasConCandidatoId = await Promise.all(
+          data.map(async (e: any) => {
+            if (!e.postulacionId) {
+              console.warn("postulacionId es undefined para la entrevista:", e)
+              return { ...e, candidatoId: null } // o podés decidir descartarla
+            }
+        
+            const res = await fetch(`http://localhost:8080/api/postulaciones/${e.postulacionId}`, {
+              credentials: "include",
+              headers: { 'Accept': 'application/json' }
+            })
+        
+            const post = await res.json()
+            return { ...e, candidatoId: post.candidatoId }
+          })
+        )
+        
+
+        setEntrevistas(entrevistasConCandidatoId)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al obtener las entrevistas")
       } finally {
@@ -42,4 +62,3 @@ export function useEntrevistas() {
 
   return { entrevistas, loading, error }
 }
-

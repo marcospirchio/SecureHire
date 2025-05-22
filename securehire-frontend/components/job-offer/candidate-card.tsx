@@ -19,18 +19,39 @@ interface CandidateCardProps {
       obligatorio: boolean
     }[]
   }
+  entrevistas?: any[]
 }
 
-export function CandidateCard({ candidate, isSelected, onClick, jobOffer }: CandidateCardProps) {
+export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrevistas }: CandidateCardProps) {
   const [iaOpinion, setIaOpinion] = useState<string | null>(null)
   const [iaOpinionLoading, setIaOpinionLoading] = useState(false)
   const [showOpinionModal, setShowOpinionModal] = useState(false)
   const [iaOpinionError, setIaOpinionError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const hasInterview = candidate.entrevista && candidate.entrevista.fechaProgramada && candidate.entrevista.horaProgramada
-  const isConfirmed = candidate.entrevista?.estado.toLowerCase() === "confirmada"
-  const isPending = candidate.entrevista?.estado.toLowerCase() === "pendiente de confirmación"
+  // Buscar entrevista correspondiente en la prop entrevistas
+  const entrevista = entrevistas?.find(
+    (e) =>
+      e.candidatoId === candidate.postulacion?.candidatoId &&
+      ["pendiente de confirmación", "confirmada"].includes(e.estado?.toLowerCase())
+  );
+  
+  
+
+  
+  
+  console.log("Entrevista visible para", candidate.name, candidate.lastName, "=>", entrevista);
+  console.log("Comparando con IDs:", {
+    candidatoCardId: candidate.id,
+    candidatoPostulacionId: candidate.postulacion?.candidatoId,
+    entrevistasIds: entrevistas?.map((e: any) => e.candidatoId)
+  });
+  
+
+  
+  const hasInterview = entrevista && entrevista.fechaProgramada && entrevista.horaProgramada;
+  const isConfirmed = entrevista?.estado?.toLowerCase() === "confirmada";
+  const isPending = entrevista?.estado?.toLowerCase() === "pendiente de confirmación";
   const isActive = candidate.postulacion.estado?.toUpperCase() !== "FINALIZADA"
 
   // Detectar si el candidato no cumple requisitos excluyentes
@@ -186,12 +207,16 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer }: Cand
   if (!isActive) return null;
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}/${month}/${year}`
-  }
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  console.log("Entrevista visible en Card:", entrevista);
 
   return (
     <>
@@ -206,7 +231,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer }: Cand
             {candidate.name} {candidate.lastName}
           </h3>
           <div className="flex items-center gap-2">
-            {hasInterview && candidate.entrevista && (
+            {hasInterview && formatDate(entrevista.fechaProgramada) && entrevista.horaProgramada && (
               <span
                 className={`text-xs px-2 py-0.5 rounded-full flex items-center ${
                   isConfirmed
@@ -217,7 +242,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer }: Cand
                 }`}
               >
                 <Calendar className="h-3 w-3 mr-1" />
-                ENTREVISTA {formatDate(candidate.entrevista?.fechaProgramada)} | {candidate.entrevista?.horaProgramada}
+                ENTREVISTA {formatDate(entrevista.fechaProgramada)} | {entrevista.horaProgramada}
                 {isConfirmed ? (
                   <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />
                 ) : isPending ? (
