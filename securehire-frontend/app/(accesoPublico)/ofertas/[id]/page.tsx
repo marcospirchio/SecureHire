@@ -479,7 +479,7 @@ export default function OfertaPage({ params }: PageProps) {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Dirección <span className="text-red-500">*</span>
                     </label>
-                    <Textarea
+                    <Input
                       placeholder="Ingrese su dirección completa"
                       value={direccion}
                       onChange={(e) => setDireccion(e.target.value)}

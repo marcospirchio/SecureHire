@@ -46,7 +46,7 @@ export default function JobOfferPage({ params }: PageProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true)
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("notes")
+  const [activeTab, setActiveTab] = useState("feedbacks")
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const [feedback, setFeedback] = useState("")
   const [finalizationReason, setFinalizationReason] = useState("")

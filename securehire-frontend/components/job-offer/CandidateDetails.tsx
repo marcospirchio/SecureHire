@@ -52,6 +52,12 @@ export function CandidateDetails({
   const [iaSummary, setIaSummary] = useState<string | null>(null)
   const [iaLoading, setIaLoading] = useState(false)
   const [showFullSummary, setShowFullSummary] = useState(false)
+  const [filters, setFilters] = useState({
+    minAge: "",
+    maxAge: "",
+    gender: "todos",
+    name: ""
+  })
 
   // Obtener el ID del usuario logueado
   useEffect(() => {
@@ -79,73 +85,81 @@ export function CandidateDetails({
 
     fetchCurrentUser();
   }, []);
-// 1. Obtener comentarios con datos del reclutador
-useEffect(() => {
-  const fetchFeedbacks = async () => {
-    if (activeTab !== "feedbacks" || !candidate?.postulacion?.candidatoId) return;
 
-    setLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8080/api/comentarios/candidato/${candidate.postulacion.candidatoId}`, {
-        credentials: "include",
-        headers: { 'Accept': 'application/json' }
-      });
+  // Función para aplicar filtros
+  const applyFilters = (candidate: Candidate) => {
+    if (filters.minAge && candidate.age < parseInt(filters.minAge)) return false;
+    if (filters.maxAge && candidate.age > parseInt(filters.maxAge)) return false;
+    if (filters.gender !== "todos" && candidate.gender.toLowerCase() !== filters.gender) return false;
+    if (filters.name && !`${candidate.name} ${candidate.lastName}`.toLowerCase().includes(filters.name.toLowerCase())) return false;
+    return true;
+  }
 
-      if (!response.ok) throw new Error("Error al cargar los comentarios");
+  // 1. Obtener comentarios con datos del reclutador
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      if (activeTab !== "feedbacks" || !candidate?.postulacion?.candidatoId) return;
 
-      const data = await response.json();
+      setLoading(true);
+      try {
+        const response = await fetch(`http://localhost:8080/api/comentarios/candidato/${candidate.postulacion.candidatoId}`, {
+          credentials: "include",
+          headers: { 'Accept': 'application/json' }
+        });
 
-      const feedbacksWithInfo = await Promise.all(
-        data.map(async (f: any) => {
-          try {
-            const recruiterRes = await fetch(`http://localhost:8080/api/usuarios/${f.usuarioId}`, {
-              credentials: "include",
-              headers: { 'Accept': 'application/json' }
-            });
+        if (!response.ok) throw new Error("Error al cargar los comentarios");
 
-            const recruiterData: Usuario = recruiterRes.ok
-              ? await recruiterRes.json()
-              : { nombre: "Reclutador", apellido: "", empresa: "Empresa" };
+        const data = await response.json();
 
-            return {
-              id: f.id,
-              texto: f.texto,
-              fecha: f.fecha,
-              usuarioId: f.usuarioId,
-              candidatoId: f.candidatoId,
-              postulacionId: f.postulacionId,
-              nombreReclutador: `${recruiterData.nombre} ${recruiterData.apellido}`,
-              empresaReclutador: recruiterData.empresa
-            };
-          } catch (e) {
-            console.error("Error al cargar reclutador:", e);
-            return null;
-          }
-        })
-      );
+        const feedbacksWithInfo = await Promise.all(
+          data.map(async (f: any) => {
+            try {
+              const recruiterRes = await fetch(`http://localhost:8080/api/usuarios/${f.usuarioId}`, {
+                credentials: "include",
+                headers: { 'Accept': 'application/json' }
+              });
 
-      // Ordenar los feedbacks por fecha de más reciente a más antiguo
-      const feedbacksOrdenados = feedbacksWithInfo
-        .filter(Boolean)
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+              const recruiterData: Usuario = recruiterRes.ok
+                ? await recruiterRes.json()
+                : { nombre: "Reclutador", apellido: "", empresa: "Empresa" };
 
-      setFeedbacks(feedbacksOrdenados);
-    } catch (error) {
-      console.error("Error al cargar comentarios:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los comentarios",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+              return {
+                id: f.id,
+                texto: f.texto,
+                fecha: f.fecha,
+                usuarioId: f.usuarioId,
+                candidatoId: f.candidatoId,
+                postulacionId: f.postulacionId,
+                nombreReclutador: `${recruiterData.nombre} ${recruiterData.apellido}`,
+                empresaReclutador: recruiterData.empresa
+              };
+            } catch (e) {
+              console.error("Error al cargar reclutador:", e);
+              return null;
+            }
+          })
+        );
 
-  fetchFeedbacks();
-}, [activeTab, candidate?.postulacion?.candidatoId, currentUserId, toast]);
+        // Ordenar los feedbacks por fecha de más reciente a más antiguo
+        const feedbacksOrdenados = feedbacksWithInfo
+          .filter(Boolean)
+          .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-  
+        setFeedbacks(feedbacksOrdenados);
+      } catch (error) {
+        console.error("Error al cargar comentarios:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los comentarios",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedbacks();
+  }, [activeTab, candidate?.postulacion?.candidatoId, currentUserId, toast]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -234,101 +248,101 @@ useEffect(() => {
     }
   };
 
-// Estado para anotaciones privadas
-const [anotaciones, setAnotaciones] = useState<{ content: string; fecha?: string | null }[]>([])
-const [loadingNotas, setLoadingNotas] = useState(false)
-const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  // Estado para anotaciones privadas
+  const [anotaciones, setAnotaciones] = useState<{ content: string; fecha?: string | null }[]>([])
+  const [loadingNotas, setLoadingNotas] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
-// Función para obtener anotaciones privadas
-const fetchAnotaciones = async () => {
-  setLoadingNotas(true)
-  try {
-    const res = await fetch(`http://localhost:8080/api/postulaciones/anotaciones/postulacion/${candidate.postulacion.id}`, {
-      credentials: "include"
-    })
-    if (res.ok) {
-      const data = await res.json()
-      const anotacionesFormateadas = data.map((a: any) => ({
-        content: a.comentario,
-        fecha: a.fecha || null
-      }))
-      setAnotaciones(anotacionesFormateadas)
+  // Función para obtener anotaciones privadas
+  const fetchAnotaciones = async () => {
+    setLoadingNotas(true)
+    try {
+      const res = await fetch(`http://localhost:8080/api/postulaciones/anotaciones/postulacion/${candidate.postulacion.id}`, {
+        credentials: "include"
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const anotacionesFormateadas = data.map((a: any) => ({
+          content: a.comentario,
+          fecha: a.fecha || null
+        }))
+        setAnotaciones(anotacionesFormateadas)
+      }
+    } catch (error) {
+      console.error("Error al obtener anotaciones privadas:", error)
+    } finally {
+      setLoadingNotas(false)
     }
-  } catch (error) {
-    console.error("Error al obtener anotaciones privadas:", error)
-  } finally {
-    setLoadingNotas(false)
   }
-}
 
-// Cargar anotaciones al montar o cambiar postulación
-useEffect(() => {
-  if (candidate?.postulacion?.id) {
-    fetchAnotaciones()
-  }
-}, [candidate?.postulacion?.id])
-
-// Agregar anotación privada
-const handleAddNote = async () => {
-  if (!newNote.trim()) return
-  try {
-    const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ comentario: newNote })
-    })
-    if (!res.ok) throw new Error("No se pudo guardar la anotación")
-    setNewNote("")
-    await fetchAnotaciones()
-  } catch (error) {
-    console.error("Error al agregar anotación:", error)
-  }
-}
-
-// Editar anotación privada
-const handleEditNote = async (index: number) => {
-  if (!editText.trim()) return
-  try {
-    const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(editText)
-    })
-    if (!res.ok) throw new Error("No se pudo editar la anotación")
-    setEditingIndex(null)
-    setEditText("")
-    await fetchAnotaciones()
-  } catch (error) {
-    console.error("Error al editar anotación:", error)
-  }
-}
-
-// Eliminar anotación privada
-const handleDeleteNote = async (index: number) => {
-  try {
-    const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    })
-    if (!res.ok) throw new Error("No se pudo eliminar la anotación")
-    await fetchAnotaciones()
-  } catch (error) {
-    console.error("Error al eliminar anotación:", error)
-  }
-}
-
-// Mostrar anotaciones privadas solo en la pestaña 'notes'
-const anotacionesOrdenadas = [...anotaciones]
-  .map((a, idx) => ({ ...a, idx }))
-  .sort((a, b) => {
-    // Si tienes la fecha como string ISO, puedes comparar así:
-    if (a.fecha && b.fecha) {
-      return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+  // Cargar anotaciones al montar o cambiar postulación
+  useEffect(() => {
+    if (candidate?.postulacion?.id) {
+      fetchAnotaciones()
     }
-    return 0;
-  });
+  }, [candidate?.postulacion?.id])
+
+  // Agregar anotación privada
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return
+    try {
+      const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ comentario: newNote })
+      })
+      if (!res.ok) throw new Error("No se pudo guardar la anotación")
+      setNewNote("")
+      await fetchAnotaciones()
+    } catch (error) {
+      console.error("Error al agregar anotación:", error)
+    }
+  }
+
+  // Editar anotación privada
+  const handleEditNote = async (index: number) => {
+    if (!editText.trim()) return
+    try {
+      const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(editText)
+      })
+      if (!res.ok) throw new Error("No se pudo editar la anotación")
+      setEditingIndex(null)
+      setEditText("")
+      await fetchAnotaciones()
+    } catch (error) {
+      console.error("Error al editar anotación:", error)
+    }
+  }
+
+  // Eliminar anotación privada
+  const handleDeleteNote = async (index: number) => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (!res.ok) throw new Error("No se pudo eliminar la anotación")
+      await fetchAnotaciones()
+    } catch (error) {
+      console.error("Error al eliminar anotación:", error)
+    }
+  }
+
+  // Mostrar anotaciones privadas solo en la pestaña 'notes'
+  const anotacionesOrdenadas = [...anotaciones]
+    .map((a, idx) => ({ ...a, idx }))
+    .sort((a, b) => {
+      // Si tienes la fecha como string ISO, puedes comparar así:
+      if (a.fecha && b.fecha) {
+        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+      }
+      return 0;
+    });
 
   // Cargar el resumen d  el CV al montar el componente o cambiar de candidato
   useEffect(() => {
@@ -551,60 +565,11 @@ const anotacionesOrdenadas = [...anotaciones]
         </div>
 
         <div className="mt-4 pt-4 border-t">
-          <Tabs defaultValue="notes" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs defaultValue="feedbacks" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
               <TabsTrigger value="feedbacks">Historial de comentarios</TabsTrigger>
+              <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="notes" className="mt-4">
-              <div className="mb-4">
-                <Textarea
-                  placeholder="Añadir una nueva nota..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  className="min-h-[80px] text-base"
-                />
-                <div className="flex justify-end mt-2">
-                  <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
-                    Guardar nota
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {anotacionesOrdenadas.length > 0 && anotacionesOrdenadas.map((note) => (
-                  <div key={note.idx} className="border rounded-lg p-4 bg-gray-50 flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-base font-medium text-gray-800">{note.content}</span>
-                      <div className="flex gap-2">
-                        <Pencil className="h-5 w-5 cursor-pointer text-gray-500 hover:text-blue-600" onClick={() => { setEditingIndex(note.idx); setEditText(note.content); }} />
-                        <Trash2 className="h-5 w-5 cursor-pointer text-gray-500 hover:text-red-600" onClick={() => handleDeleteNote(note.idx)} />
-                      </div>
-                    </div>
-                    {note.fecha && (
-                      <span className="text-xs text-gray-500">{formatDate(note.fecha)}</span>
-                    )}
-                    {editingIndex === note.idx && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <input
-                          value={editText}
-                          onChange={e => setEditText(e.target.value)}
-                          className="border rounded px-2 py-1 text-base"
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <Button size="sm" onClick={() => handleEditNote(note.idx)} disabled={!editText.trim()}>
-                            Guardar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
 
             <TabsContent value="feedbacks" className="mt-4">
               <div className="bg-gray-50 p-4 rounded-md mb-4">
@@ -657,6 +622,55 @@ const anotacionesOrdenadas = [...anotaciones]
               ) : (
                 <p className="text-gray-500 text-sm text-center py-4">No hay comentarios disponibles.</p>
               )}
+            </TabsContent>
+
+            <TabsContent value="notes" className="mt-4">
+              <div className="mb-4">
+                <Textarea
+                  placeholder="Añadir una nueva nota..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="min-h-[80px] text-base"
+                />
+                <div className="flex justify-end mt-2">
+                  <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
+                    Guardar nota
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {anotacionesOrdenadas.length > 0 && anotacionesOrdenadas.map((note) => (
+                  <div key={note.idx} className="border rounded-lg p-4 bg-gray-50 flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-base font-medium text-gray-800">{note.content}</span>
+                      <div className="flex gap-2">
+                        <Pencil className="h-5 w-5 cursor-pointer text-gray-500 hover:text-blue-600" onClick={() => { setEditingIndex(note.idx); setEditText(note.content); }} />
+                        <Trash2 className="h-5 w-5 cursor-pointer text-gray-500 hover:text-red-600" onClick={() => handleDeleteNote(note.idx)} />
+                      </div>
+                    </div>
+                    {note.fecha && (
+                      <span className="text-xs text-gray-500">{formatDate(note.fecha)}</span>
+                    )}
+                    {editingIndex === note.idx && (
+                      <div className="flex flex-col gap-2 mt-2">
+                        <input
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          className="border rounded px-2 py-1 text-base"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" onClick={() => handleEditNote(note.idx)} disabled={!editText.trim()}>
+                            Guardar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </TabsContent>
           </Tabs>
         </div>

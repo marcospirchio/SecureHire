@@ -1,9 +1,11 @@
-import { Calendar, CheckCircle2, AlertCircle, AlertTriangle, Sparkles } from 'lucide-react'
+import { Calendar, CheckCircle2, AlertCircle, AlertTriangle, Sparkles, Filter } from 'lucide-react'
 import { Candidate } from "@/types/job-offer"
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface CandidateCardProps {
   candidate: Candidate
@@ -27,6 +29,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
   const [iaOpinionLoading, setIaOpinionLoading] = useState(false)
   const [showOpinionModal, setShowOpinionModal] = useState(false)
   const [iaOpinionError, setIaOpinionError] = useState<string | null>(null)
+  const [showFilterModal, setShowFilterModal] = useState(false)
   const { toast } = useToast()
 
   // Buscar entrevista correspondiente en la prop entrevistas

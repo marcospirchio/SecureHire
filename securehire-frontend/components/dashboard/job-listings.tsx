@@ -16,6 +16,11 @@ interface JobListingsProps {
 }
 
 export function JobListings({ listings, onJobClick }: JobListingsProps) {
+  // Ordenar las ofertas por fecha de creación (más recientes primero)
+  const sortedListings = [...listings].sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
   return (
     <div className="rounded-lg border bg-white p-3 w-full">
       <div className="mb-3 flex items-center justify-between">
@@ -32,7 +37,7 @@ export function JobListings({ listings, onJobClick }: JobListingsProps) {
         </Link>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {listings.map((listing) => (
+        {sortedListings.map((listing) => (
           <div
             key={listing.id}
             className="rounded-lg border p-3 hover:shadow-sm transition-shadow cursor-pointer"
@@ -52,7 +57,7 @@ export function JobListings({ listings, onJobClick }: JobListingsProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Creada el:</span>
-                <span className="font-medium">{listing.createdAt}</span>
+                <span className="font-medium">{new Date(listing.createdAt).toLocaleDateString("es-AR")}</span>
               </div>
             </div>
           </div>

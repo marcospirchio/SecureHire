@@ -114,7 +114,7 @@ export default function BusquedasPage() {
         const offers: JobOffer[] = busquedasArray.map((b: any) => ({
           id: b._id || b.id,
           title: b.titulo || "",
-          createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
+          createdAt: b.fechaCreacion,
           candidates: conteoActivos[b._id || b.id] || 0,
           archivada: b.archivada || false
         }))
@@ -187,15 +187,13 @@ export default function BusquedasPage() {
       .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
       .filter((offer) => offer.archivada === showArchived)
       .sort((a, b) => {
-    if (sortBy === "recent") {
-      const dateA = a.createdAt.split("/").reverse().join("")
-      const dateB = b.createdAt.split("/").reverse().join("")
-      return dateB.localeCompare(dateA)
-    } else if (sortBy === "candidates") {
-      return b.candidates - a.candidates
-    }
-    return 0
-  })
+        if (sortBy === "recent") {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        } else if (sortBy === "candidates") {
+          return b.candidates - a.candidates
+        }
+        return 0
+      })
   }, [jobOffers, searchQuery, showArchived, sortBy])
 
   // Calcular paginación
@@ -356,7 +354,7 @@ export default function BusquedasPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Creada el:</span>
-                  <span className="font-medium">{offer.createdAt}</span>
+                  <span className="font-medium">{new Date(offer.createdAt).toLocaleDateString("es-AR")}</span>
                 </div>
               </div>
             </div>
