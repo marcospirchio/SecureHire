@@ -47,6 +47,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/entrevistas/reprogramar/**").permitAll()
                 .requestMatchers("/api/ofertas/**").permitAll()
 
+                // ✅ NUEVO: Acceso público a ofertas de trabajo (usado en la vista pública)
+                .requestMatchers(HttpMethod.GET, "/api/busquedas/**").permitAll()
+
                 // Protegido: cualquier acción debajo de /api/postulaciones requiere token
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/postulaciones/**").authenticated()
