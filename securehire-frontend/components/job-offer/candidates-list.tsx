@@ -33,6 +33,13 @@ export function CandidatesList({
   const [minAge, setMinAge] = useState("")
   const [maxAge, setMaxAge] = useState("")
   const [gender, setGender] = useState("todos")
+  const [requisitosFilter, setRequisitosFilter] = useState("todos")
+
+  // Estados temporales para el modal
+  const [tempMinAge, setTempMinAge] = useState("")
+  const [tempMaxAge, setTempMaxAge] = useState("")
+  const [tempGender, setTempGender] = useState("todos")
+  const [tempRequisitosFilter, setTempRequisitosFilter] = useState("todos")
 
   // Filtrar candidatos que no estén finalizados (case insensitive)
   const activeCandidates = candidates.filter(candidate => {
@@ -46,8 +53,37 @@ export function CandidatesList({
     const nameMatch = fullName.includes(searchQuery.toLowerCase())
     const ageMatch = (!minAge || candidate.age >= parseInt(minAge)) && (!maxAge || candidate.age <= parseInt(maxAge))
     const genderMatch = gender === "todos" || candidate.gender.toLowerCase() === gender
-    return nameMatch && ageMatch && genderMatch
+    let requisitosMatch = true
+    if (requisitosFilter === "cumplen") {
+      requisitosMatch = !(candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0)
+    } else if (requisitosFilter === "nocumplen") {
+      requisitosMatch = !!(candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0)
+    }
+    return nameMatch && ageMatch && genderMatch && requisitosMatch
   })
+
+  // Al abrir el modal, inicializa los temporales
+  const handleOpenFilterModal = () => {
+    setTempMinAge(minAge)
+    setTempMaxAge(maxAge)
+    setTempGender(gender)
+    setTempRequisitosFilter(requisitosFilter)
+    setShowFilterModal(true)
+  }
+
+  // Al aplicar filtros
+  const handleApplyFilters = () => {
+    setMinAge(tempMinAge)
+    setMaxAge(tempMaxAge)
+    setGender(tempGender)
+    setRequisitosFilter(tempRequisitosFilter)
+    setShowFilterModal(false)
+  }
+
+  // Al cancelar filtros
+  const handleCancelFilters = () => {
+    setShowFilterModal(false)
+  }
 
   return (
     <div
@@ -68,7 +104,7 @@ export function CandidatesList({
           size="icon"
           variant="ghost"
           className="h-8 w-8 ml-2"
-          onClick={() => setShowFilterModal(true)}
+          onClick={handleOpenFilterModal}
           title="Filtrar candidatos"
         >
           <Filter className="h-4 w-4 text-gray-500" />
@@ -89,13 +125,13 @@ export function CandidatesList({
             <div className="space-y-2">
               <label className="text-sm font-medium">Rango de edad</label>
               <div className="flex gap-2">
-                <Input type="number" placeholder="Mín" className="w-24" value={minAge} onChange={e => setMinAge(e.target.value)} />
-                <Input type="number" placeholder="Máx" className="w-24" value={maxAge} onChange={e => setMaxAge(e.target.value)} />
+                <Input type="number" placeholder="Mín" className="w-24" value={tempMinAge} onChange={e => setTempMinAge(e.target.value)} />
+                <Input type="number" placeholder="Máx" className="w-24" value={tempMaxAge} onChange={e => setTempMaxAge(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Género</label>
-              <Select value={gender} onValueChange={setGender}>
+              <Select value={tempGender} onValueChange={setTempGender}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar género" />
                 </SelectTrigger>
@@ -107,12 +143,25 @@ export function CandidatesList({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Requisitos excluyentes</label>
+              <Select value={tempRequisitosFilter} onValueChange={setTempRequisitosFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por requisitos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="cumplen">Solo los que cumplen</SelectItem>
+                  <SelectItem value="nocumplen">Solo los que NO cumplen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowFilterModal(false)}>
+            <Button variant="outline" onClick={handleCancelFilters}>
               Cancelar
             </Button>
-            <Button onClick={() => setShowFilterModal(false)}>
+            <Button onClick={handleApplyFilters}>
               Aplicar filtros
             </Button>
           </div>

@@ -163,15 +163,7 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
               <Users className="h-5 w-5" />
               {!collapsed && <span>Mis ofertas de trabajo</span>}
             </Link>
-            <Link
-              href="/notificaciones"
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
-                isActive("/notificaciones") ? "bg-gray-100 font-medium text-gray-900" : "text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              <Bell className="h-5 w-5" />
-              {!collapsed && <span>Notificaciones</span>}
-            </Link>
+            
           </nav>
         </div>
 

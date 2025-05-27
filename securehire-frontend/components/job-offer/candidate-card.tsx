@@ -36,6 +36,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
   const entrevista = entrevistas?.find(
     (e) =>
       e.candidatoId === candidate.postulacion?.candidatoId &&
+      e.postulacionId === candidate.postulacion?.id &&
       ["pendiente de confirmación", "confirmada"].includes(e.estado?.toLowerCase())
   );
   
