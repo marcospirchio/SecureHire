@@ -51,6 +51,25 @@ interface CalendarEvent {
   busquedaId?: string
 }
 
+interface Entrevista {
+  id: string
+  fechaProgramada: string
+  horaProgramada: string
+  nombreCandidato?: string
+  apellidoCandidato?: string
+  candidato?: {
+    nombre?: string
+    apellido?: string
+  }
+  candidateName?: string
+  candidatoId?: string
+  linkEntrevista?: string
+  tituloPuesto?: string
+  estado: string
+  busquedaId?: string
+  nombreCompleto?: string
+}
+
 export default function CalendarioPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const { entrevistas, loading, error } = useEntrevistas()
@@ -130,18 +149,46 @@ export default function CalendarioPage() {
             credentials: 'include'
           })
             .then(res => res.ok ? res.json() : { content: [] })
-            .then(data => data.content || [])
+            .then(data => (data.content || []) as Entrevista[])
         )
-      ).then(results => {
+      ).then(async results => {
         // Unir todos los resultados y quitar duplicados por id
         const todas = results.flat();
         const unicas = Object.values(
           todas.reduce((acc, curr) => {
             acc[curr.id] = curr;
             return acc;
-          }, {} as Record<string, any>)
+          }, {} as Record<string, Entrevista>)
         );
-        setEntrevistasCanceladas(unicas);
+
+        // Completar nombres faltantes
+        const entrevistasConNombre = await Promise.all(unicas.map(async (entrevista: Entrevista) => {
+          let nombreCompleto = '';
+          if (entrevista.nombreCandidato || entrevista.apellidoCandidato) {
+            nombreCompleto = `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim();
+          } else if (entrevista.candidato) {
+            nombreCompleto = `${entrevista.candidato.nombre || ''} ${entrevista.candidato.apellido || ''}`.trim();
+          } else if (entrevista.candidateName) {
+            nombreCompleto = entrevista.candidateName;
+          }
+          // Si aún no tenemos nombre, intentar buscarlo por ID
+          if (!nombreCompleto && entrevista.candidatoId) {
+            try {
+              const res = await fetch(`http://localhost:8080/api/candidatos/${entrevista.candidatoId}`, {
+                credentials: 'include'
+              });
+              if (res.ok) {
+                const candidato = await res.json();
+                nombreCompleto = `${candidato.nombre || ''} ${candidato.apellido || ''}`.trim();
+              }
+            } catch (err) {
+              console.error('Error al buscar candidato:', err);
+            }
+          }
+          return { ...entrevista, nombreCompleto: nombreCompleto || '-' };
+        }));
+
+        setEntrevistasCanceladas(entrevistasConNombre);
         setLoadingCanceladas(false);
       });
     }
@@ -150,45 +197,20 @@ export default function CalendarioPage() {
   const events: CalendarEvent[] = [
     ...(
       mostrarCanceladas
-        ? entrevistasCanceladas.map(entrevista => {
-            console.log('Entrevista cancelada:', entrevista); // Para debug
-            let nombreCompleto = '';
-            // Intentar obtener el nombre de todas las posibles ubicaciones
-            if (entrevista.nombreCandidato || entrevista.apellidoCandidato) {
-              nombreCompleto = `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim();
-            } else if (entrevista.candidato) {
-              nombreCompleto = `${entrevista.candidato.nombre || ''} ${entrevista.candidato.apellido || ''}`.trim();
-            } else if (entrevista.candidateName) {
-              nombreCompleto = entrevista.candidateName;
-            }
-            
-            // Si aún no tenemos nombre, intentar buscarlo por ID
-            if (!nombreCompleto && entrevista.candidatoId) {
-              fetch(`http://localhost:8080/api/candidatos/${entrevista.candidatoId}`, {
-                credentials: 'include'
-              })
-              .then(res => res.json())
-              .then(candidato => {
-                nombreCompleto = `${candidato.nombre || ''} ${candidato.apellido || ''}`.trim();
-              })
-              .catch(err => console.error('Error al buscar candidato:', err));
-            }
-
-            return {
-              id: entrevista.id,
-              date: (entrevista.fechaProgramada || '').split('T')[0],
-              time: entrevista.horaProgramada || "-",
-              title: "Entrevista",
-              person: nombreCompleto || '-',
-              link: entrevista.linkEntrevista || "",
-              candidateName: nombreCompleto || '-',
-              jobTitle: entrevista.tituloPuesto || "-",
-              estado: entrevista.estado,
-              tipo: "entrevista",
-              candidatoId: entrevista.candidatoId,
-              busquedaId: entrevista.busquedaId
-            }
-          })
+        ? entrevistasCanceladas.map((entrevista: Entrevista) => ({
+            id: entrevista.id,
+            date: (entrevista.fechaProgramada || '').split('T')[0],
+            time: entrevista.horaProgramada || "-",
+            title: "Entrevista",
+            person: entrevista.nombreCompleto || '-',
+            link: entrevista.linkEntrevista || "",
+            candidateName: entrevista.nombreCompleto || '-',
+            jobTitle: entrevista.tituloPuesto || "-",
+            estado: entrevista.estado,
+            tipo: "entrevista",
+            candidatoId: entrevista.candidatoId,
+            busquedaId: entrevista.busquedaId
+          }))
         : [
             ...entrevistas
               .filter(entrevista => {
