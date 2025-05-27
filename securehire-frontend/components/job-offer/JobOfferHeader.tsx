@@ -76,7 +76,7 @@ export function JobOfferHeader({ title, onBack, onOpenJobDetails, busquedaId, ur
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className="h-7 px-2 text-xs hover:bg-gray-200"
                 onClick={handleCopyLink}
               >
                 <Copy className="h-3 w-3 mr-1" />

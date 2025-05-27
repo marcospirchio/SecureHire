@@ -163,7 +163,6 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
               <Users className="h-5 w-5" />
               {!collapsed && <span>Mis ofertas de trabajo</span>}
             </Link>
-            
           </nav>
         </div>
 

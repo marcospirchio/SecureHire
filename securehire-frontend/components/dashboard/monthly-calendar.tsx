@@ -86,9 +86,8 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
                   }`}
                 onClick={() => onEventClick?.(event)}
               >
-                  <div className="font-medium truncate">{event.time} - {event.title}</div>
-                {event.person && <div className="text-xs truncate">{event.person}</div>}
-                  {event.jobTitle && <div className="text-[11px] text-gray-600">{event.jobTitle}</div>}
+                  <div className="font-medium truncate">{event.time} - {event.title}{event.person ? `: ${event.person}` : ''}</div>
+                {event.jobTitle && <div className="text-[11px] text-gray-600">{event.jobTitle}</div>}
               </div>
               )
             })}

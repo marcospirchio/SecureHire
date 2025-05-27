@@ -300,24 +300,6 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            {isExcluido && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">
-                    El candidato no cumple con el/los siguientes requisitos excluyentes:
-                  </p>
-                  <ul className="mt-2 ml-5 list-disc">
-                    {candidate.postulacion.requisitosExcluyentes?.map((req, i) => (
-                      <li key={i} className="text-sm text-amber-700">
-                        <span className="font-medium">{req.campo}</span><br />
-                        Respuesta: <span className="italic">{Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
             {iaOpinionLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>

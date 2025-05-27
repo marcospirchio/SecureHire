@@ -47,6 +47,8 @@ interface CalendarEvent {
   description?: string
   tipo?: string
   ubicacion?: string
+  candidatoId?: string
+  busquedaId?: string
 }
 
 export default function CalendarioPage() {
@@ -148,18 +150,45 @@ export default function CalendarioPage() {
   const events: CalendarEvent[] = [
     ...(
       mostrarCanceladas
-        ? entrevistasCanceladas.map(entrevista => ({
-            id: entrevista.id,
-            date: (entrevista.fechaProgramada || '').split('T')[0],
-            time: entrevista.horaProgramada || "-",
-            title: "Entrevista",
-            person: `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim(),
-            link: entrevista.linkEntrevista || "",
-            candidateName: `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim(),
-            jobTitle: entrevista.tituloPuesto || "-",
-            estado: entrevista.estado,
-            tipo: "entrevista"
-          }))
+        ? entrevistasCanceladas.map(entrevista => {
+            console.log('Entrevista cancelada:', entrevista); // Para debug
+            let nombreCompleto = '';
+            // Intentar obtener el nombre de todas las posibles ubicaciones
+            if (entrevista.nombreCandidato || entrevista.apellidoCandidato) {
+              nombreCompleto = `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim();
+            } else if (entrevista.candidato) {
+              nombreCompleto = `${entrevista.candidato.nombre || ''} ${entrevista.candidato.apellido || ''}`.trim();
+            } else if (entrevista.candidateName) {
+              nombreCompleto = entrevista.candidateName;
+            }
+            
+            // Si aún no tenemos nombre, intentar buscarlo por ID
+            if (!nombreCompleto && entrevista.candidatoId) {
+              fetch(`http://localhost:8080/api/candidatos/${entrevista.candidatoId}`, {
+                credentials: 'include'
+              })
+              .then(res => res.json())
+              .then(candidato => {
+                nombreCompleto = `${candidato.nombre || ''} ${candidato.apellido || ''}`.trim();
+              })
+              .catch(err => console.error('Error al buscar candidato:', err));
+            }
+
+            return {
+              id: entrevista.id,
+              date: (entrevista.fechaProgramada || '').split('T')[0],
+              time: entrevista.horaProgramada || "-",
+              title: "Entrevista",
+              person: nombreCompleto || '-',
+              link: entrevista.linkEntrevista || "",
+              candidateName: nombreCompleto || '-',
+              jobTitle: entrevista.tituloPuesto || "-",
+              estado: entrevista.estado,
+              tipo: "entrevista",
+              candidatoId: entrevista.candidatoId,
+              busquedaId: entrevista.busquedaId
+            }
+          })
         : [
             ...entrevistas
               .filter(entrevista => {
@@ -245,6 +274,14 @@ export default function CalendarioPage() {
         // Si falla, dejar los valores por defecto
       }
       setSelectedEvent({ ...event, candidateName, jobTitle });
+      setIsEventDetailsModalOpen(true);
+    } else if (event.tipo === "entrevista") {
+      // Si es entrevista y ya tiene los datos, igualar los campos para el modal
+      setSelectedEvent({
+        ...event,
+        candidateName: event.candidateName || event.person || '',
+        jobTitle: event.jobTitle || event.title || ''
+      });
       setIsEventDetailsModalOpen(true);
     } else {
       setSelectedEvent(event);
@@ -393,9 +430,9 @@ export default function CalendarioPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={mostrarCanceladas ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              className={`h-7 text-xs ${mostrarCanceladas ? "bg-red-100 text-red-700 border-red-300" : ""}`}
+              className="h-7 text-xs"
               onClick={() => setMostrarCanceladas(v => !v)}
             >
               {mostrarCanceladas ? "Ocultar canceladas" : "Mostrar canceladas"}
@@ -468,8 +505,7 @@ export default function CalendarioPage() {
                             className={`mt-1 rounded p-1 text-[10px] truncate cursor-pointer ${colorClass}`}
                             onClick={() => handleOpenEventDetailsModal(event)}
                           >
-                            {event.time} - {event.title}
-                            {event.person && `: ${event.person}`}
+                            {event.time} - {event.title}{event.person ? `: ${event.person}` : ''}
                           </div>
                         );
                       })}
