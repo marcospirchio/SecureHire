@@ -52,7 +52,7 @@ public class CandidatoService {
                     .paisResidencia(dto.getPaisResidencia())
                     .provincia(dto.getProvincia())
                     .direccion(dto.getDireccion())
-                    .cvUrl(dto.getCvUrl()) // <- ¡Esto es clave!
+                    .cvUrl(dto.getCvUrl()) 
                     .reputacion(null)
                     .tiempoRespuesta(null)
                     .comentarioIds(new ArrayList<>())
