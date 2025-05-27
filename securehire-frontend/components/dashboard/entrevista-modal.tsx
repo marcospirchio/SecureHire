@@ -16,6 +16,7 @@ interface EntrevistaModalProps {
     hora: string  // formato "HH:mm"
     candidato: string
     puesto: string
+    estado?: string
   } | null
 }
 
@@ -23,6 +24,7 @@ export function EntrevistaModal({ open, onClose, onCancel, entrevista }: Entrevi
   if (!entrevista) return null
 
   const fechaFormateada = format(new Date(entrevista.fecha + "T" + entrevista.hora), "PPPP 'a las' HH:mm", { locale: es })
+  const isCanceled = entrevista.estado?.toLowerCase().includes("cancelada")
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -55,10 +57,18 @@ export function EntrevistaModal({ open, onClose, onCancel, entrevista }: Entrevi
               <div className="text-sm text-gray-900">{entrevista.puesto}</div>
             </div>
           </div>
+
+          {isCanceled && (
+            <div className="flex gap-3 items-start">
+              <div className="text-sm font-medium text-red-600">Entrevista cancelada</div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between mt-6">
-          <Button variant="destructive" onClick={onCancel} className="px-4">Cancelar entrevista</Button>
+          {!isCanceled && (
+            <Button variant="destructive" onClick={onCancel} className="px-4">Cancelar entrevista</Button>
+          )}
           <Button variant="outline" onClick={onClose} className="px-4">Cerrar</Button>
         </div>
       </DialogContent>

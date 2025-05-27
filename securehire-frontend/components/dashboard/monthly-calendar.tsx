@@ -80,9 +80,11 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
               <div
                 key={idx}
                   className={`rounded-md p-1 mb-1 text-xs cursor-pointer ${
-                    event.estado === "Pendiente de confirmación" 
-                      ? "bg-amber-100 text-amber-900 hover:bg-amber-200" 
-                      : "bg-green-100 text-green-900 hover:bg-green-200"
+                    event.estado?.toLowerCase().includes("cancelada")
+                      ? "bg-red-100 text-red-900 hover:bg-red-200"
+                      : event.estado === "Pendiente de confirmación" 
+                        ? "bg-amber-100 text-amber-900 hover:bg-amber-200" 
+                        : "bg-green-100 text-green-900 hover:bg-green-200"
                   }`}
                 onClick={() => onEventClick?.(event)}
               >

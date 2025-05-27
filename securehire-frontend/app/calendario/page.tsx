@@ -668,18 +668,26 @@ export default function CalendarioPage() {
                   >
                     Eliminar evento
                   </Button>
+                ) : selectedEvent?.estado?.toLowerCase().includes("cancelada") ? (
+                  <div className="flex justify-end w-full">
+                    <Button variant="outline" onClick={() => setIsEventDetailsModalOpen(false)}>
+                      Cerrar
+                    </Button>
+                  </div>
                 ) : (
-                <Button
-                  variant="destructive"
-                  className="bg-red-500 hover:bg-red-600 border-2 border-red-600"
-                  onClick={handleCancelInterview}
-                >
-                  Cancelar entrevista
-                </Button>
+                  <div className="flex justify-between w-full">
+                    <Button
+                      variant="destructive"
+                      className="bg-red-500 hover:bg-red-600 border-2 border-red-600"
+                      onClick={handleCancelInterview}
+                    >
+                      Cancelar entrevista
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsEventDetailsModalOpen(false)}>
+                      Cerrar
+                    </Button>
+                  </div>
                 )}
-                <Button variant="outline" onClick={() => setIsEventDetailsModalOpen(false)}>
-                  Cerrar
-                </Button>
               </div>
             </div>
           </DialogContent>

@@ -19,11 +19,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Calcular el ancho máximo del contenido basado en el estado de la sidebar
   const getMaxWidth = () => {
     if (hidden) {
-      return "calc(100vw - 16px)" // Reducido de 20px a 16px
+      return "100vw"
     } else if (collapsed) {
-      return "calc(100vw - 80px)" // Reducido de 90px a 80px
+      return "calc(100vw - 70px)"
     } else {
-      return "calc(100vw - 260px)" // Reducido de 270px a 260px
+      return "calc(100vw - 250px)"
     }
   }
 
@@ -33,20 +33,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         className={`transition-all duration-300 ease-in-out ${
           hidden ? "ml-0" : collapsed ? "ml-[70px]" : "ml-[250px]"
         }`}
+        style={{
+          width: getMaxWidth(),
+          maxWidth: "100vw",
+          overflowX: "hidden"
+        }}
       >
         {/* Mostrar el Header solo en la página de inicio */}
         {isHomePage && <Header />}
         <main
-          className="flex flex-1 flex-col gap-4 p-3 md:p-4 pb-16 overflow-x-hidden"
-          style={{ maxWidth: getMaxWidth() }}
+          className="flex flex-1 flex-col gap-4 p-3 md:p-4 pb-16"
+          style={{
+            maxWidth: "1400px",
+            margin: "0 auto",
+            width: "100%"
+          }}
         >
-          <div
-            className="w-full transition-all duration-300 ease-in-out min-h-[calc(100vh-120px)]"
-            style={{
-              maxWidth: hidden ? "1400px" : collapsed ? "1300px" : "1200px",
-              margin: "0 auto",
-            }}
-          >
+          <div className="w-full transition-all duration-300 ease-in-out min-h-[calc(100vh-120px)]">
             {children}
           </div>
         </main>

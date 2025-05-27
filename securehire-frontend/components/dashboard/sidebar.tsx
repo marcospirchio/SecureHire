@@ -42,10 +42,15 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
 
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-      if (window.innerWidth < 768) {
-        setCollapsed(true)
-        setHidden(true)
+      const isMobileView = window.innerWidth < 768;
+      setIsMobile(isMobileView);
+      
+      // Solo actualizar el estado si es necesario
+      if (isMobileView && !collapsed) {
+        setCollapsed(true);
+      }
+      if (isMobileView && !hidden) {
+        setHidden(true);
       }
     }
 
@@ -55,7 +60,7 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
     return () => {
       window.removeEventListener("resize", checkIfMobile)
     }
-  }, [])
+  }, [collapsed, hidden])
 
   const toggleCollapse = () => {
     const newCollapsed = !collapsed
@@ -111,6 +116,11 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
         className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 ${
           hidden ? "-translate-x-full" : "translate-x-0"
         } ${collapsed ? "w-[70px]" : "w-[250px]"}`}
+        style={{
+          transform: `translateX(${hidden ? "-100%" : "0"})`,
+          width: collapsed ? "70px" : "250px",
+          maxWidth: "100vw"
+        }}
       >
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-gray-100 px-4">
