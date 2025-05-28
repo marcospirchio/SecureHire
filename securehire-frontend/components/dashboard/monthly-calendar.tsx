@@ -49,7 +49,7 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
   const getEventsForDay = (date: Date) => {
     const dateString = format(date, "yyyy-MM-dd")
     const dayEvents = events.filter(event => event.date === dateString)
-    console.log('Eventos para el día', dateString, ':', dayEvents) // Debug log
+    console.log('Eventos para el día', dateString, ':', dayEvents) 
     return dayEvents
   }
 
@@ -75,7 +75,7 @@ export function MonthlyCalendar({ events, onEventClick }: MonthlyCalendarProps) 
           </div>
           <div className="flex-1">
             {dayEvents.map((event, idx) => {
-              console.log('Renderizando evento:', event) // Debug log
+              console.log('Renderizando evento:', event) 
               return (
               <div
                 key={idx}

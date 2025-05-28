@@ -51,7 +51,7 @@ export default function EntrevistaPage({ token }: { token: string }) {
         const entrevistaData = await entrevistaResponse.json()
         setEntrevista(entrevistaData)
 
-        // Establecer datos de la oferta directamente desde entrevistaData
+        
         setOferta({
           titulo: entrevistaData.titulo,
           empresa: { nombre: entrevistaData.empresa },

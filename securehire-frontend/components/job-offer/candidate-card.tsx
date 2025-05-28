@@ -32,7 +32,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
   const [showFilterModal, setShowFilterModal] = useState(false)
   const { toast } = useToast()
 
-  // Buscar entrevista correspondiente en la prop entrevistas
+  
   const entrevista = entrevistas?.find(
     (e) =>
       e.candidatoId === candidate.postulacion?.candidatoId &&
@@ -80,7 +80,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
           }
         }
       }
-      // Para campos tipo select o texto
+      // Para campos tipo select
       else {
         const valoresExcluyentes = campo.valoresExcluyentes || []
         if (valoresExcluyentes.length > 0 && !valoresExcluyentes.includes(respuesta.respuesta as string)) {
@@ -168,7 +168,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
       console.log('Respuesta recibida:', fullText);
       setIaOpinion(fullText);
 
-      // Guardar la opinión en la postulación
+      
       const updateResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
         method: 'PATCH',
         credentials: "include",

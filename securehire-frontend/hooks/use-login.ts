@@ -32,7 +32,7 @@ export function useLogin() {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Importante para manejar las cookies
+        credentials: "include", 
         body: JSON.stringify(credentials),
       })
 
@@ -43,10 +43,8 @@ export function useLogin() {
 
       const data: LoginResponse = await response.json()
       
-      // Guardar el token en localStorage
       localStorage.setItem("token", data.token)
       
-      // Redirigir al dashboard
       router.push("/")
       
       return data

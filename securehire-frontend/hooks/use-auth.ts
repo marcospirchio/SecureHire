@@ -18,7 +18,7 @@ export function useAuth() {
     const fetchUser = async () => {
       try {
         const response = await fetch("http://localhost:8080/api/auth/me", {
-          credentials: "include" // Importante para enviar las cookies
+          credentials: "include" 
         })
 
         if (!response.ok) {

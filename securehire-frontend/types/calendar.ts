@@ -8,7 +8,7 @@ export interface CalendarEvent {
     candidateName?: string
     jobTitle?: string
     estado?: string
-    tipo: string  // debe ser obligatorio
+    tipo: string  
     description: string
     ubicacion: string
   }

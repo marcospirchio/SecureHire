@@ -16,7 +16,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Determinar si estamos en la página de inicio
   const isHomePage = pathname === "/"
 
-  // Calcular el ancho máximo del contenido basado en el estado de la sidebar
+  
   const getMaxWidth = () => {
     if (hidden) {
       return "100vw"

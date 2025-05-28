@@ -22,7 +22,6 @@ export function useBusquedas() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch búsquedas
         const resBusquedas = await fetch("http://localhost:8080/api/busquedas", {
           credentials: "include"
         })
@@ -30,14 +29,12 @@ export function useBusquedas() {
         const busquedasData = await resBusquedas.json()
         const busquedas = (Array.isArray(busquedasData.content) ? busquedasData.content : busquedasData) as Busqueda[]
 
-        // Fetch conteo de postulaciones
         const resConteo = await fetch("http://localhost:8080/api/postulaciones/conteo-por-busqueda", {
           credentials: "include"
         })
         if (!resConteo.ok) throw new Error("No se pudo obtener el conteo de postulaciones")
         const conteos: ConteoPostulaciones[] = await resConteo.json()
 
-        // Merge búsquedas con conteo
         const busquedasConConteo = busquedas.map((b) => {
           const conteo = conteos.find((c) => c.busquedaId === b.id)
           return {

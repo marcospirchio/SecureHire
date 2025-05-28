@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 
 interface Entrevista {  
   id: string
-  candidatoId: string // 👈 necesario
+  candidatoId: string 
   fechaProgramada: string
   horaProgramada: string | null
   estado: string
@@ -30,12 +30,11 @@ export function useEntrevistas() {
 
         const data = await response.json()
 
-        // 🔧 Asumimos que cada objeto entrevista tiene un `postulacionId`, desde donde obtenemos `candidatoId`
         const entrevistasConCandidatoId = await Promise.all(
           data.map(async (e: any) => {
             if (!e.postulacionId) {
               console.warn("postulacionId es undefined para la entrevista:", e)
-              return { ...e, candidatoId: null } // o podés decidir descartarla
+              return { ...e, candidatoId: null } 
             }
         
             const res = await fetch(`http://localhost:8080/api/postulaciones/${e.postulacionId}`, {

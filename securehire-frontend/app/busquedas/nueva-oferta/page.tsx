@@ -22,15 +22,7 @@ interface CampoAdicional {
 export default function NuevaOfertaPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("preguntas")
-  const [benefits, setBenefits] = useState([
-    "Horario flexible",
-    "Trabajo remoto",
-    "Seguro médico",
-    "Oportunidades de crecimiento profesional",
-  ])
-  const [newBenefit, setNewBenefit] = useState("")
 
-  // Estado para los campos obligatorios
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");
@@ -41,11 +33,10 @@ export default function NuevaOfertaPage() {
   const [phases, setPhases] = useState(["Preselección", "Entrevista", "Oferta"]);
   const [urlPublica, setUrlPublica] = useState("");
 
-  // Estado y helpers para preguntas adicionales con opciones excluyentes
   const [preguntas, setPreguntas] = useState([
     {
       texto: "",
-      tipo: "checkbox", // "checkbox" (opción múltiple) o "radio" (opción única)
+      tipo: "checkbox", 
       opciones: [
         { valor: "Sí", excluyente: false },
         { valor: "No", excluyente: false }
@@ -53,36 +44,17 @@ export default function NuevaOfertaPage() {
     },
   ]);
 
-  // Función para volver a la página anterior
   const handleGoBack = () => {
     router.back()
   }
 
-  // Función para añadir un nuevo beneficio
-  const handleAddBenefit = () => {
-    if (newBenefit.trim()) {
-      setBenefits([...benefits, newBenefit.trim()])
-      setNewBenefit("")
-    }
-  }
-
-  // Función para eliminar un beneficio
-  const handleRemoveBenefit = (index: number) => {
-    const updatedBenefits = [...benefits]
-    updatedBenefits.splice(index, 1)
-    setBenefits(updatedBenefits)
-  }
-
-  // Función para eliminar una pregunta
   const handleRemovePregunta = (index: number) => {
     const updated = [...preguntas];
     updated.splice(index, 1);
     setPreguntas(updated);
   };
 
-  // Manejar publicación de la oferta
   const handlePublish = async () => {
-    // Armar camposPorDefecto
     const camposPorDefecto = [
       {
         nombre: "Nombre completo",
@@ -110,9 +82,8 @@ export default function NuevaOfertaPage() {
       }
     ];
 
-    // Armar el body
     const camposAdicionales = preguntas
-      .filter(preg => preg.texto.trim() !== "") // Solo incluir preguntas con texto
+      .filter(preg => preg.texto.trim() !== "") 
       .map(preg => ({
         nombre: preg.texto,
         tipo: preg.tipo === "radio" ? "select" : "checkbox",
@@ -146,7 +117,6 @@ export default function NuevaOfertaPage() {
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error("Error al crear la búsqueda");
-      // Redirigir o mostrar éxito
       router.push("/busquedas");
     } catch (err) {
       alert("Error al crear la búsqueda");
@@ -292,29 +262,6 @@ export default function NuevaOfertaPage() {
                     onChange={e => setDescription(e.target.value)}
                   />
                 </div>
-              </div>
-            </section>
-
-            {/* Beneficios */}
-            <section className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Beneficios:</h2>
-                <Button onClick={handleAddBenefit} className="flex items-center gap-1">
-                  <Plus className="h-4 w-4" /> Añadir
-                </Button>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-100">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center justify-between border border-gray-100 rounded-md p-3 mb-2 bg-gray-50">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400">-</span>
-                      <span>{benefit}</span>
-                    </div>
-                    <button onClick={() => handleRemoveBenefit(index)}>
-                      <Trash2 className="h-4 w-4 text-gray-400" />
-                    </button>
-                  </div>
-                ))}
               </div>
             </section>
 

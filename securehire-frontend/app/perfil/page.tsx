@@ -22,7 +22,6 @@ export default function PerfilPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [refreshUser, setRefreshUser] = useState(0);
 
-  // Refrescar datos de usuario tras subir foto
   const { user: refreshedUser, loading: refreshedLoading } = useAuth();
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,7 +33,6 @@ export default function PerfilPage() {
       };
       reader.readAsDataURL(file);
 
-      // Subir imagen al backend
       const formData = new FormData();
       formData.append("imagen", file);
       setUploading(true);
@@ -73,7 +71,6 @@ export default function PerfilPage() {
     e.preventDefault()
     setPasswordError("")
 
-    // Validación simple
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPasswordError("Las contraseñas no coinciden")
       return
@@ -84,7 +81,6 @@ export default function PerfilPage() {
       return
     }
 
-    // Aquí iría la lógica para cambiar la contraseña
     alert("Contraseña cambiada con éxito")
     setIsChangingPassword(false)
     setPasswordData({

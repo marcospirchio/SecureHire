@@ -18,14 +18,12 @@ export default function RecuperarContrasenaPage() {
     setMessage("")
     setIsSubmitting(true)
 
-    // Validación básica
     if (!email) {
       setMessage("Por favor ingrese su dirección de email")
       setIsSubmitting(false)
       return
     }
 
-    // Simulación de envío de correo de recuperación
     setTimeout(() => {
       setMessage("Se ha enviado un correo con instrucciones para recuperar su contraseña")
       setIsSubmitting(false)

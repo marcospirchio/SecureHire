@@ -87,7 +87,6 @@ export default function BusquedasPage() {
         console.log('Conteo de postulaciones:')
         console.table(conteoData)
 
-        // Filtrar solo las postulaciones activas (no finalizadas)
         const conteoActivos = conteoData.reduce((acc, curr) => {
           if (curr.estado?.toUpperCase() !== "FINALIZADA") {
             acc[curr.busquedaId] = (acc[curr.busquedaId] || 0) + curr.cantidad
@@ -98,7 +97,6 @@ export default function BusquedasPage() {
         console.log('=== CONTEOS ACTIVOS ===')
         console.table(conteoActivos)
 
-        // Asegurarnos de que busquedasData sea un array
         const busquedasArray = Array.isArray(busquedasData) ? busquedasData : 
                              Array.isArray(busquedasData.content) ? busquedasData.content : 
                              [busquedasData]
@@ -122,7 +120,6 @@ export default function BusquedasPage() {
         console.log('=== OFERTAS FINALES ===')
         console.table(offers)
         setJobOffers(offers)
-        // Resetear a la primera página cuando se cargan nuevos datos
         setCurrentPage(1)
       } catch (err) {
         console.error("Error al cargar búsquedas:", err)
@@ -158,7 +155,6 @@ export default function BusquedasPage() {
 
       if (!response.ok) throw new Error("Error al actualizar el estado de archivo")
 
-      // Actualizar el estado local
       setJobOffers(prev => prev.map(offer => 
         offer.id === id 
           ? { ...offer, archivada: !currentStatus }
@@ -181,7 +177,6 @@ export default function BusquedasPage() {
     }
   }
 
-  // Aplicar filtros y ordenamiento
   const filteredOffers = useMemo(() => {
     return jobOffers
       .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -196,13 +191,11 @@ export default function BusquedasPage() {
       })
   }, [jobOffers, searchQuery, showArchived, sortBy])
 
-  // Calcular paginación
   const totalPages = Math.ceil(filteredOffers.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const currentOffers = filteredOffers.slice(startIndex, endIndex)
 
-  // Asegurarse de que la página actual sea válida
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages)
@@ -223,15 +216,12 @@ export default function BusquedasPage() {
       const busquedaData = await busquedaRes.json();
       const postulacionesData = await postulacionesRes.json();
 
-      // Guardar los datos en el estado global o en localStorage para usarlos en la siguiente página
       localStorage.setItem('busquedaSeleccionada', JSON.stringify(busquedaData));
       localStorage.setItem('postulacionesSeleccionadas', JSON.stringify(postulacionesData));
 
-      // Navegar a la página de detalle
       router.push(`/busquedas/${id}`);
     } catch (error) {
       console.error("Error al cargar los datos:", error);
-      // Aquí podrías mostrar un mensaje de error al usuario
     }
   }
 

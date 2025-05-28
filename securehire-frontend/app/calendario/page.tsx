@@ -94,7 +94,6 @@ export default function CalendarioPage() {
     }
   }, [authLoading, user, router])
 
-  // Cargar eventos del calendario
   useEffect(() => {
     const fetchEventos = async () => {
       try {
@@ -103,9 +102,7 @@ export default function CalendarioPage() {
         })
         if (response.ok) {
           const data = await response.json()
-          // Transformar los eventos al formato esperado por el calendario
           const eventosFormateados = data.map((evento: any) => {
-            // Validar que fechaHora existe y tiene el formato correcto
             let date = ""
             let time = ""
             if (evento.fechaHora) {
@@ -134,7 +131,6 @@ export default function CalendarioPage() {
   }, [])
 
   useEffect(() => {
-    // Si mostrarCanceladas está activo, hacer fetch solo de las entrevistas canceladas
     const estadosCancelacion = [
       "Cancelada por solicitud de reprogramación",
       "Cancelada por el candidato",
@@ -152,7 +148,6 @@ export default function CalendarioPage() {
             .then(data => (data.content || []) as Entrevista[])
         )
       ).then(async results => {
-        // Unir todos los resultados y quitar duplicados por id
         const todas = results.flat();
         const unicas = Object.values(
           todas.reduce((acc, curr) => {
@@ -161,7 +156,6 @@ export default function CalendarioPage() {
           }, {} as Record<string, Entrevista>)
         );
 
-        // Completar nombres faltantes
         const entrevistasConNombre = await Promise.all(unicas.map(async (entrevista: Entrevista) => {
           let nombreCompleto = '';
           if (entrevista.nombreCandidato || entrevista.apellidoCandidato) {
@@ -171,7 +165,6 @@ export default function CalendarioPage() {
           } else if (entrevista.candidateName) {
             nombreCompleto = entrevista.candidateName;
           }
-          // Si aún no tenemos nombre, intentar buscarlo por ID
           if (!nombreCompleto && entrevista.candidatoId) {
             try {
               const res = await fetch(`http://localhost:8080/api/candidatos/${entrevista.candidatoId}`, {
@@ -272,11 +265,9 @@ export default function CalendarioPage() {
   }
 
   const handleOpenEventDetailsModal = async (event: CalendarEvent) => {
-    // Si es entrevista y faltan datos, buscar candidato y búsqueda
     if (event.tipo === "entrevista" && (event.candidateName === '-' || !event.candidateName || event.jobTitle === '-' || !event.jobTitle)) {
       let candidateName = event.candidateName || '';
       let jobTitle = event.jobTitle || '';
-      // Buscar datos si hay ids
       try {
         if ((event as any).candidatoId) {
           const res = await fetch(`http://localhost:8080/api/candidatos/${(event as any).candidatoId}`, { credentials: 'include' });
@@ -293,12 +284,10 @@ export default function CalendarioPage() {
           }
         }
       } catch (e) {
-        // Si falla, dejar los valores por defecto
       }
       setSelectedEvent({ ...event, candidateName, jobTitle });
       setIsEventDetailsModalOpen(true);
     } else if (event.tipo === "entrevista") {
-      // Si es entrevista y ya tiene los datos, igualar los campos para el modal
       setSelectedEvent({
         ...event,
         candidateName: event.candidateName || event.person || '',
@@ -362,7 +351,6 @@ export default function CalendarioPage() {
   const handleCreateEvent = async () => {
     if (newEvent.title && newEvent.date && newEvent.time) {
       try {
-        // Combinar fecha y hora en formato ISO
         const fechaHora = new Date(`${newEvent.date}T${newEvent.time}:00Z`).toISOString()
 
         const eventoData = {
@@ -370,7 +358,7 @@ export default function CalendarioPage() {
           descripcion: newEvent.description || "",
           tipo: "evento",
           fechaHora: fechaHora,
-          ubicacion: "Oficina" // Valor por defecto, podríamos añadir un campo para esto si es necesario
+          ubicacion: "Oficina" 
         }
 
         const response = await fetch('http://localhost:8080/api/calendario/eventos', {
@@ -512,7 +500,6 @@ export default function CalendarioPage() {
                       {dayEvents.map((event, eventIndex) => {
                         let colorClass = "";
                         if (mostrarCanceladas && event.tipo === "entrevista") {
-                          // Si estamos mostrando solo canceladas, todas son canceladas
                           colorClass = "bg-red-100 text-red-900 hover:bg-red-200";
                         } else if (event.tipo === "evento") {
                           colorClass = "bg-blue-100 text-blue-900 hover:bg-blue-200";

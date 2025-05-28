@@ -14,12 +14,10 @@ interface InterviewModalProps {
 }
 
 export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: InterviewModalProps) {
-  // Estado para la fecha actual del calendario
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 13)); // Mayo 2025
+  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 13)); 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Navegar al mes anterior
   const goToPreviousMonth = () => {
     setCurrentMonth((prevMonth) => {
       const newMonth = new Date(prevMonth);
@@ -28,7 +26,6 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
     });
   };
 
-  // Navegar al mes siguiente
   const goToNextMonth = () => {
     setCurrentMonth((prevMonth) => {
       const newMonth = new Date(prevMonth);
@@ -37,26 +34,21 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
     });
   };
 
-  // Generar días del calendario para el mes actual
   const generateCalendarDays = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
 
-    // Primer día del mes
     const firstDay = new Date(year, month, 1);
-    // Último día del mes
     const lastDay = new Date(year, month + 1, 0);
 
-    // Ajustar para que la semana comience en lunes (0 = lunes, 6 = domingo)
     let firstDayOfWeek = firstDay.getDay() - 1;
-    if (firstDayOfWeek === -1) firstDayOfWeek = 6; // Si es domingo (0), convertir a 6
+    if (firstDayOfWeek === -1) firstDayOfWeek = 6;
 
     const daysInMonth = lastDay.getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
 
     const days = [];
 
-    // Días del mes anterior
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       days.push({
         day: daysInPrevMonth - i,
@@ -66,7 +58,6 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
       });
     }
 
-    // Días del mes actual
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
         day: i,
@@ -76,7 +67,6 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
       });
     }
 
-    // Días del mes siguiente para completar la última semana
     const remainingDays = 7 - (days.length % 7 || 7);
     for (let i = 1; i <= remainingDays; i++) {
       days.push({
@@ -90,50 +80,41 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
     return days;
   };
 
-  // Obtener los días para el calendario
   const calendarDays = generateCalendarDays();
 
-  // Formatear el mes y año para mostrar
   const formattedMonthYear = new Intl.DateTimeFormat("es-ES", {
     month: "long",
     year: "numeric",
   }).format(currentMonth);
 
-  // Verificar si una fecha es hoy
   const isToday = (day: number, month: number, year: number) => {
-    const today = new Date(2025, 4, 13); // Simulamos que hoy es 13 de mayo de 2025
+    const today = new Date(2025, 4, 13); 
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
 
-  // Verificar si una fecha está seleccionada
   const isDateSelected = (day: number, month: number, year: number) => {
     if (!selectedDate) return false;
 
-    // Parsear la fecha seleccionada
     const [selectedDay, selectedMonth, selectedYear] = selectedDate.split("/").map(Number);
     return day === selectedDay && month + 1 === selectedMonth && year === selectedYear;
   };
 
-  // Manejar la selección de fecha
   const handleDateSelect = (day: number, month: number, year: number) => {
-    // Solo permitir seleccionar días del mes actual
+    
     if (month === currentMonth.getMonth() && year === currentMonth.getFullYear()) {
       setSelectedDate(`${day}/${month + 1}/${year}`);
-      setSelectedTime(null); // Reiniciar el tiempo cuando se selecciona una nueva fecha
+      setSelectedTime(null); 
     }
   };
 
-  // Manejar la confirmación de la entrevista
   const handleConfirmInterview = () => {
     if (selectedDate && selectedTime) {
       onConfirm(selectedDate, selectedTime);
-      // Resetear estados
       setSelectedDate(null);
       setSelectedTime(null);
     }
   };
 
-  // Horarios disponibles
   const availableTimes = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
     "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", 

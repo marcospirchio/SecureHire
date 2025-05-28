@@ -28,26 +28,22 @@ export function CandidatesList({
   jobOffer,
   entrevistas
 }: CandidatesListProps) {
-  // Estado para el modal de filtro y los filtros
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [minAge, setMinAge] = useState("")
   const [maxAge, setMaxAge] = useState("")
   const [gender, setGender] = useState("todos")
   const [requisitosFilter, setRequisitosFilter] = useState("todos")
-
-  // Estados temporales para el modal
+  
   const [tempMinAge, setTempMinAge] = useState("")
   const [tempMaxAge, setTempMaxAge] = useState("")
   const [tempGender, setTempGender] = useState("todos")
   const [tempRequisitosFilter, setTempRequisitosFilter] = useState("todos")
 
-  // Filtrar candidatos que no estén finalizados (case insensitive)
   const activeCandidates = candidates.filter(candidate => {
     const estado = candidate.postulacion.estado?.toUpperCase() || ""
     return estado !== "FINALIZADA"
   })
 
-  // Filtrar por búsqueda y filtros adicionales
   const filteredCandidates = activeCandidates.filter(candidate => {
     const fullName = `${candidate.name} ${candidate.lastName}`.toLowerCase()
     const nameMatch = fullName.includes(searchQuery.toLowerCase())
@@ -62,7 +58,6 @@ export function CandidatesList({
     return nameMatch && ageMatch && genderMatch && requisitosMatch
   })
 
-  // Al abrir el modal, inicializa los temporales
   const handleOpenFilterModal = () => {
     setTempMinAge(minAge)
     setTempMaxAge(maxAge)
@@ -71,7 +66,6 @@ export function CandidatesList({
     setShowFilterModal(true)
   }
 
-  // Al aplicar filtros
   const handleApplyFilters = () => {
     setMinAge(tempMinAge)
     setMaxAge(tempMaxAge)
@@ -80,7 +74,6 @@ export function CandidatesList({
     setShowFilterModal(false)
   }
 
-  // Al cancelar filtros
   const handleCancelFilters = () => {
     setShowFilterModal(false)
   }

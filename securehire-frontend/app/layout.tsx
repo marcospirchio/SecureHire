@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'SecureHire',
   description: 'SecureHire es una herramienta para reclutadores, orientada a la gestión de procesos de selección de personal.',
   icons: {
-    icon: '/favicon.ico', // Asegurate de que favicon.ico esté en la carpeta /public
+    icon: '/favicon.ico', 
   },
 }
 

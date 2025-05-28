@@ -17,7 +17,6 @@ export default function LoginPage() {
     try {
       await login({ email, password })
     } catch (err) {
-      // El error ya está manejado en el hook
       console.error("Error en el login:", err)
     }
   }
@@ -91,17 +90,14 @@ export default function LoginPage() {
   )
 }
 
-// Componente para el fondo animado de red
 function NetworkBackground() {
   useEffect(() => {
-    // Crear el canvas y configurar el contexto
     const canvas = document.getElementById("network-canvas") as HTMLCanvasElement
     if (!canvas) return
 
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Ajustar el tamaño del canvas al tamaño de la ventana
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
@@ -110,13 +106,11 @@ function NetworkBackground() {
     resizeCanvas()
     window.addEventListener("resize", resizeCanvas)
 
-    // Definir los nodos y conexiones
     const particleCount = 70
     const particles: Particle[] = []
     const connectionDistance = 150
     const colors = ["#4a88eb", "#6ad0c5", "#ffffff"]
 
-    // Clase para representar un nodo
     class Particle {
       x: number
       y: number
@@ -135,11 +129,9 @@ function NetworkBackground() {
       }
 
       update() {
-        // Mover el nodo
         this.x += this.speedX
         this.y += this.speedY
 
-        // Rebotar en los bordes
         if (this.x > canvas.width || this.x < 0) {
           this.speedX = -this.speedX
         }
@@ -149,7 +141,6 @@ function NetworkBackground() {
       }
 
       draw() {
-        // Dibujar el nodo
         if (!ctx) return
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
@@ -158,12 +149,10 @@ function NetworkBackground() {
       }
     }
 
-    // Inicializar los nodos
     for (let i = 0; i < particleCount; i++) {
       particles.push(new Particle())
     }
 
-    // Función para dibujar las conexiones entre nodos
     const drawConnections = () => {
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -185,27 +174,22 @@ function NetworkBackground() {
       }
     }
 
-    // Función de animación
     const animate = () => {
       if (!ctx) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // Actualizar y dibujar cada nodo
       for (const particle of particles) {
         particle.update()
         particle.draw()
       }
 
-      // Dibujar las conexiones
       drawConnections()
 
       requestAnimationFrame(animate)
     }
 
-    // Iniciar la animación
     animate()
 
-    // Limpiar al desmontar
     return () => {
       window.removeEventListener("resize", resizeCanvas)
     }

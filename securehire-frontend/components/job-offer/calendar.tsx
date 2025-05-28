@@ -19,7 +19,7 @@ export function Calendar({
   onDateSelect,
   isDateSelected
 }: CalendarProps) {
-  // Función para generar los días del calendario
+  
   const generateCalendarDays = () => {
     const year = currentMonth.getFullYear()
     const month = currentMonth.getMonth()

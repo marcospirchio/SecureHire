@@ -59,7 +59,7 @@ export function CandidateDetails({
     name: ""
   })
 
-  // Obtener el ID del usuario logueado
+  
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
@@ -86,7 +86,7 @@ export function CandidateDetails({
     fetchCurrentUser();
   }, []);
 
-  // Función para aplicar filtros
+  
   const applyFilters = (candidate: Candidate) => {
     if (filters.minAge && candidate.age < parseInt(filters.minAge)) return false;
     if (filters.maxAge && candidate.age > parseInt(filters.maxAge)) return false;
@@ -95,7 +95,7 @@ export function CandidateDetails({
     return true;
   }
 
-  // 1. Obtener comentarios con datos del reclutador
+  //Obtener comentarios con datos del reclutador
   useEffect(() => {
     const fetchFeedbacks = async () => {
       if (activeTab !== "feedbacks" || !candidate?.postulacion?.candidatoId) return;
@@ -140,7 +140,7 @@ export function CandidateDetails({
           })
         );
 
-        // Ordenar los feedbacks por fecha de más reciente a más antiguo
+        
         const feedbacksOrdenados = feedbacksWithInfo
           .filter(Boolean)
           .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
@@ -181,7 +181,7 @@ export function CandidateDetails({
         throw new Error("Error al eliminar el comentario");
       }
 
-      // Actualizar la lista de comentarios
+      
       setFeedbacks(prev => prev.filter(f => f.id !== feedbackId));
       
       toast({
@@ -220,7 +220,7 @@ export function CandidateDetails({
 
       const updatedComment = await response.json();
 
-      // Actualizar la lista de comentarios manteniendo la información del reclutador
+      
       setFeedbacks(prev => prev.map(f => 
         f.id === editingFeedback.id 
           ? { 
@@ -248,12 +248,12 @@ export function CandidateDetails({
     }
   };
 
-  // Estado para anotaciones privadas
+  
   const [anotaciones, setAnotaciones] = useState<{ content: string; fecha?: string | null }[]>([])
   const [loadingNotas, setLoadingNotas] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
-  // Función para obtener anotaciones privadas
+  
   const fetchAnotaciones = async () => {
     setLoadingNotas(true)
     try {
@@ -275,14 +275,14 @@ export function CandidateDetails({
     }
   }
 
-  // Cargar anotaciones al montar o cambiar postulación
+  
   useEffect(() => {
     if (candidate?.postulacion?.id) {
       fetchAnotaciones()
     }
   }, [candidate?.postulacion?.id])
 
-  // Agregar anotación privada
+  
   const handleAddNote = async () => {
     if (!newNote.trim()) return
     try {
@@ -300,7 +300,7 @@ export function CandidateDetails({
     }
   }
 
-  // Editar anotación privada
+  
   const handleEditNote = async (index: number) => {
     if (!editText.trim()) return
     try {
@@ -319,7 +319,7 @@ export function CandidateDetails({
     }
   }
 
-  // Eliminar anotación privada
+  
   const handleDeleteNote = async (index: number) => {
     try {
       const res = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/anotaciones/${index}`, {
@@ -333,18 +333,17 @@ export function CandidateDetails({
     }
   }
 
-  // Mostrar anotaciones privadas solo en la pestaña 'notes'
+  
   const anotacionesOrdenadas = [...anotaciones]
     .map((a, idx) => ({ ...a, idx }))
     .sort((a, b) => {
-      // Si tienes la fecha como string ISO, puedes comparar así:
       if (a.fecha && b.fecha) {
         return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
       }
       return 0;
     });
 
-  // Cargar el resumen d  el CV al montar el componente o cambiar de candidato
+  
   useEffect(() => {
     const fetchResumenCv = async () => {
       if (candidate.postulacion?.id) {
@@ -416,7 +415,7 @@ export function CandidateDetails({
   
       const resumen = await iaRes.text();
   
-      // ✅ No se parsea como JSON, ya es texto plano
+      
       if (!resumen || resumen.trim().length === 0) {
         setIaSummary(null);
         toast({
@@ -429,7 +428,7 @@ export function CandidateDetails({
   
       setIaSummary(resumen);
   
-      // Opcional: guardar el resumen como string plano
+      
       const updateResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
         method: 'PATCH',
         credentials: "include",

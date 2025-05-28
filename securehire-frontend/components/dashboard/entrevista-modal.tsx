@@ -1,5 +1,3 @@
-// Ruta sugerida: components/dashboard/entrevista-modal.tsx
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CalendarIcon, UserIcon, BriefcaseIcon } from "lucide-react"
@@ -12,8 +10,8 @@ interface EntrevistaModalProps {
   onClose: () => void
   onCancel: () => void
   entrevista: {
-    fecha: string // formato ISO ("2025-05-15")
-    hora: string  // formato "HH:mm"
+    fecha: string 
+    hora: string  
     candidato: string
     puesto: string
     estado?: string

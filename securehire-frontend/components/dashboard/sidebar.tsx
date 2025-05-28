@@ -8,7 +8,6 @@ import React from "react"
 import Image from "next/image"
 import { useAuth } from "@/hooks/use-auth"
 
-// Crear contexto para el estado de la sidebar
 interface SidebarContextType {
   collapsed: boolean
   hidden: boolean
@@ -45,7 +44,6 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
       const isMobileView = window.innerWidth < 768;
       setIsMobile(isMobileView);
       
-      // Solo actualizar el estado si es necesario
       if (isMobileView && !collapsed) {
         setCollapsed(true);
       }
@@ -176,7 +174,7 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
           </nav>
         </div>
 
-        {/* Footer with user info */}
+        {/* Footer con info de usuario */}
         <div className="border-t border-gray-100 p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -232,7 +230,7 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
           </div>
         </div>
 
-        {/* Collapse/Expand button */}
+        {/* Collapse/Expand boton */}
         <button
           onClick={toggleCollapse}
           className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm hover:bg-gray-50"

@@ -44,7 +44,6 @@ export function useJobOffer(id: string) {
         const entrevistasData = await entrevistasRes.json()
         console.log('Datos de entrevistas:', entrevistasData)
 
-        // Convertir los datos al formato esperado por el componente
         const jobOfferData: JobOffer = {
           id: busquedaData.id,
           titulo: busquedaData.titulo,

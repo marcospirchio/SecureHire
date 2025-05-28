@@ -6,7 +6,7 @@ export interface EventoCalendario {
   titulo: string
   descripcion?: string
   tipo: string
-  fechaHora: string // ISO date string
+  fechaHora: string 
   ubicacion?: string
   color?: string
   creadoEn: string

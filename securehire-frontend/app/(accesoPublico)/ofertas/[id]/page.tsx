@@ -56,7 +56,6 @@ export default function OfertaPage({ params }: PageProps) {
   const resolvedParams = use(params)
   const { jobOffer, loading, error } = usePublicJobOffer(resolvedParams.id)
   
-  // Estados para el formulario
   const [tab, setTab] = useState("datos")
   const [nombre, setNombre] = useState("")
   const [apellido, setApellido] = useState("")
@@ -82,7 +81,6 @@ export default function OfertaPage({ params }: PageProps) {
 
   const termsRef = useRef<HTMLDivElement>(null)
 
-  // Función para manejar el scroll en los términos y condiciones
   const handleTermsScroll = () => {
     if (!termsRef.current) return
 
@@ -179,12 +177,10 @@ export default function OfertaPage({ params }: PageProps) {
     }
   }
 
-  // Función para manejar el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
   
-    // Construir respuestas válidas antes del envío
     const respuestas = (jobOffer?.camposAdicionales || [])
       .map((campo: any) => {
         const respuesta = respuestasAdicionales[campo.nombre];
@@ -204,7 +200,7 @@ export default function OfertaPage({ params }: PageProps) {
       formData.append("telefono", telefono);
       formData.append("dni", documento);
       formData.append("codigoPais", codigoPais);
-      formData.append("fechaNacimiento", fechaNacimiento); // en formato YYYY-MM-DD
+      formData.append("fechaNacimiento", fechaNacimiento); 
       formData.append("genero", genero);
       formData.append("nacionalidad", nacionalidad);
       formData.append("paisResidencia", pais);
@@ -213,12 +209,12 @@ export default function OfertaPage({ params }: PageProps) {
       formData.append("respuestas", JSON.stringify(respuestas));
       
       if (curriculum) {
-        formData.append("cv", curriculum); // archivo PDF
+        formData.append("cv", curriculum); 
       }
   
       const response = await fetch("http://localhost:8080/api/postulaciones", {
         method: "POST",
-        body: formData // no pongas headers manualmente
+        body: formData 
       });
   
       if (!response.ok) throw new Error("Error en la postulación");
@@ -232,7 +228,6 @@ export default function OfertaPage({ params }: PageProps) {
   };
   
 
-  // Si está cargando, mostrar un indicador de carga
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-4 md:p-6">
@@ -243,7 +238,6 @@ export default function OfertaPage({ params }: PageProps) {
     )
   }
 
-  // Si hay un error, mostrarlo
   if (error) {
     return (
       <div className="max-w-6xl mx-auto p-4 md:p-6">
@@ -254,7 +248,6 @@ export default function OfertaPage({ params }: PageProps) {
     )
   }
 
-  // Si no hay datos de la oferta, mostrar un mensaje
   if (!jobOffer) {
     return (
       <div className="max-w-6xl mx-auto p-4 md:p-6">
@@ -265,7 +258,6 @@ export default function OfertaPage({ params }: PageProps) {
     )
   }
 
-  // Si la postulación fue exitosa, mostrar mensaje de confirmación
   if (success) {
     return <SuccessMessage jobTitle={jobOffer.titulo} />
   }
@@ -334,7 +326,7 @@ export default function OfertaPage({ params }: PageProps) {
               <TabsContent value="datos" className="pt-4">
                 <form onSubmit={(e) => {
                   e.preventDefault()
-                  // Si los datos personales están completos, cambiar a la pestaña de preguntas
+                  
                   if (nombre && apellido && documento && fechaNacimiento && genero && nacionalidad && pais && provincia && direccion && email && emailConfirmacion && email === emailConfirmacion && codigoPais && telefono && curriculum && aceptaTerminos) {
                     setTab("preguntas")
                   }
@@ -582,7 +574,7 @@ export default function OfertaPage({ params }: PageProps) {
                           return;
                         }
 
-                        setCurriculum(file); // curriculum es un estado tipo File
+                        setCurriculum(file);
                       }}
                     />
                     <label htmlFor="curriculum" className="cursor-pointer flex flex-col items-center">

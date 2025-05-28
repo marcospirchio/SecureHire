@@ -44,7 +44,6 @@ export function useBusqueda(id: string) {
   useEffect(() => {
     const fetchBusqueda = async () => {
       try {
-        // Fetch job offer details
         const busquedaRes = await fetch(`http://localhost:8080/api/busquedas/${id}`, {
           credentials: "include"
         })
@@ -52,7 +51,6 @@ export function useBusqueda(id: string) {
         const busquedaData = await busquedaRes.json()
         setBusqueda(busquedaData)
 
-        // Fetch candidates for this job offer
         const postulacionesRes = await fetch(`http://localhost:8080/api/postulaciones/busqueda/${id}`, {
           credentials: "include"
         })
