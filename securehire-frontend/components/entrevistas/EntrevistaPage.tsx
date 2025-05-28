@@ -311,32 +311,33 @@ export default function EntrevistaPage({ token }: { token: string }) {
         <Button variant="outline" onClick={() => window.history.back()} disabled={loading}>
           Cancelar
         </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={
-            !action || 
-            (action === "cancelar" && (!motivoCancelacion || !canCancel)) || 
-            loading
-          }
-          className={
-            action === "confirmar"
-              ? "bg-green-600 hover:bg-green-700 text-white"
-              : action === "cancelar"
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : ""
-          }
-        >
-          {loading ? (
-            <>
-              <span className="animate-spin mr-2">⟳</span>
-              Procesando...
-            </>
-          ) : action === "confirmar" ? (
-            "Confirmar entrevista"
-          ) : action === "cancelar" ? (
-            "Confirmar cancelación"
-          ) : null}
-        </Button>
+        {action && (
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              (action === "cancelar" && (!motivoCancelacion || !canCancel)) || 
+              loading
+            }
+            className={
+              action === "confirmar"
+                ? "bg-green-600 hover:bg-green-700 text-white"
+                : action === "cancelar"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : ""
+            }
+          >
+            {loading ? (
+              <>
+                <span className="animate-spin mr-2">⟳</span>
+                Procesando...
+              </>
+            ) : action === "confirmar" ? (
+              "Confirmar entrevista"
+            ) : action === "cancelar" ? (
+              "Confirmar cancelación"
+            ) : null}
+          </Button>
+        )}
       </div>
     </div>
   )
