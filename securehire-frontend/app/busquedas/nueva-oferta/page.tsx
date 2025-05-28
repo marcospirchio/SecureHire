@@ -84,13 +84,27 @@ export default function NuevaOfertaPage() {
 
     const camposAdicionales = preguntas
       .filter(preg => preg.texto.trim() !== "") 
-      .map(preg => ({
-        nombre: preg.texto,
-        tipo: preg.tipo === "radio" ? "select" : "checkbox",
-        esExcluyente: false,
-        opciones: preg.opciones.map(op => op.valor),
-        valoresExcluyentes: preg.opciones.filter(op => op.excluyente).map(op => op.valor),
-      }));
+      .map(preg => {
+        if (preg.tipo === "texto") {
+          return {
+            nombre: preg.texto,
+            tipo: "texto",
+            esExcluyente: false,
+            opciones: [],
+            valoresExcluyentes: [],
+            opcionesObligatorias: []
+          };
+        } else {
+          return {
+            nombre: preg.texto,
+            tipo: preg.tipo === "radio" ? "select" : "checkbox",
+            esExcluyente: false,
+            opciones: preg.opciones.map(op => op.valor),
+            valoresExcluyentes: preg.opciones.filter(op => op.excluyente).map(op => op.valor),
+            opcionesObligatorias: []
+          };
+        }
+      });
 
     const uuid = crypto.randomUUID()
     const urlPublica = `https://securehire.com/postulacion/${uuid}`
@@ -303,10 +317,7 @@ export default function NuevaOfertaPage() {
 
             {/* Preguntas adicionales (sin tabs) */}
             <section className="mt-8">
-              <div className="flex justify-between items-center mb-2">
-                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Nuevo!</div>
-                <p className="text-gray-600">Marca las opciones excluyentes para filtrar candidatos automáticamente</p>
-              </div>
+              <h2 className="text-xl font-semibold mb-6 text-gray-800">Preguntas adicionales</h2>
               <div className="bg-white p-4 rounded-lg border">
                 <div className="space-y-4">
                   {preguntas.map((preg, idx) => (
@@ -405,13 +416,16 @@ export default function NuevaOfertaPage() {
 
                       {/* Botón para agregar opción solo si no es texto */}
                       {preg.tipo !== "texto" && (
-                        <button
-                          type="button"
-                          className="text-gray-500 flex items-center gap-1"
-                          onClick={() => handleAddOpcion(idx)}
-                        >
-                          <Plus className="h-4 w-4" /> Agregar otra opción
-                        </button>
+                        <div className="flex items-center justify-between w-full mt-2">
+                          <button
+                            type="button"
+                            className="text-gray-500 flex items-center gap-1"
+                            onClick={() => handleAddOpcion(idx)}
+                          >
+                            <Plus className="h-4 w-4" /> Agregar otra opción
+                          </button>
+                          <span className="text-xs text-gray-400 whitespace-nowrap">Puedes elegir si quieres que la respuesta sea excluyente o no</span>
+                        </div>
                       )}
                     </div>
                   ))}
