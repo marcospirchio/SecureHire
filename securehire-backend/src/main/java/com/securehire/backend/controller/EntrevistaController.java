@@ -9,6 +9,7 @@ import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.service.CandidatoService; 
 import com.securehire.backend.service.EntrevistaService;
 import com.securehire.backend.service.PostulacionService;      
+import com.securehire.backend.service.SendGridEmailService;
 import com.securehire.backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,9 @@ public class EntrevistaController {
 
     @Autowired
     private CandidatoService candidatoService;
+
+    @Autowired
+    private SendGridEmailService sendGridEmailService;
 
     @Autowired
     private PostulacionService postulacionService;
@@ -61,40 +65,69 @@ public class EntrevistaController {
     }
 
     @PostMapping
-    public ResponseEntity<?> crearEntrevista(
-            @RequestBody Entrevista entrevista,
-            @AuthenticationPrincipal Usuario usuario
-    ) {
-        String usuarioId = usuario.getId();
+public ResponseEntity<?> crearEntrevista(
+        @RequestBody Entrevista entrevista,
+        @AuthenticationPrincipal Usuario usuario
+) {
+    String usuarioId = usuario.getId();
 
-        if (entrevista.getBusquedaId() == null || entrevista.getPostulacionId() == null) {
-            return ResponseEntity.badRequest().body("Faltan datos: búsqueda o postulación");
-        }
-
-        Optional<Busqueda> busquedaOpt = busquedaRepository.findById(entrevista.getBusquedaId());
-        if (busquedaOpt.isEmpty() || !busquedaOpt.get().getUsuarioId().equals(usuarioId)) {
-            return ResponseEntity.status(403).body("La búsqueda no pertenece al usuario");
-        }
-
-        var postulacionOpt = postulacionService.obtenerPostulacionPorId(entrevista.getPostulacionId());
-        if (postulacionOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("La postulación no existe");
-        }
-
-        var postulacion = postulacionOpt.get();
-        if (!postulacion.getBusquedaId().equals(entrevista.getBusquedaId())) {
-            return ResponseEntity.status(403).body("La postulación no pertenece a la búsqueda indicada");
-        }
-
-        if (entrevista.getHoraProgramada() == null || entrevista.getHoraProgramada().isBlank()) {
-            return ResponseEntity.badRequest().body("Falta la hora programada de la entrevista");
-        }
-
-        entrevista.setUsuarioId(usuarioId);
-        entrevista.setCandidatoId(postulacion.getCandidatoId());
-
-        return ResponseEntity.ok(entrevistaService.crearEntrevista(entrevista));
+    if (entrevista.getBusquedaId() == null || entrevista.getPostulacionId() == null) {
+        return ResponseEntity.badRequest().body("Faltan datos: búsqueda o postulación");
     }
+
+    Optional<Busqueda> busquedaOpt = busquedaRepository.findById(entrevista.getBusquedaId());
+    if (busquedaOpt.isEmpty() || !busquedaOpt.get().getUsuarioId().equals(usuarioId)) {
+        return ResponseEntity.status(403).body("La búsqueda no pertenece al usuario");
+    }
+
+    var postulacionOpt = postulacionService.obtenerPostulacionPorId(entrevista.getPostulacionId());
+    if (postulacionOpt.isEmpty()) {
+        return ResponseEntity.badRequest().body("La postulación no existe");
+    }
+
+    var postulacion = postulacionOpt.get();
+    if (!postulacion.getBusquedaId().equals(entrevista.getBusquedaId())) {
+        return ResponseEntity.status(403).body("La postulación no pertenece a la búsqueda indicada");
+    }
+
+    if (entrevista.getHoraProgramada() == null || entrevista.getHoraProgramada().isBlank()) {
+        return ResponseEntity.badRequest().body("Falta la hora programada de la entrevista");
+    }
+
+    entrevista.setUsuarioId(usuarioId);
+    entrevista.setCandidatoId(postulacion.getCandidatoId());
+
+    // Guardar la entrevista primero para obtener el ID
+    Entrevista entrevistaGuardada = entrevistaService.crearEntrevista(entrevista);
+
+    // Enviar correo al candidato
+    candidatoService.obtenerCandidatoPorId(postulacion.getCandidatoId()).ifPresent(candidato -> {
+        String asunto = "Nueva entrevista agendada";
+        String mensaje = String.format("""
+            Hola %s,
+
+            Has sido invitado a una entrevista.
+
+            📅 Fecha: %s
+            🕐 Hora: %s
+
+            Por favor, confirmá o cancelá tu asistencia en el siguiente enlace:
+            👉 http://localhost:3000/entrevistas/%s
+
+            ¡Muchos éxitos!
+            Equipo de SecureHire
+        """, 
+            candidato.getNombre(), 
+            entrevistaGuardada.getFechaProgramada(), 
+            entrevistaGuardada.getHoraProgramada(), 
+            entrevistaGuardada.getId());
+
+        sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+    });
+
+    return ResponseEntity.ok(entrevistaGuardada);
+}
+
     
     @PatchMapping("/confirmar/{id}")
     public ResponseEntity<?> confirmarEntrevista(@PathVariable String id) {
@@ -107,8 +140,30 @@ public class EntrevistaController {
         }
 
         entrevista.setEstado("confirmada");
-        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+        entrevistaService.actualizarEntrevista(entrevista);
+
+        candidatoService.obtenerCandidatoPorId(entrevista.getCandidatoId()).ifPresent(candidato -> {
+            String asunto = "Entrevista confirmada";
+            String mensaje = String.format("""
+                Hola %s,
+
+                Te confirmamos que tu entrevista fue marcada como confirmada por el sistema.
+
+                📅 Fecha: %s
+                🕐 Hora: %s
+                🔗 Link: https://localhost:3000/entrevistas/%s
+
+                ¡Muchos éxitos!
+
+                Equipo de SecureHire
+            """, candidato.getNombre(), entrevista.getFechaProgramada(), entrevista.getHoraProgramada(), entrevista.getId());
+
+            sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+        });
+
+        return ResponseEntity.ok(entrevista);
     }
+
 
     @PatchMapping("/cancelar/{id}")
     public ResponseEntity<?> cancelarEntrevista(@PathVariable String id) {
@@ -121,8 +176,26 @@ public class EntrevistaController {
         }
 
         entrevista.setEstado("Cancelada por el candidato");
-        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+        entrevistaService.actualizarEntrevista(entrevista);
+
+        candidatoService.obtenerCandidatoPorId(entrevista.getCandidatoId()).ifPresent(candidato -> {
+            String asunto = "Entrevista cancelada";
+            String mensaje = String.format("""
+                Hola %s,
+
+                Tu entrevista ha sido cancelada por el candidato.
+
+                Si querés reprogramarla, comunicate con el reclutador o respondé este mail.
+
+                Equipo de SecureHire
+            """, candidato.getNombre());
+
+            sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+        });
+
+        return ResponseEntity.ok(entrevista);
     }
+
 
     @GetMapping("/mis-entrevistas-con-candidato")
     public ResponseEntity<List<EntrevistaConCandidatoDTO>> obtenerEntrevistasConDatosCandidato(

@@ -36,7 +36,7 @@ public class EntrevistaService {
     private BusquedaService busquedaService;
 
     @Autowired
-    private ResendEmailService resendEmailService;
+    private SendGridEmailService sendGridEmailService;
 
     public Entrevista crearEntrevista(Entrevista entrevista) {
         try {
@@ -52,49 +52,54 @@ public class EntrevistaService {
 
             Entrevista creada = entrevistaRepository.save(entrevista);
 
-            var candidato = candidatoService.obtenerCandidatoPorId(creada.getCandidatoId())
-                    .orElseThrow(() -> new RuntimeException("Candidato no encontrado"));
-            String email = candidato.getEmail();
+            try {
+                var candidato = candidatoService.obtenerCandidatoPorId(creada.getCandidatoId())
+                        .orElseThrow(() -> new RuntimeException("Candidato no encontrado"));
+                String email = candidato.getEmail();
 
-            var busquedaOpt = busquedaRepository.findById(creada.getBusquedaId());
-            String nombreProceso = busquedaOpt.map(Busqueda::getTitulo).orElse("Proceso desconocido");
+                var busquedaOpt = busquedaRepository.findById(creada.getBusquedaId());
+                String nombreProceso = busquedaOpt.map(Busqueda::getTitulo).orElse("Proceso desconocido");
 
-            var usuarioOpt = usuarioRepository.findById(creada.getUsuarioId());
-            String nombreReclutador = usuarioOpt.map(u -> u.getNombre() + " " + u.getApellido()).orElse("Reclutador desconocido");
-            String empresa = usuarioOpt.map(Usuario::getEmpresa).orElse("Empresa desconocida");
+                var usuarioOpt = usuarioRepository.findById(creada.getUsuarioId());
+                String nombreReclutador = usuarioOpt.map(u -> u.getNombre() + " " + u.getApellido()).orElse("Reclutador desconocido");
+                String empresa = usuarioOpt.map(Usuario::getEmpresa).orElse("Empresa desconocida");
 
-            SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            String fechaFormateada = formatoFecha.format(creada.getFechaProgramada());
+                SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                String fechaFormateada = formatoFecha.format(creada.getFechaProgramada());
 
-            String asunto = "Entrevista agendada para el proceso: " + nombreProceso;
-            String mensaje = String.format("""
-                Estimado/a %s,
+                String asunto = "Entrevista agendada para el proceso: " + nombreProceso;
+                String mensaje = String.format("""
+                    Estimado/a %s,
 
-                Te confirmamos que has sido convocado/a a una entrevista para el proceso de selección "%s" en %s.
+                    Te confirmamos que has sido convocado/a a una entrevista para el proceso de selección "%s" en %s.
 
-                📅 Fecha y hora: %s  
-                🧑 Reclutador asignado: %s  
-                🔗 Dirección: Avenida Siempre Viva 123
+                    📅 Fecha y hora: %s  
+                    🧑 Reclutador asignado: %s  
+                    🔗 Dirección: Avenida Siempre Viva 123
 
-                Para confirmar tu asistencia, hacé clic en el siguiente enlace:
-                👉 https://securehire.com/confirmar-entrevista/%s
+                    Para confirmar tu asistencia, hacé clic en el siguiente enlace:
+                    👉 https://securehire.com/confirmar-entrevista/%s
 
-                ¡Muchos éxitos!
+                    ¡Muchos éxitos!
 
-                Saludos cordiales,  
-                Equipo de %s
-                """,
-                candidato.getNombre(),
-                nombreProceso,
-                empresa,
-                fechaFormateada,
-                nombreReclutador,
-                creada.getId(),
-                empresa
-            );
+                    Saludos cordiales,  
+                    Equipo de %s
+                    """,
+                    candidato.getNombre(),
+                    nombreProceso,
+                    empresa,
+                    fechaFormateada,
+                    nombreReclutador,
+                    creada.getId(),
+                    empresa
+                );
 
-            resendEmailService.enviarCorreo(email, asunto, mensaje);
-            System.out.println("✅ Correo enviado exitosamente a " + email);
+                sendGridEmailService.enviarCorreo(email, asunto, mensaje);  
+                System.out.println("✅ Correo enviado exitosamente a " + email);
+            } catch (Exception e) {
+                System.out.println("⚠️ No se pudo enviar el correo: " + e.getMessage());
+                // No lanzamos la excepción, solo registramos el error
+            }
 
             return creada;
 
@@ -105,6 +110,7 @@ public class EntrevistaService {
             throw new RuntimeException("Error al crear la entrevista: " + e.getMessage());
         }
     }
+    
     
 
     public Optional<Entrevista> obtenerEntrevistaPorId(String id) {

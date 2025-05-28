@@ -12,7 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.securehire.backend.service.ResendEmailService;
+import com.securehire.backend.service.SendGridEmailService;
 import java.util.Date;
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final ResendEmailService emailService;
+    private final SendGridEmailService emailService;
     public AuthResponse register(AuthRequest request) {
         if (usuarioRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");

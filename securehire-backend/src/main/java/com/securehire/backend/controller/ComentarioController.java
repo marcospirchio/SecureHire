@@ -7,8 +7,7 @@ import com.securehire.backend.service.ComentarioService;
 import com.securehire.backend.service.PostulacionService;
 import com.securehire.backend.service.CandidatoService;
 import com.securehire.backend.service.BusquedaService;
-import com.securehire.backend.service.ResendEmailService;
-
+    
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,7 +23,7 @@ import com.securehire.backend.model.Postulacion;
 import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.service.CandidatoService;
 import com.securehire.backend.service.BusquedaService;
-import com.securehire.backend.service.ResendEmailService;
+import com.securehire.backend.service.SendGridEmailService;
 
 
 
@@ -41,7 +40,7 @@ public class ComentarioController {
     private BusquedaService busquedaService;
 
     @Autowired
-    private ResendEmailService resendEmailService;
+    private SendGridEmailService sendGridEmailService;
 
     @Autowired
     private AuthService authService;
@@ -102,7 +101,7 @@ public class ComentarioController {
             );
     
             System.out.println("📤 Enviando correo a: " + candidato.getEmail());
-            resendEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+            sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
             System.out.println("✅ Solicitud de envío de correo completada.");
         } catch (Exception e) {
             System.out.println("⚠️ No se pudo enviar el correo al candidato: " + e.getMessage());
