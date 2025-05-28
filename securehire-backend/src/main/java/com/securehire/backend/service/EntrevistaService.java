@@ -36,7 +36,8 @@ public class EntrevistaService {
     private BusquedaService busquedaService;
 
     @Autowired
-    private ResendEmailService resendEmailService;
+    private SendGridEmailService sendGridEmailService;
+
 
     public Entrevista crearEntrevista(Entrevista entrevista) {
         try {
@@ -93,8 +94,9 @@ public class EntrevistaService {
                 empresa
             );
 
-            resendEmailService.enviarCorreo(email, asunto, mensaje);
+            sendGridEmailService.enviarCorreo(email, asunto, mensaje);  
             System.out.println("✅ Correo enviado exitosamente a " + email);
+
 
             return creada;
 

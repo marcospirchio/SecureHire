@@ -9,6 +9,7 @@ import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.service.CandidatoService; 
 import com.securehire.backend.service.EntrevistaService;
 import com.securehire.backend.service.PostulacionService;      
+import com.securehire.backend.service.SendGridEmailService;
 import com.securehire.backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,9 @@ public class EntrevistaController {
 
     @Autowired
     private CandidatoService candidatoService;
+
+    @Autowired
+    private SendGridEmailService sendGridEmailService;
 
     @Autowired
     private PostulacionService postulacionService;
@@ -107,8 +111,30 @@ public class EntrevistaController {
         }
 
         entrevista.setEstado("confirmada");
-        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+        entrevistaService.actualizarEntrevista(entrevista);
+
+        candidatoService.obtenerCandidatoPorId(entrevista.getCandidatoId()).ifPresent(candidato -> {
+            String asunto = "Entrevista confirmada";
+            String mensaje = String.format("""
+                Hola %s,
+
+                Te confirmamos que tu entrevista fue marcada como confirmada por el sistema.
+
+                📅 Fecha: %s
+                🕐 Hora: %s
+                🔗 Link: https://securehire.com/confirmar-entrevista/%s
+
+                ¡Muchos éxitos!
+
+                Equipo de SecureHire
+            """, candidato.getNombre(), entrevista.getFechaProgramada(), entrevista.getHoraProgramada(), entrevista.getId());
+
+            sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+        });
+
+        return ResponseEntity.ok(entrevista);
     }
+
 
     @PatchMapping("/cancelar/{id}")
     public ResponseEntity<?> cancelarEntrevista(@PathVariable String id) {
@@ -121,8 +147,26 @@ public class EntrevistaController {
         }
 
         entrevista.setEstado("Cancelada por el candidato");
-        return ResponseEntity.ok(entrevistaService.actualizarEntrevista(entrevista));
+        entrevistaService.actualizarEntrevista(entrevista);
+
+        candidatoService.obtenerCandidatoPorId(entrevista.getCandidatoId()).ifPresent(candidato -> {
+            String asunto = "Entrevista cancelada";
+            String mensaje = String.format("""
+                Hola %s,
+
+                Tu entrevista ha sido cancelada por el candidato.
+
+                Si querés reprogramarla, comunicate con el reclutador o respondé este mail.
+
+                Equipo de SecureHire
+            """, candidato.getNombre());
+
+            sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+        });
+
+        return ResponseEntity.ok(entrevista);
     }
+
 
     @GetMapping("/mis-entrevistas-con-candidato")
     public ResponseEntity<List<EntrevistaConCandidatoDTO>> obtenerEntrevistasConDatosCandidato(

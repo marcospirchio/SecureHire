@@ -7,7 +7,6 @@ import com.securehire.backend.service.ComentarioService;
 import com.securehire.backend.service.PostulacionService;
 import com.securehire.backend.service.CandidatoService;
 import com.securehire.backend.service.BusquedaService;
-import com.securehire.backend.service.ResendEmailService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +23,7 @@ import com.securehire.backend.model.Postulacion;
 import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.service.CandidatoService;
 import com.securehire.backend.service.BusquedaService;
-import com.securehire.backend.service.ResendEmailService;
+import com.securehire.backend.service.SendGridEmailService;
 
 
 
@@ -41,7 +40,7 @@ public class ComentarioController {
     private BusquedaService busquedaService;
 
     @Autowired
-    private ResendEmailService resendEmailService;
+    private SendGridEmailService sendGridEmailService;
 
     @Autowired
     private AuthService authService;
@@ -85,7 +84,7 @@ public class ComentarioController {
         Comentario comentarioGuardado = comentarioService.crearComentario(comentario);
         System.out.println("✅ Comentario guardado correctamente en la BDD con ID: " + comentarioGuardado.getId());
     
-        // Enviar correo
+        // Enviar correo con SendGrid
         try {
             System.out.println("📩 Iniciando proceso de envío de correo...");
             Candidato candidato = candidatoService.obtenerCandidatoPorId(comentario.getCandidatoId())
@@ -93,16 +92,16 @@ public class ComentarioController {
     
             System.out.println("✅ Candidato encontrado: " + candidato.getEmail());
     
-            String asunto = "Nuevo comentario sobre tu postulación";
+            String asunto = "Nueva actualización sobre tu postulación";
             String mensaje = String.format(
-                "Hola %s,\n\nHas recibido un nuevo comentario sobre tu postulación a \"%s\":\n\n\"%s\"\n\nSaludos,\nSecureHire",
+                "Hola %s,\n\nTu postulación para el puesto: \"%s\" ha finalizado. El reclutador dejó el siguiente comentario:\n\n\"%s\"\n\nSaludos,\nSecureHire",
                 candidato.getNombre(),
                 tituloBusqueda,
                 comentario.getTexto()
             );
     
             System.out.println("📤 Enviando correo a: " + candidato.getEmail());
-            resendEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
+            sendGridEmailService.enviarCorreo(candidato.getEmail(), asunto, mensaje);
             System.out.println("✅ Solicitud de envío de correo completada.");
         } catch (Exception e) {
             System.out.println("⚠️ No se pudo enviar el correo al candidato: " + e.getMessage());
