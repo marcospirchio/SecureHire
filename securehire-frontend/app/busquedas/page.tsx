@@ -216,12 +216,21 @@ export default function BusquedasPage() {
       const busquedaData = await busquedaRes.json();
       const postulacionesData = await postulacionesRes.json();
 
+      // Guardar la búsqueda completa
       localStorage.setItem('busquedaSeleccionada', JSON.stringify(busquedaData));
-      localStorage.setItem('postulacionesSeleccionadas', JSON.stringify(postulacionesData));
+      
+      // Guardar solo los IDs de las postulaciones
+      const idsPostulaciones = postulacionesData.map((p: any) => p.id);
+      localStorage.setItem('postulacionesSeleccionadas', JSON.stringify(idsPostulaciones));
 
       router.push(`/busquedas/${id}`);
     } catch (error) {
       console.error("Error al cargar los datos:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos de la búsqueda.",
+        variant: "destructive",
+      });
     }
   }
 

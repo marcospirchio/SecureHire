@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DashboardLayout } from "@/components/dashboard/layout"
 import { useEntrevistas } from "@/hooks/use-entrevistas"
+import { usePostulaciones } from "@/hooks/use-postulaciones"
 
 interface EntrevistaConCandidato {
   id: string
@@ -51,6 +52,7 @@ export default function JobOfferPage({ params }: PageProps) {
   const [feedback, setFeedback] = useState("")
   const [finalizationReason, setFinalizationReason] = useState("")
   const { entrevistas: entrevistasHook, loading: entrevistasLoading } = useEntrevistas();
+  const { postulaciones, loading: loadingPostulaciones, error: errorPostulaciones, cargarPostulaciones } = usePostulaciones();
 
   useEffect(() => {
     const fetchData = async () => {

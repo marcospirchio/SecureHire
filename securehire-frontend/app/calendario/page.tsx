@@ -84,7 +84,6 @@ export default function CalendarioPage() {
     tipo: "evento"
   })
   const [eventos, setEventos] = useState<CalendarEvent[]>([])
-  const [mostrarCanceladas, setMostrarCanceladas] = useState(false)
   const [entrevistasCanceladas, setEntrevistasCanceladas] = useState<any[]>([])
   const [loadingCanceladas, setLoadingCanceladas] = useState(false)
 
@@ -130,106 +129,30 @@ export default function CalendarioPage() {
     fetchEventos()
   }, [])
 
-  useEffect(() => {
-    const estadosCancelacion = [
-      "Cancelada por solicitud de reprogramación",
-      "Cancelada por el candidato",
-      "cancelada",
-      "cancelada por el reclutador"
-    ];
-    if (mostrarCanceladas) {
-      setLoadingCanceladas(true);
-      Promise.all(
-        estadosCancelacion.map(estado =>
-          fetch(`http://localhost:8080/api/entrevistas/mis-entrevistas?estado=${encodeURIComponent(estado)}`, {
-            credentials: 'include'
-          })
-            .then(res => res.ok ? res.json() : { content: [] })
-            .then(data => (data.content || []) as Entrevista[])
-        )
-      ).then(async results => {
-        const todas = results.flat();
-        const unicas = Object.values(
-          todas.reduce((acc, curr) => {
-            acc[curr.id] = curr;
-            return acc;
-          }, {} as Record<string, Entrevista>)
-        );
-
-        const entrevistasConNombre = await Promise.all(unicas.map(async (entrevista: Entrevista) => {
-          let nombreCompleto = '';
-          if (entrevista.nombreCandidato || entrevista.apellidoCandidato) {
-            nombreCompleto = `${entrevista.nombreCandidato || ''} ${entrevista.apellidoCandidato || ''}`.trim();
-          } else if (entrevista.candidato) {
-            nombreCompleto = `${entrevista.candidato.nombre || ''} ${entrevista.candidato.apellido || ''}`.trim();
-          } else if (entrevista.candidateName) {
-            nombreCompleto = entrevista.candidateName;
-          }
-          if (!nombreCompleto && entrevista.candidatoId) {
-            try {
-              const res = await fetch(`http://localhost:8080/api/candidatos/${entrevista.candidatoId}`, {
-                credentials: 'include'
-              });
-              if (res.ok) {
-                const candidato = await res.json();
-                nombreCompleto = `${candidato.nombre || ''} ${candidato.apellido || ''}`.trim();
-              }
-            } catch (err) {
-              console.error('Error al buscar candidato:', err);
-            }
-          }
-          return { ...entrevista, nombreCompleto: nombreCompleto || '-' };
-        }));
-
-        setEntrevistasCanceladas(entrevistasConNombre);
-        setLoadingCanceladas(false);
-      });
-    }
-  }, [mostrarCanceladas]);
-
   const events: CalendarEvent[] = [
-    ...(
-      mostrarCanceladas
-        ? entrevistasCanceladas.map((entrevista: Entrevista) => ({
-            id: entrevista.id,
-            date: (entrevista.fechaProgramada || '').split('T')[0],
-            time: entrevista.horaProgramada || "-",
-            title: "Entrevista",
-            person: entrevista.nombreCompleto || '-',
-            link: entrevista.linkEntrevista || "",
-            candidateName: entrevista.nombreCompleto || '-',
-            jobTitle: entrevista.tituloPuesto || "-",
-            estado: entrevista.estado,
-            tipo: "entrevista",
-            candidatoId: entrevista.candidatoId,
-            busquedaId: entrevista.busquedaId
-          }))
-        : [
-            ...entrevistas
-              .filter(entrevista => {
-                const estado = (entrevista.estado || "").toLowerCase();
-                return ![
-                  "cancelada por solicitud de reprogramación",
-                  "cancelada por el candidato",
-                  "cancelada",
-                  "cancelada por el reclutador"
-                ].includes(estado);
-              })
-              .map(entrevista => ({
-                id: entrevista.id,
-                date: entrevista.fechaProgramada.split('T')[0],
-                time: entrevista.horaProgramada || "-",
-                title: "Entrevista",
-                person: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
-                link: entrevista.linkEntrevista || "",
-                candidateName: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
-                jobTitle: entrevista.tituloPuesto || "-",
-                estado: entrevista.estado,
-                tipo: "entrevista"
-              })),
-            ...eventos
-          ]
-    )
+    ...entrevistas
+      .filter(entrevista => {
+        const estado = (entrevista.estado || "").toLowerCase();
+        return ![
+          "cancelada por solicitud de reprogramación",
+          "cancelada por el candidato",
+          "cancelada",
+          "cancelada por el reclutador"
+        ].includes(estado);
+      })
+      .map(entrevista => ({
+        id: entrevista.id,
+        date: entrevista.fechaProgramada.split('T')[0],
+        time: entrevista.horaProgramada || "-",
+        title: "Entrevista",
+        person: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
+        link: entrevista.linkEntrevista || "",
+        candidateName: `${entrevista.nombreCandidato} ${entrevista.apellidoCandidato}`,
+        jobTitle: entrevista.tituloPuesto || "-",
+        estado: entrevista.estado,
+        tipo: "entrevista"
+      })),
+    ...eventos
   ]
 
   const generateCalendarDays = (date: Date) => {
@@ -399,7 +322,7 @@ export default function CalendarioPage() {
     }
   }
 
-  if (loading || authLoading || (mostrarCanceladas && loadingCanceladas)) {
+  if (loading || authLoading || (entrevistasCanceladas.length > 0 && loadingCanceladas)) {
     return (
       <Sidebar>
         <DashboardLayout>
@@ -439,14 +362,6 @@ export default function CalendarioPage() {
             <h1 className="text-lg font-bold">Calendario</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setMostrarCanceladas(v => !v)}
-            >
-              {mostrarCanceladas ? "Ocultar canceladas" : "Mostrar canceladas"}
-            </Button>
             <Button size="sm" className="bg-gray-900 hover:bg-gray-800 h-7 text-xs" onClick={handleOpenNewEventModal}>
               <Plus className="mr-1 h-3 w-3" /> Nuevo Evento
             </Button>
@@ -499,9 +414,7 @@ export default function CalendarioPage() {
                     <div className="mt-0.5 overflow-y-auto max-h-[calc(100%-16px)]">
                       {dayEvents.map((event, eventIndex) => {
                         let colorClass = "";
-                        if (mostrarCanceladas && event.tipo === "entrevista") {
-                          colorClass = "bg-red-100 text-red-900 hover:bg-red-200";
-                        } else if (event.tipo === "evento") {
+                        if (event.tipo === "evento") {
                           colorClass = "bg-blue-100 text-blue-900 hover:bg-blue-200";
                         } else if (event.estado === "Pendiente de confirmación") {
                           colorClass = "bg-amber-100 text-amber-900 hover:bg-amber-200";
