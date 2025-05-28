@@ -25,7 +25,7 @@ import com.securehire.backend.model.Busqueda;
 import com.securehire.backend.service.CandidatoService;
 import com.securehire.backend.service.BusquedaService;
 import com.securehire.backend.service.ResendEmailService;
-// ESTA CLASE ES FEEDBACK NO COMENTARIO.
+
 
 
 @RestController
@@ -50,8 +50,6 @@ public class ComentarioController {
     private PostulacionService postulacionService;
 
     
-    // ✅ Crear un comentario público (solo si la postulación está finalizada)
-    // Este comentario se guarda como parte del perfil del candidato y es visible por todos los reclutadores.
     @PostMapping
     public ResponseEntity<Comentario> crearComentario(
             @RequestBody Comentario comentario,
@@ -74,7 +72,6 @@ public class ComentarioController {
     
         Postulacion postulacion = postulacionOpt.get();
     
-        // Validar que la postulación esté finalizada
         if (!"FINALIZADA".equalsIgnoreCase(postulacion.getEstado())) {
             System.out.println("⛔ La postulación no está finalizada.");
             return ResponseEntity.badRequest().build();
@@ -115,9 +112,6 @@ public class ComentarioController {
     }
     
 
-
-    // ✅ Obtener comentarios por candidato.
-    // Útil para mostrar los comentarios de un candidato en la vista de candidato.
     @GetMapping("/candidato/{candidatoId}")
     public ResponseEntity<List<Comentario>> obtenerComentariosPorCandidato(
             @PathVariable String candidatoId,
@@ -154,16 +148,13 @@ public class ComentarioController {
         }
     
         existente.setTexto(actualizado.getTexto());
-        existente.setFecha(new Date()); // 🔄 actualiza fecha al momento de edición
+        existente.setFecha(new Date()); 
     
         return ResponseEntity.ok(comentarioService.actualizarComentario(existente));
     }
     
     
     
-    
-    // ✅ Eliminar un comentario por su ID.
-    // Solo se puede eliminar si el usuario es el propietario del comentario.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarComentario(
             @PathVariable String id,
@@ -177,7 +168,7 @@ public class ComentarioController {
     
         Comentario comentario = comentarioOpt.get();
         if (!comentario.getUsuarioId().equals(usuario.getId())) {
-            return ResponseEntity.status(403).build(); // No autorizado
+            return ResponseEntity.status(403).build(); 
         }
     
         comentarioService.eliminarComentario(id);

@@ -22,8 +22,6 @@ public class EventoCalendarioController {
     @Autowired
     private EventoCalendarioService eventoCalendarioService;
 
-    // ✅ Obtiene eventos del calendario del usuario logueado
-    // ✅ Filtra eventos por tipo, rango de fechas o ambos
     @GetMapping("/eventos")
     public ResponseEntity<List<EventoCalendario>> obtenerEventos(
             @AuthenticationPrincipal Usuario usuario,
@@ -64,21 +62,17 @@ public class EventoCalendarioController {
         return ResponseEntity.ok(eventos);
     }
 
-    // ✅ Crear un nuevo evento en el calendario del usuario logueado
-    // ✅ Asigna el usuario logueado y la fecha automática
     @PostMapping("/eventos")
     public ResponseEntity<EventoCalendario> crearEvento(
             @RequestBody EventoCalendario evento,
             @AuthenticationPrincipal Usuario usuario
     ) {
-        evento.setUsuarioId(usuario.getId()); // ✅ Asigna el usuario logueado
-        evento.setCreadoEn(new Date());       // ✅ Fecha automática
+        evento.setUsuarioId(usuario.getId()); 
+        evento.setCreadoEn(new Date());       
         return ResponseEntity.ok(eventoCalendarioService.crearEvento(evento));
     }
     
 
-    // ✅ Eliminar un evento por su ID
-    // ❌ Si no existe o no pertenece al usuario logueado
     @DeleteMapping("/eventos/{id}")
     public ResponseEntity<Void> eliminarEvento(
             @PathVariable String id,
@@ -86,7 +80,6 @@ public class EventoCalendarioController {
     ) {
     Optional<EventoCalendario> eventoOpt = eventoCalendarioService.obtenerEventoPorId(id);
 
-    // ❌ Si no existe o no pertenece al usuario logueado
     if (eventoOpt.isEmpty() || !eventoOpt.get().getUsuarioId().equals(usuario.getId())) {
         return ResponseEntity.notFound().build();
     }

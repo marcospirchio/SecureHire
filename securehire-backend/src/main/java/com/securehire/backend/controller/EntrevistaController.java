@@ -141,14 +141,12 @@ public class EntrevistaController {
                 dto.setEstado(e.getEstado());
                 dto.setLinkEntrevista(e.getLinkEntrevista());
     
-                // Nombre y apellido del candidato
                 var candidato = candidatoService.obtenerCandidatoPorId(e.getCandidatoId());
                 candidato.ifPresent(c -> {
                     dto.setNombreCandidato(c.getNombre());
                     dto.setApellidoCandidato(c.getApellido());
                 });
     
-                // Título de la búsqueda (puesto)
                 if (e.getPostulacionId() != null) {
                     postulacionService.obtenerPostulacionPorId(e.getPostulacionId())
                         .flatMap(p -> busquedaRepository.findById(p.getBusquedaId()))
@@ -254,7 +252,6 @@ public class EntrevistaController {
     
         Entrevista entrevista = entrevistaOpt.get();
     
-        // Obtener búsqueda asociada
         Optional<Busqueda> busquedaOpt = busquedaRepository.findById(entrevista.getBusquedaId());
         if (busquedaOpt.isEmpty()) {
             return ResponseEntity.status(404).body("No se encontró la búsqueda asociada.");
@@ -262,7 +259,6 @@ public class EntrevistaController {
     
         Busqueda busqueda = busquedaOpt.get();
     
-        // Obtener reclutador (usuario)
         Optional<Usuario> usuarioOpt = candidatoService.obtenerUsuarioPorId(busqueda.getUsuarioId());
         if (usuarioOpt.isEmpty()) {
             return ResponseEntity.status(404).body("No se encontró el reclutador.");
@@ -277,7 +273,7 @@ public class EntrevistaController {
             "candidatoId", entrevista.getCandidatoId(),
             "busquedaId", busqueda.getId(),
             "titulo", busqueda.getTitulo(),
-            "empresa", busqueda.getEmpresa(), // asegúrate de que tenga el campo empresa
+            "empresa", busqueda.getEmpresa(), 
             "reclutador", Map.of(
                 "id", reclutador.getId(),
                 "nombre", reclutador.getNombre(),

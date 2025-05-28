@@ -43,7 +43,6 @@ public class GeminiIAController {
             @RequestParam(value = "postulacionId", required = false) String postulacionId
     ) {
         try {
-            // Buscar la búsqueda correspondiente
             Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(busquedaId);
             if (busquedaOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body("No se encontró la búsqueda con ID: " + busquedaId);
@@ -51,18 +50,15 @@ public class GeminiIAController {
 
             Busqueda busqueda = busquedaOpt.get();
 
-            // Validar que el archivo no esté vacío
             if (file == null || file.isEmpty()) {
                 return ResponseEntity.badRequest().body("El archivo CV está vacío o no fue enviado.");
             }
 
-            // Leer el contenido del PDF
             PDDocument document = PDDocument.load(file.getInputStream());
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
             document.close();
 
-            // Armar prompt para IA
             String prompt = """
                 Sos un asistente de selección de personal. Recibiste el currículum de un candidato que se postuló a una búsqueda laboral. 
                 Quiero que resumas la información más importante del CV para ayudar a un reclutador a evaluarlo. 
@@ -88,10 +84,8 @@ public class GeminiIAController {
                 %s
                 """.formatted(busqueda.getTitulo(), busqueda.getDescripcion(), text);
 
-            // Llamar a Gemini
             String resumen = geminiService.obtenerRespuestaDesdeGemini(prompt);
 
-            // Si vino postulacionId, guardar el resumen en esa postulación
             if (postulacionId != null && !postulacionId.isBlank()) {
                 postulacionRepository.findById(postulacionId).ifPresent(postulacion -> {
                     postulacion.setResumenCv(resumen);
