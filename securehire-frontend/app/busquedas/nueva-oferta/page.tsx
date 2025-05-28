@@ -301,57 +301,58 @@ export default function NuevaOfertaPage() {
               </div>
             </section>
 
-            {/* Preguntas adicionales */}
+            {/* Preguntas adicionales (sin tabs) */}
             <section className="mt-8">
               <div className="flex justify-between items-center mb-2">
                 <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Nuevo!</div>
                 <p className="text-gray-600">Marca las opciones excluyentes para filtrar candidatos automáticamente</p>
               </div>
-              <Tabs defaultValue="preguntas" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="preguntas">Preguntas Específicas</TabsTrigger>
-                  <TabsTrigger value="formulario">Formulario Obligatorio</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="preguntas" className="bg-white p-4 rounded-lg border">
-                  <div className="space-y-4">
-                    {preguntas.map((preg, idx) => (
-                      <div key={idx} className="space-y-4 border-b pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
-                        <div className="flex justify-between items-start">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                            <input
-                              type="text"
-                              placeholder="Escribe tu pregunta aquí"
-                              className="p-2 border rounded-md"
-                              value={preg.texto}
-                              onChange={e => handlePreguntaChange(idx, "texto", e.target.value)}
-                            />
-                            <div className="flex items-center gap-2 border rounded-md p-2">
-                              <Check className="h-5 w-5" />
-                              <span>
-                                {preg.tipo === "checkbox" ? "Casillas de verificación" : "Opción única"}
-                              </span>
-                              <select
-                                className="ml-auto border rounded-md p-1"
-                                value={preg.tipo}
-                                onChange={e => handlePreguntaChange(idx, "tipo", e.target.value)}
-                              >
-                                <option value="checkbox">Casillas de verificación</option>
-                                <option value="radio">Opción única</option>
-                              </select>
-                              <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
-                            </div>
+              <div className="bg-white p-4 rounded-lg border">
+                <div className="space-y-4">
+                  {preguntas.map((preg, idx) => (
+                    <div key={idx} className="space-y-4 border-b pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
+                      <div className="flex justify-between items-start">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                          <input
+                            type="text"
+                            placeholder="Escribe tu pregunta aquí"
+                            className="p-2 border rounded-md"
+                            value={preg.texto}
+                            onChange={e => handlePreguntaChange(idx, "texto", e.target.value)}
+                          />
+                          <div className="flex items-center gap-2 border rounded-md p-2">
+                            <Check className="h-5 w-5" />
+                            <span>
+                              {preg.tipo === "checkbox"
+                                ? "Casillas de verificación"
+                                : preg.tipo === "radio"
+                                ? "Opción única"
+                                : "Respuesta de texto"}
+                            </span>
+                            <select
+                              className="ml-auto border rounded-md p-1"
+                              value={preg.tipo}
+                              onChange={e => handlePreguntaChange(idx, "tipo", e.target.value)}
+                            >
+                              <option value="checkbox">Casillas de verificación</option>
+                              <option value="radio">Opción única</option>
+                              <option value="texto">Respuesta de texto</option>
+                            </select>
+                            <ChevronDown className="h-4 w-4 ml-2 text-gray-400" />
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="ml-2 text-red-500 hover:text-red-700"
-                            onClick={() => handleRemovePregunta(idx)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 text-red-500 hover:text-red-700"
+                          onClick={() => handleRemovePregunta(idx)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
 
+                      {/* Renderizado de opciones solo si no es texto */}
+                      {preg.tipo !== "texto" ? (
                         <div className="space-y-2">
                           {preg.opciones.map((op, opIdx) => (
                             <div key={opIdx} className="flex items-center justify-between border rounded-md p-3">
@@ -391,7 +392,19 @@ export default function NuevaOfertaPage() {
                             </div>
                           ))}
                         </div>
+                      ) : (
+                        <div className="mt-2">
+                          <input
+                            type="text"
+                            className="w-full border rounded-md p-2 bg-gray-50"
+                            placeholder="Respuesta del candidato..."
+                            disabled
+                          />
+                        </div>
+                      )}
 
+                      {/* Botón para agregar opción solo si no es texto */}
+                      {preg.tipo !== "texto" && (
                         <button
                           type="button"
                           className="text-gray-500 flex items-center gap-1"
@@ -399,22 +412,17 @@ export default function NuevaOfertaPage() {
                         >
                           <Plus className="h-4 w-4" /> Agregar otra opción
                         </button>
-                      </div>
-                    ))}
-
-                    <div className="flex justify-center mt-6">
-                      <Button type="button" className="flex items-center gap-2" onClick={handleAddPregunta}>
-                        <Plus className="h-4 w-4" /> Nueva pregunta
-                      </Button>
+                      )}
                     </div>
-                  </div>
-                </TabsContent>
+                  ))}
 
-                <TabsContent value="formulario" className="bg-white p-4 rounded-lg border">
-                  {/* Aquí puedes poner los campos obligatorios si lo deseas */}
-                  <p className="text-gray-500">Estos campos se solicitarán automáticamente a todos los candidatos.</p>
-                </TabsContent>
-              </Tabs>
+                  <div className="flex justify-center mt-6">
+                    <Button type="button" className="flex items-center gap-2" onClick={handleAddPregunta}>
+                      <Plus className="h-4 w-4" /> Nueva pregunta
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </section>
 
             {/* Botones de acción */}
