@@ -19,6 +19,7 @@ interface EntrevistaPublica {
     nombre: string;
     apellido: string;
   };
+  fechaProgramada?: string;
 }
 
 interface Oferta {
@@ -33,7 +34,7 @@ interface Oferta {
 }
 
 export default function EntrevistaPage({ token }: { token: string }) {
-  const [action, setAction] = useState<"confirmar" | "cancelar" | "reprogramar" | null>(null)
+  const [action, setAction] = useState<"confirmar" | "cancelar" | null>(null)
   const [motivo, setMotivo] = useState("")
   const [motivoCancelacion, setMotivoCancelacion] = useState("")
   const [success, setSuccess] = useState(false)
@@ -88,18 +89,10 @@ export default function EntrevistaPage({ token }: { token: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ motivo: motivoCancelacion })
         })
-      } else if (action === "reprogramar") {
-        response = await fetch(`http://localhost:8080/api/entrevistas/publica/${token}/solicitar-reprogramacion`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ motivo })
-        })
       }
-
       if (!response?.ok) {
         throw new Error('Error al procesar la solicitud')
       }
-
       setSuccess(true)
     } catch (error) {
       toast({
@@ -123,7 +116,14 @@ export default function EntrevistaPage({ token }: { token: string }) {
     )
   }
 
-  if (entrevista.estado && entrevista.estado.toLowerCase() === "cancelada") {
+  // Estados de cancelación
+  const estadosCancelacion = [
+    "cancelada por el reclutador",
+    "cancelada por el candidato",
+    "Cancelada por el candidato",
+    "cancelada"
+  ];
+  if (entrevista.estado && estadosCancelacion.includes(entrevista.estado.toLowerCase())) {
     return (
       <div className="mx-auto max-w-md p-8 bg-white rounded-xl shadow-lg flex flex-col items-center justify-center mt-24">
         <div className="flex flex-col items-center">
@@ -135,7 +135,32 @@ export default function EntrevistaPage({ token }: { token: string }) {
           </div>
           <h2 className="text-2xl font-bold text-red-700 mb-2">Entrevista cancelada</h2>
           <p className="text-gray-700 text-center mb-6">La entrevista ya se encuentra cancelada.<br />No es posible realizar ninguna acción sobre esta entrevista.</p>
-          <Button onClick={() => window.close()} className="bg-gray-100 text-gray-800 hover:bg-gray-200">Cerrar ventana</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Obtener la fecha de la entrevista de forma robusta
+  let fechaEntrevista: Date | null = null;
+  if (entrevista.fechaProgramada) {
+    fechaEntrevista = new Date(entrevista.fechaProgramada);
+  } else if (entrevista.fecha && entrevista.hora) {
+    fechaEntrevista = new Date(`${entrevista.fecha}T${entrevista.hora}:00Z`);
+  }
+
+  // Mostrar cartel si la entrevista ya pasó
+  if (fechaEntrevista && fechaEntrevista < new Date()) {
+    return (
+      <div className="mx-auto max-w-md p-8 bg-white rounded-xl shadow-lg flex flex-col items-center justify-center mt-24">
+        <div className="flex flex-col items-center">
+          <div className="bg-gray-100 rounded-full p-4 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#f3f4f6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Entrevista finalizada</h2>
+          <p className="text-gray-700 text-center mb-6">La entrevista ya finalizó. No se pueden realizar acciones sobre esta entrevista.</p>
         </div>
       </div>
     );
@@ -161,18 +186,6 @@ export default function EntrevistaPage({ token }: { token: string }) {
             </p>
           </div>
         )}
-
-        {action === "reprogramar" && (
-          <div className="p-4 bg-green-50 rounded-md mb-6">
-            <p className="text-green-800">
-              Tu solicitud de reprogramación ha sido enviada. El reclutador se pondrá en contacto contigo pronto.
-            </p>
-          </div>
-        )}
-
-        <Button onClick={() => window.close()} className="bg-gray-100 text-gray-800 hover:bg-gray-200">
-          Cerrar ventana
-        </Button>
       </div>
     )
   }
@@ -185,6 +198,27 @@ export default function EntrevistaPage({ token }: { token: string }) {
       month: 'long',
       year: 'numeric'
     })
+  }
+
+  // Si la entrevista está confirmada, solo permitir cancelar
+  const isConfirmed = entrevista.estado && entrevista.estado.toLowerCase() === "confirmada";
+  let canCancel = true;
+
+  if (isConfirmed) {
+    return (
+      <div className="mx-auto max-w-md p-8 bg-white rounded-xl shadow-lg flex flex-col items-center justify-center mt-24">
+        <div className="flex flex-col items-center">
+          <div className="bg-green-100 rounded-full p-4 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#d1fae5" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-green-700 mb-2">Entrevista confirmada</h2>
+          <p className="text-gray-700 text-center mb-6">La entrevista ya se encuentra confirmada.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -245,18 +279,14 @@ export default function EntrevistaPage({ token }: { token: string }) {
               </label>
             </div>
           )}
-          <div className="flex items-center space-x-2 mb-3">
-            <RadioGroupItem value="cancelar" id="cancelar" />
-            <label htmlFor="cancelar" className="text-base cursor-pointer">
-              Cancelar entrevista
-            </label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="reprogramar" id="reprogramar" />
-            <label htmlFor="reprogramar" className="text-base cursor-pointer">
-              Solicitar reprogramación
-            </label>
-          </div>
+          {(entrevista.estado.toLowerCase() === "pendiente de confirmación" || isConfirmed) && (
+            <div className="flex items-center space-x-2 mb-3">
+              <RadioGroupItem value="cancelar" id="cancelar" />
+              <label htmlFor="cancelar" className="text-base cursor-pointer">
+                Cancelar entrevista
+              </label>
+            </div>
+          )}
         </RadioGroup>
       </div>
 
@@ -277,39 +307,15 @@ export default function EntrevistaPage({ token }: { token: string }) {
         </div>
       )}
 
-      {action === "reprogramar" && (
-        <div className="mb-6 animate-in fade-in duration-300">
-          <div className="p-4 bg-blue-50 rounded-md mb-4">
-            <p className="text-blue-800 text-sm">
-              <strong>Información importante</strong>
-            </p>
-            <p className="text-blue-800 text-sm">
-              Al solicitar una reprogramación, el reclutador recibirá tu solicitud y se pondrá en contacto contigo para
-              acordar una nueva fecha y hora.
-            </p>
-          </div>
-
-          <label className="block text-sm font-medium text-gray-700 mb-2">Motivo de reprogramación</label>
-          <Textarea
-            placeholder="Explica por qué necesitas reprogramar la entrevista..."
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            className="min-h-[120px]"
-          />
-        </div>
-      )}
-
       <div className="flex justify-end gap-3 mt-8">
         <Button variant="outline" onClick={() => window.history.back()} disabled={loading}>
           Cancelar
         </Button>
-
         <Button
           onClick={handleSubmit}
           disabled={
             !action || 
-            (action === "cancelar" && !motivoCancelacion) || 
-            (action === "reprogramar" && !motivo) || 
+            (action === "cancelar" && (!motivoCancelacion || !canCancel)) || 
             loading
           }
           className={
@@ -317,7 +323,7 @@ export default function EntrevistaPage({ token }: { token: string }) {
               ? "bg-green-600 hover:bg-green-700 text-white"
               : action === "cancelar"
                 ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
+                : ""
           }
         >
           {loading ? (
@@ -329,9 +335,7 @@ export default function EntrevistaPage({ token }: { token: string }) {
             "Confirmar entrevista"
           ) : action === "cancelar" ? (
             "Confirmar cancelación"
-          ) : (
-            "Solicitar reprogramación"
-          )}
+          ) : null}
         </Button>
       </div>
     </div>

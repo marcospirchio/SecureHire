@@ -182,13 +182,13 @@ export default function BusquedasPage() {
       .filter((offer) => offer.title.toLowerCase().includes(searchQuery.toLowerCase()))
       .filter((offer) => offer.archivada === showArchived)
       .sort((a, b) => {
-        if (sortBy === "recent") {
+    if (sortBy === "recent") {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        } else if (sortBy === "candidates") {
-          return b.candidates - a.candidates
-        }
-        return 0
-      })
+    } else if (sortBy === "candidates") {
+      return b.candidates - a.candidates
+    }
+    return 0
+  })
   }, [jobOffers, searchQuery, showArchived, sortBy])
 
   const totalPages = Math.ceil(filteredOffers.length / itemsPerPage)
