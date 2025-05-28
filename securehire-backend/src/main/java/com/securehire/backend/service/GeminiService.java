@@ -37,7 +37,6 @@ public class GeminiService {
                     String.class
             );
     
-            // ✅ Parsear JSON y extraer sólo el texto deseado
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.getBody());
     

@@ -33,7 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = null;
         String userEmail = null;
 
-        // ✅ 1. Buscar JWT en cookie llamada "jwt"
         if (request.getCookies() != null) {
             jwt = Arrays.stream(request.getCookies())
                     .filter(cookie -> "jwt".equals(cookie.getName()))
@@ -42,7 +41,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .orElse(null);
         }
 
-        // ✅ 2. Si no está en cookie, buscar en Authorization header como fallback
         if (jwt == null) {
             final String authHeader = request.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -50,13 +48,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // ✅ 3. Si no hay JWT, seguir la cadena sin autenticar
         if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // ✅ 4. Extraer el usuario y validar el token
         userEmail = jwtService.extractUsername(jwt);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -73,7 +69,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // ✅ 5. Continuar la cadena
         filterChain.doFilter(request, response);
     }
 }

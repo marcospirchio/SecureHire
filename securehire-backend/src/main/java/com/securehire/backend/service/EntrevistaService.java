@@ -40,21 +40,18 @@ public class EntrevistaService {
 
     public Entrevista crearEntrevista(Entrevista entrevista) {
         try {
-            // Combinar fechaProgramada (fecha sin hora) y horaProgramada para construir Date completo
             if (entrevista.getFechaProgramada() == null || entrevista.getHoraProgramada() == null) {
                 throw new IllegalArgumentException("Faltan datos de fecha u hora");
             }
 
             SimpleDateFormat formatoCompleto = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
             String fechaYHora = new SimpleDateFormat("yyyy-MM-dd").format(entrevista.getFechaProgramada())
-                                + "T" + entrevista.getHoraProgramada(); // Ejemplo: 2025-05-23T14:00
+                                + "T" + entrevista.getHoraProgramada(); 
             Date fechaConHora = formatoCompleto.parse(fechaYHora);
             entrevista.setFechaProgramada(fechaConHora);
 
-            // Guardar en base de datos
             Entrevista creada = entrevistaRepository.save(entrevista);
 
-            // Obtener datos relacionados
             var candidato = candidatoService.obtenerCandidatoPorId(creada.getCandidatoId())
                     .orElseThrow(() -> new RuntimeException("Candidato no encontrado"));
             String email = candidato.getEmail();
@@ -66,11 +63,9 @@ public class EntrevistaService {
             String nombreReclutador = usuarioOpt.map(u -> u.getNombre() + " " + u.getApellido()).orElse("Reclutador desconocido");
             String empresa = usuarioOpt.map(Usuario::getEmpresa).orElse("Empresa desconocida");
 
-            // Formatear fecha y hora para el correo
             SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             String fechaFormateada = formatoFecha.format(creada.getFechaProgramada());
 
-            // Preparar mensaje
             String asunto = "Entrevista agendada para el proceso: " + nombreProceso;
             String mensaje = String.format("""
                 Estimado/a %s,

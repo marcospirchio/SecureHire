@@ -45,7 +45,7 @@ public class ResendEmailService {
             .retrieve()
             .onStatus(status -> status.value() == 403, clientResponse -> {
                 System.out.println("Resend bloqueó el correo (403). Ignorando el error para continuar sin fallos.");
-                return Mono.empty(); // No interrumpe el flujo, ignora el error
+                return Mono.empty(); 
             })
             .onStatus(status -> status.isError(), clientResponse ->
                 clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
@@ -57,7 +57,7 @@ public class ResendEmailService {
             .doOnSuccess(resp -> System.out.println("Respuesta de Resend: " + resp))
             .onErrorResume(e -> {
                 System.out.println("Error inesperado al enviar correo: " + e.getMessage());
-                return Mono.empty(); // Silencioso
+                return Mono.empty(); 
             })
             .block();
     }

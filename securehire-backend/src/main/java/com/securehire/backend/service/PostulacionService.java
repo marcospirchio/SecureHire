@@ -289,7 +289,7 @@ public class PostulacionService {
         }
     
         anotacion.setComentario(nuevoComentario);
-        anotacion.setFecha(new Date()); // opcional: actualizar fecha de edición
+        anotacion.setFecha(new Date()); 
     
         return postulacionRepository.save(p);
     }

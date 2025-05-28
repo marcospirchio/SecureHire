@@ -30,20 +30,15 @@ public class BusquedaService {
         busqueda.setFechaCreacion(new Date());
         busqueda.setArchivada(false);
     
-        // 1. Guardar sin URL para obtener el ID generado
         Busqueda guardada = busquedaRepository.save(busqueda);
     
-        // 2. Ahora que tenemos el ID, generamos la URL
         String url = "http://localhost:3000/ofertas/" + guardada.getId();
         guardada.setUrlPublica(url);
     
-        // 3. Guardar nuevamente con la URL ya seteada
         guardada = busquedaRepository.save(guardada);
     
-        // Log de confirmación
         System.out.println("🔗 URL Pública generada: " + url);
     
-        // 4. Asociar al usuario
         Optional<Usuario> optUsuario = usuarioRepository.findById(guardada.getUsuarioId());
         if (optUsuario.isPresent()) {
             Usuario usuario = optUsuario.get();
@@ -87,7 +82,7 @@ public class BusquedaService {
         Date fechaDesde, 
         Date fechaHasta
     ) {
-        return busquedaRepository.findByUsuarioId(usuarioId) // ya filtra internamente
+        return busquedaRepository.findByUsuarioId(usuarioId) 
             .stream()
             .filter(b -> archivada == null || b.isArchivada() == archivada)
             .filter(b -> titulo == null || b.getTitulo().toLowerCase().contains(titulo.toLowerCase()))
@@ -136,7 +131,6 @@ public class BusquedaService {
         Busqueda busqueda = busquedaRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Búsqueda no encontrada"));
     
-        // Validación fuerte: no dejar borrar si no hay usuario asignado o si no es el dueño
         if (busqueda.getUsuarioId() == null || !busqueda.getUsuarioId().equals(usuarioAutenticado.getId())) {
             throw new UnauthorizedException("No tenés permiso para eliminar esta búsqueda");
         }

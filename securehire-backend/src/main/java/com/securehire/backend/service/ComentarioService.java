@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Optional;
 
 
-// ESTA CLASE ES FEEDBACK NO COMENTARIO.
 
 @Service
 public class ComentarioService {
@@ -23,7 +22,7 @@ public class ComentarioService {
     public Comentario crearComentario(Comentario comentario) {
         comentario.setFecha(new Date());
         
-        // Obtener información del reclutador
+        
         usuarioService.obtenerUsuarioPorId(comentario.getUsuarioId())
             .ifPresent(reclutador -> {
                 comentario.setNombreReclutador(reclutador.getNombre() + " " + reclutador.getApellido());

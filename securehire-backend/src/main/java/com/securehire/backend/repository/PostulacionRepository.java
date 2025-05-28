@@ -26,10 +26,8 @@ public interface PostulacionRepository extends MongoRepository<Postulacion, Stri
     Page<Postulacion> findByUsuarioIdAndFaseActual(String usuarioId, String fase, Pageable pageable);
     Page<Postulacion> findByUsuarioIdAndEstadoAndFaseActual(String usuarioId, String estado, String fase, Pageable pageable);
 
-    // 🔐 Métodos necesarios para validar acceso del reclutador
     boolean existsByCandidatoIdAndBusquedaId(String candidatoId, String busquedaId);
 
-    // ✅ Agregado: conteo de postulaciones por búsqueda
     @Aggregation(pipeline = {
         "{ $group: { _id: '$busquedaId', cantidad: { $sum: 1 } } }"
     })

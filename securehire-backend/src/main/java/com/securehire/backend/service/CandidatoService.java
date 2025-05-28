@@ -121,7 +121,7 @@ public class CandidatoService {
             }
         }
     
-        return Optional.empty(); // No se encontró ninguna postulación válida
+        return Optional.empty(); 
     }
     
 
@@ -204,7 +204,7 @@ public class CandidatoService {
     }
 
     public Optional<Usuario> obtenerUsuarioPorId(String id) {
-        return usuarioRepository.findById(id); // Asegurate de tener el repositorio y dependencia
+        return usuarioRepository.findById(id); 
     }
     
 }
