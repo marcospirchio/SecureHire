@@ -61,19 +61,16 @@ public class BusquedaController {
 
             Busqueda busqueda = busquedaOpt.get();
             
-            // Verificar que el usuario esté autenticado
             if (usuario == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            // Verificar que el usuario tenga acceso a la búsqueda
             if (!busqueda.getUsuarioId().equals(usuario.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
             return ResponseEntity.ok(busqueda);
         } catch (Exception e) {
-            // Log del error para debugging
             System.err.println("Error al obtener búsqueda: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -128,56 +125,4 @@ public class BusquedaController {
         }
     }
 
-
-    
-    // // NUEVO: Agregar una fase a la búsqueda
-    // @PatchMapping("/{id}/agregar-fase")
-    // public ResponseEntity<?> agregarFase(
-    //         @PathVariable String id,
-    //         @RequestParam String nuevaFase,
-    //         @AuthenticationPrincipal Usuario usuario
-    // ) {
-    //     Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
-
-    //     if (busquedaOpt.isEmpty()) return ResponseEntity.notFound().build();
-
-    //     Busqueda busqueda = busquedaOpt.get();
-    //     if (!busqueda.getUsuarioId().equals(usuario.getId())) {
-    //         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    //     }
-
-    //     if (busqueda.getFases() == null) {
-    //         busqueda.setFases(new java.util.ArrayList<>());
-    //     }
-
-    //     if (!busqueda.getFases().contains(nuevaFase)) {
-    //         busqueda.getFases().add(nuevaFase);
-    //         busquedaService.actualizarBusqueda(busqueda);
-    //     }
-
-    //     return ResponseEntity.ok(busqueda);
-    // }
-
-    // // NUEVO: Eliminar una fase de la búsqueda
-    // @PatchMapping("/{id}/eliminar-fase")
-    // public ResponseEntity<?> eliminarFase(
-    //         @PathVariable String id,
-    //         @RequestParam String faseAEliminar,
-    //         @AuthenticationPrincipal Usuario usuario
-    // ) {
-    //     Optional<Busqueda> busquedaOpt = busquedaService.obtenerBusquedaPorId(id);
-
-    //     if (busquedaOpt.isEmpty()) return ResponseEntity.notFound().build();
-
-    //     Busqueda busqueda = busquedaOpt.get();
-    //     if (!busqueda.getUsuarioId().equals(usuario.getId())) {
-    //         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    //     }
-
-    //     if (busqueda.getFases() != null && busqueda.getFases().remove(faseAEliminar)) {
-    //         busquedaService.actualizarBusqueda(busqueda);
-    //     }
-
-    //     return ResponseEntity.ok(busqueda);
-    // }
 }

@@ -80,7 +80,7 @@ public class AuthController {
 
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", authResponse.getToken())
             .httpOnly(true)
-            .secure(false) // true si usás HTTPS
+            .secure(false) 
             .path("/")
             .maxAge(Duration.ofDays(1))
             .sameSite("Lax")
@@ -122,7 +122,7 @@ public class AuthController {
             .httpOnly(true)
             .secure(false)
             .path("/")
-            .maxAge(0) // Eliminar cookie
+            .maxAge(0) 
             .sameSite("Lax")
             .build();
 

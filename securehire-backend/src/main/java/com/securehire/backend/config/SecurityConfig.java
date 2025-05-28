@@ -33,29 +33,23 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // Público: autenticación y documentación
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/api-docs/**").permitAll()
 
-                // Público: creación de candidatos y postulaciones desde la web
                 .requestMatchers(HttpMethod.POST, "/api/candidatos").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/asociar-candidato").permitAll()
 
-                // Público: endpoints de entrevista pública
                 .requestMatchers("/api/entrevistas/publica/**").permitAll()
                 .requestMatchers("/api/entrevistas/confirmar/**").permitAll()
                 .requestMatchers("/api/entrevistas/reprogramar/**").permitAll()
                 .requestMatchers("/api/ofertas/**").permitAll()
 
-                // ✅ NUEVO: Acceso público a ofertas de trabajo (usado en la vista pública)
                 .requestMatchers(HttpMethod.GET, "/api/busquedas/**").permitAll()
 
-                // Protegido: cualquier acción debajo de /api/postulaciones requiere token
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/postulaciones/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/postulaciones/**").authenticated()
 
-                // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
@@ -69,7 +63,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // o "*" para todos
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

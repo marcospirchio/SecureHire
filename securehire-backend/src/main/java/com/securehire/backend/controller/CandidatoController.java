@@ -20,14 +20,13 @@ import java.util.Optional;
 public class CandidatoController {
     @Autowired private CandidatoService candidatoService;
 
-    //(FUNCIONA) el candidato se crea en postulacion controller (crear postulacion) 
     // @PostMapping
     // public ResponseEntity<Candidato> crearCandidato(@Valid @RequestBody CandidatoDTO dto) {
     //     Candidato creadoOActualizado = candidatoService.crearCandidato(dto);
     //     return ResponseEntity.ok(creadoOActualizado);
     // }
     
-    //(FUNCIONA)
+    
     @GetMapping
     public ResponseEntity<Page<Candidato>> obtenerCandidatosPaginadosFiltrados(
             @RequestParam(defaultValue = "0") int page,
@@ -38,7 +37,6 @@ public class CandidatoController {
         return ResponseEntity.ok(candidatoService.obtenerCandidatosFiltradosPorReclutador(usuario.getId(), page, size, nombre));
     }
 
-    //(FUNCIONA)
     @GetMapping("/{id}")
     public ResponseEntity<Candidato> obtenerCandidato(
             @PathVariable String id,
@@ -47,7 +45,7 @@ public class CandidatoController {
         Optional<Candidato> candidato = candidatoService.obtenerCandidatoPorIdParaReclutador(id, usuario.getId());
         return candidato.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
-    //(FUNCIONA)
+
     @GetMapping("/nombre")
     public ResponseEntity<List<Candidato>> buscarPorNombre(
             @RequestParam String nombre,
