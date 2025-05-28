@@ -55,7 +55,6 @@ public class Candidato {
     @NotBlank(message = "La dirección es obligatoria")
     private String direccion;
 
-    // Opcionales
     private String cvUrl;
     private Double reputacion;
     private Integer tiempoRespuesta;

@@ -18,7 +18,6 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
 
-    //mostrar  los datos del reclutador actual desde su id (por ejemplo, al entrar al perfil del reclutador
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> obtenerUsuario(@PathVariable String id) {
         Optional<Usuario> usuario = usuarioService.obtenerUsuarioPorId(id);
@@ -41,7 +40,7 @@ public class UsuarioController {
     
         try {
             byte[] imagenBytes = imagen.getBytes();
-            usuario.setFotoPerfil(imagenBytes); // asegurate que el campo exista
+            usuario.setFotoPerfil(imagenBytes); 
             usuarioService.actualizarUsuario(usuario);
             return ResponseEntity.ok("Foto de perfil actualizada correctamente.");
         } catch (IOException e) {

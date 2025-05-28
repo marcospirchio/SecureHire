@@ -52,7 +52,6 @@ public class PostulacionController {
     @Autowired
     private PostulacionRepository postulacionRepository;
 
-    //FUNCIONA
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> crearPostulacion(
             @RequestParam("cv") MultipartFile archivoCV,
@@ -71,7 +70,6 @@ public class PostulacionController {
             @RequestParam("direccion") String direccion,
             @RequestParam(value = "respuestas", required = false) String respuestasJson
     ) {
-        // Crear candidato
         Candidato candidato = Candidato.builder()
                 .nombre(nombre)
                 .apellido(apellido)
@@ -88,7 +86,6 @@ public class PostulacionController {
                 .fechaRegistro(new Date())
                 .build();
 
-        // Parsear respuestas si las hay
         List<Postulacion.RespuestaFormulario> respuestas = new ArrayList<>();
         if (respuestasJson != null && !respuestasJson.isEmpty()) {
             try {
@@ -99,13 +96,11 @@ public class PostulacionController {
             }
         }
 
-        // Validar búsqueda
         Optional<Busqueda> busquedaOpt = busquedaRepository.findById(busquedaId);
         if (busquedaOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("La búsqueda indicada no existe");
         }
 
-        // Crear postulación
         Postulacion postulacion = new Postulacion();
         postulacion.setBusquedaId(busquedaId);
         postulacion.setRespuestas(respuestas);
@@ -131,7 +126,6 @@ public class PostulacionController {
 
         Postulacion postulacion = postulacionOpt.get();
 
-        // Buscar búsqueda para validar dueño
         Optional<Busqueda> busquedaOpt = busquedaRepository.findById(postulacion.getBusquedaId());
         if (busquedaOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -153,8 +147,6 @@ public class PostulacionController {
                 .body(postulacion.getCvArchivo());
     }
 
-    //FUNCIONA  
-    // para asociar manual, pero no hace falta
     @PostMapping("/asociar-candidato")
     public ResponseEntity<?> asociarCandidatoAPostulacion(@RequestBody Map<String, String> datos) {
         String candidatoId = datos.get("candidatoId");
@@ -171,7 +163,7 @@ public class PostulacionController {
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace(); // 👈 imprimí el error completo
+            ex.printStackTrace(); 
             return ResponseEntity.status(500).body("Error interno: " + ex.getMessage());
         }
 
@@ -188,7 +180,6 @@ public class PostulacionController {
 
     
 
-    //FUNCIONA
     @GetMapping("/mis-postulaciones")
     public ResponseEntity<Page<Postulacion>> obtenerMisPostulaciones(
             @AuthenticationPrincipal Usuario usuario,
@@ -201,7 +192,7 @@ public class PostulacionController {
                 postulacionService.obtenerPostulacionesDelReclutador(usuario.getId(), page, size, estado, fase)
         );
     }
-    //FUNCIONA
+
     @GetMapping("/{id}")
     public ResponseEntity<Postulacion> obtenerPostulacion(
             @PathVariable String id,
@@ -212,13 +203,11 @@ public class PostulacionController {
     }
 
 
-    //FUNCIONA
     @GetMapping("/candidato/{candidatoId}")
     public ResponseEntity<List<Postulacion>> obtenerPostulacionesPorCandidato(@PathVariable String candidatoId) {
         return ResponseEntity.ok(postulacionService.obtenerPostulacionesPorCandidato(candidatoId));
     }
 
-        //FUNCIONA
     @GetMapping("/busqueda/{busquedaId}")
     public ResponseEntity<List<Postulacion>> obtenerPostulacionesPorBusqueda(
             @PathVariable String busquedaId,
@@ -229,7 +218,6 @@ public class PostulacionController {
         return ResponseEntity.ok(postulacionService.obtenerPostulacionesPorBusquedaYUsuario(busquedaId, usuario.getId(), estado, fase));
     }
 
-    // no probe de aca para abajo
     @PatchMapping("/{id}/fase")
     public ResponseEntity<Postulacion> actualizarFasePostulacion(
             @PathVariable String id,
@@ -240,7 +228,7 @@ public class PostulacionController {
         if (opt.isEmpty()) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(postulacionService.actualizarFase(id, nuevaFase));
     }
-    //ACTUALIZA EL ESTADO DE LA POSTULACION
+ 
     @PatchMapping("/{id}/estado")
     public ResponseEntity<Postulacion> actualizarEstadoPostulacion(
             @PathVariable String id,
@@ -252,7 +240,7 @@ public class PostulacionController {
         if (opt.isEmpty()) return ResponseEntity.status(403).build();
         return ResponseEntity.ok(postulacionService.actualizarEstado(id, nuevoEstado, motivo));
     }
-    //AGREGA UNA ANOTACION PRIVADA A LA POSTULACION
+    
     @PostMapping("/{id}/anotacion")
     public ResponseEntity<Postulacion> agregarAnotacionPrivada(
             @PathVariable String id,
@@ -269,7 +257,6 @@ public class PostulacionController {
         return ResponseEntity.ok(postulacionService.agregarAnotacionPrivada(id, anotacion));
     }
 
-    // RECHAZA AL CANDIDATO PERO NO ELIMINA LA POSTULACION
     @PatchMapping("/{id}/rechazar")
     public ResponseEntity<Postulacion> rechazarPostulacion(
             @PathVariable String id,
@@ -280,8 +267,7 @@ public class PostulacionController {
 
         return ResponseEntity.ok(postulacionService.actualizarEstado(id, "RECHAZADA", "Rechazado por el reclutador"));
     }
-
-    // ELIMINA LA POSTULACION   
+  
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarPostulacion(
             @PathVariable String id,
@@ -371,7 +357,7 @@ public class PostulacionController {
 
         Postulacion postulacion = postulacionOpt.get();
 
-        // 🔍 Buscar la búsqueda para verificar que el usuario es el dueño
+      
         Optional<Busqueda> busquedaOpt = busquedaRepository.findById(postulacion.getBusquedaId());
         if (busquedaOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Búsqueda no encontrada");
@@ -381,7 +367,6 @@ public class PostulacionController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para ver anotaciones de esta postulación");
         }
 
-        // Filtrar solo las anotaciones del reclutador logueado
         List<Postulacion.AnotacionPrivada> propias = postulacion.getAnotacionesPrivadas() != null
             ? postulacion.getAnotacionesPrivadas().stream()
                 .filter(a -> a.getUsuarioId().equals(usuario.getId()))
@@ -390,7 +375,7 @@ public class PostulacionController {
 
         return ResponseEntity.ok(propias);
     }
-// Para cambiar el cv de la postulacion manualmente (solo postman)
+
     @PutMapping("/{postulacionId}/actualizar-cv")
     public ResponseEntity<String> actualizarCv(
             @PathVariable String postulacionId,

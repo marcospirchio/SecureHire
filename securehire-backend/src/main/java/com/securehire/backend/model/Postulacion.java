@@ -26,16 +26,16 @@ public class Postulacion {
     private List<RespuestaFormulario> respuestas;
 
     private String faseActual;
-    private String estado; // "ACTIVA", "FINALIZADA", "RECHAZADA", "INACTIVA"
-    private String motivoFinalizacion; // "NINGUNO", "DESAPARECIO", "NO_ASISTIO", "NO_CUMPLE"
+    private String estado; 
+    private String motivoFinalizacion; 
     private List<AnotacionPrivada> anotacionesPrivadas;
     private Date fechaPostulacion;
 
-    private String resumenCv; // Texto generado por IA (opcional)
+    private String resumenCv; 
 
-    private byte[] cvArchivo; // Archivo PDF binario
+    private byte[] cvArchivo; 
 
-    private String opinionComentariosIA; // Texto generado por IA (opcional)
+    private String opinionComentariosIA; 
 
     @Data
     @Builder

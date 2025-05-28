@@ -17,12 +17,12 @@ import java.util.Date;
 public class EventoCalendario {
     @Id
     private String id;
-    private String usuarioId;         // Usuario al que pertenece el evento
+    private String usuarioId;        
     private String titulo;
     private String descripcion;
-    private String tipo;              // Puede ser: "evento" o "entrevista"
-    private Date fechaHora;           // Fecha y hora del evento
-    private String ubicacion;         // Opcional
-    private String color;             // Opcional, para mostrar en el frontend
-    private Date creadoEn;            // Fecha de creación
+    private String tipo;              
+    private Date fechaHora;           
+    private String ubicacion;         
+    private String color;             
+    private Date creadoEn;            
 } 

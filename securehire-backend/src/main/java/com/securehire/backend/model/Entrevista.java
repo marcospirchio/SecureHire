@@ -22,9 +22,9 @@ public class Entrevista {
     private String candidatoId;
     private String busquedaId;
     private String postulacionId;
-    private Date fechaProgramada;           // Fecha (ej. 2025-05-15)
-    private String horaProgramada;          // Hora (ej. "10:00")
-    private String estado;                  // "confirmada", etc.
+    private Date fechaProgramada;           
+    private String horaProgramada;          
+    private String estado;                  
     private String linkEntrevista;
     private List<String> comentarios;
     private String motivoCancelacion;
