@@ -94,9 +94,12 @@ export default function DashboardReclutamiento() {
       id: b.id,
       title: b.titulo,
       subtitle: b.faseActual ?? "",
-      phase: b.faseActual ?? "",
       candidates: b.cantidadCandidatos ?? 0,
-      createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR"),
+      createdAt: new Date(b.fechaCreacion).toLocaleDateString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      })
     }))
 
   const handleNewJobOffer = () => {

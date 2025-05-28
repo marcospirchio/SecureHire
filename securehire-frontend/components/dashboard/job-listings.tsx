@@ -5,7 +5,6 @@ interface JobListing {
   id: string
   title: string
   subtitle?: string
-  phase: string
   candidates: number
   createdAt: string
 }
@@ -40,24 +39,22 @@ export function JobListings({ listings, onJobClick }: JobListingsProps) {
         {sortedListings.map((listing) => (
           <div
             key={listing.id}
-            className="rounded-lg border p-3 hover:shadow-sm transition-shadow cursor-pointer"
+            className="rounded-lg border p-3 hover:shadow-sm transition-shadow cursor-pointer h-[140px]"
             onClick={() => onJobClick && onJobClick(listing.id)}
           >
-            <h3 className="text-sm font-bold mb-2">{listing.title}</h3>
-            {listing.subtitle && <p className="text-xs font-medium mb-2">{listing.subtitle}</p>}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold">{listing.title}</h3>
+              {listing.subtitle && <p className="text-xs font-medium mt-1">{listing.subtitle}</p>}
+            </div>
 
-            <div className="mt-3 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Fase actual:</span>
-                <span className="font-medium">{listing.phase}</span>
-              </div>
+            <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-500">Candidatos:</span>
                 <span className="font-medium text-green-600">{listing.candidates}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Creada el:</span>
-                <span className="font-medium">{new Date(listing.createdAt).toLocaleDateString("es-AR")}</span>
+                <span className="font-medium">{listing.createdAt}</span>
               </div>
             </div>
           </div>

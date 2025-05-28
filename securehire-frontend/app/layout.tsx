@@ -2,9 +2,11 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'SecureHire',
+  description: 'SecureHire es una herramienta para reclutadores, orientada a la gestión de procesos de selección de personal.',
+  icons: {
+    icon: '/favicon.ico', // Asegurate de que favicon.ico esté en la carpeta /public
+  },
 }
 
 export default function RootLayout({
