@@ -5,20 +5,31 @@ import com.securehire.backend.dto.CandidatoDTO;
 import com.securehire.backend.model.Candidato;
 import com.securehire.backend.model.Usuario;
 import com.securehire.backend.service.CandidatoService;
+import com.securehire.backend.repository.CandidatoRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/candidatos")
 public class CandidatoController {
+
     @Autowired private CandidatoService candidatoService;
+    @Autowired private CandidatoRepository candidatoRepository;
 
     // @PostMapping
     // public ResponseEntity<Candidato> crearCandidato(@Valid @RequestBody CandidatoDTO dto) {
@@ -68,6 +79,24 @@ public class CandidatoController {
         Optional<Candidato> candidato = candidatoService.obtenerCandidatoPorEmail(email);
         return candidato.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    @PostMapping("/{id}/foto-perfil")
+    public ResponseEntity<Candidato> subirFotoPerfil(
+            @PathVariable String id,
+            @RequestParam("foto") MultipartFile foto,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Candidato> candidato = candidatoService.obtenerCandidatoPorIdParaReclutador(id, usuario.getId());
+        if (candidato.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Candidato actualizado = candidatoService.actualizarFotoPerfil(id, foto);
+        return ResponseEntity.ok(actualizado);
+    }
+
+
+
 
     //no deberia usarse 
 

@@ -226,18 +226,32 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
     <>
       <div
         className={`rounded-lg border p-3 cursor-pointer hover:border-gray-300 transition-colors ${
-          isSelected ? "border-blue-300 bg-blue-50" : ""
-        } ${isExcluido ? "border-amber-400 bg-amber-50" : ""}`}
+          isSelected ? "border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-200" : ""
+        } ${isExcluido ? "bg-white" : "bg-green-50 border-green-200"}`}
         onClick={() => onClick(candidate)}
       >
-        <div className="flex justify-between items-start">
-          <h3 className="text-sm font-bold flex items-center gap-2">
-            {candidate.name} {candidate.lastName}
-          </h3>
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold truncate">
+                {candidate.name} {candidate.lastName}
+              </h3>
+              <div className="mt-2 space-y-1 text-xs">
+                <div className="flex gap-1">
+                  <span className="text-gray-500">Edad:</span>
+                  <span>{candidate.age} años</span>
+                </div>
+                <div className="flex gap-1">
+                  <span className="text-gray-500">Sexo:</span>
+                  <span>{candidate.gender}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 flex-shrink-0">
             {hasInterview && formatDate(entrevista.fechaProgramada) && entrevista.horaProgramada && (
               <span
-                className={`text-xs px-2 py-0.5 rounded-full flex items-center ${
+                className={`text-xs px-2 py-0.5 rounded-full flex items-center whitespace-nowrap ${
                   isConfirmed
                     ? "bg-green-100 text-green-800" 
                     : isPending
@@ -245,14 +259,16 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
                       : "bg-amber-100 text-amber-800"
                 }`}
               >
-                <Calendar className="h-3 w-3 mr-1" />
-                ENTREVISTA {formatDate(entrevista.fechaProgramada)} | {entrevista.horaProgramada}
+                <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                <span className="truncate">
+                  ENTREVISTA {formatDate(entrevista.fechaProgramada)} | {entrevista.horaProgramada}
+                </span>
                 {isConfirmed ? (
-                  <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />
+                  <CheckCircle2 className="h-3 w-3 ml-1 text-green-600 flex-shrink-0" />
                 ) : isPending ? (
-                  <AlertTriangle className="h-3 w-3 ml-1 text-yellow-600" />
+                  <AlertTriangle className="h-3 w-3 ml-1 text-yellow-600 flex-shrink-0" />
                 ) : (
-                  <AlertCircle className="h-3 w-3 ml-1 text-amber-600" />
+                  <AlertCircle className="h-3 w-3 ml-1 text-amber-600 flex-shrink-0" />
                 )}
               </span>
             )}
@@ -260,25 +276,11 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
               size="icon"
               variant="ghost"
               onClick={iaOpinion ? handleOpenModal : handleGenerateIAOpinion}
-              className="h-6 w-6 hover:bg-purple-100"
+              className="h-6 w-6 hover:bg-purple-100 flex-shrink-0"
               title={iaOpinion ? "Ver opinión IA" : "Generar opinión IA"}
             >
               <Sparkles className="h-3 w-3 text-purple-500" />
             </Button>
-          </div>
-        </div>
-        <div className="mt-2 space-y-1 text-xs">
-          <div className="flex gap-1">
-            <span className="text-gray-500">Edad:</span>
-            <span>{candidate.age} años</span>
-          </div>
-          <div className="flex gap-1">
-            <span className="text-gray-500">Sexo:</span>
-            <span>{candidate.gender}</span>
-          </div>
-          <div className="flex gap-1">
-            <span className="text-gray-500">Localidad:</span>
-            <span>{candidate.location}</span>
           </div>
         </div>
       </div>

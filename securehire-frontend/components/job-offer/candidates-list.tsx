@@ -80,10 +80,10 @@ export function CandidatesList({
 
   return (
     <div
-      className={`flex flex-col h-[90vh] ${isCollapsed ? "w-1/2" : "w-full"} bg-white rounded-lg border p-3 overflow-hidden`}
+      className={`flex flex-col h-[90vh] ${isCollapsed ? "w-1/4" : "w-1/2"} bg-white rounded-lg border p-3 overflow-hidden`}
     >
       <div className="mb-3 flex flex-col sm:flex-row gap-2 items-center">
-        <div className="relative flex-1">
+        <div className="relative flex-1 w-full">
           <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
@@ -96,7 +96,7 @@ export function CandidatesList({
         <Button
           size="icon"
           variant="ghost"
-          className="h-8 w-8 ml-2"
+          className="h-8 w-8 flex-shrink-0"
           onClick={handleOpenFilterModal}
           title="Filtrar candidatos"
         >
@@ -162,16 +162,22 @@ export function CandidatesList({
       </Dialog>
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-        {filteredCandidates.map((candidate) => (
-          <CandidateCard
-            key={candidate.id}
-            candidate={candidate}
-            isSelected={selectedCandidate?.id === candidate.id}
-            onClick={onCandidateClick}
-            jobOffer={jobOffer}
-            entrevistas={entrevistas}
-          />
-        ))}
+        {filteredCandidates.length > 0 ? (
+          filteredCandidates.map((candidate) => (
+            <CandidateCard
+              key={candidate.id}
+              candidate={candidate}
+              isSelected={selectedCandidate?.id === candidate.id}
+              onClick={onCandidateClick}
+              jobOffer={jobOffer}
+              entrevistas={entrevistas}
+            />
+          ))
+        ) : (
+          <div className="text-center py-4 text-sm text-gray-500">
+            No se encontraron candidatos que coincidan con los filtros
+          </div>
+        )}
       </div>
     </div>
   )

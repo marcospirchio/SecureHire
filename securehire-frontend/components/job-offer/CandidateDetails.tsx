@@ -1,4 +1,4 @@
-import { X, AlertTriangle, Calendar, FileText, Pencil, Trash2, Sparkles } from 'lucide-react'
+import { X, AlertTriangle, Calendar, FileText, Pencil, Trash2, Sparkles, CheckCircle2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
@@ -6,6 +6,7 @@ import { Candidate } from "@/types/job-offer"
 import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { ImagenPerfil } from "./ImagenPerfil"
 
 interface Feedback {
   id: string;
@@ -58,8 +59,8 @@ export function CandidateDetails({
     gender: "todos",
     name: ""
   })
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
 
-  
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
@@ -457,224 +458,270 @@ export function CandidateDetails({
       setIaLoading(false);
     }
   };
+  
+  console.log("Base64 recibido:", candidate.postulacion.fotoPerfil?.slice(0, 100));
 
   return (
-    <div className="w-1/2 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
+    
+    <div className="w-3/4 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
       <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
         <X className="h-4 w-4" />
       </button>
       <div className="flex-1 overflow-y-auto pr-2">
-        <h2 className="text-xl font-bold mb-4">{candidate.name} {candidate.lastName}</h2>
+        <div className="space-y-4 mb-6">
+          <div className="relative flex items-center gap-4 bg-[#f6fafd] rounded-xl p-6">
+            <div className="relative w-16 h-16 flex-shrink-0">
+              <ImagenPerfil postulacionId={candidate.postulacion.id} />
+            </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-          <p><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
-          <p><strong>Email:</strong> {candidate.email}</p>
-          <p><strong>DNI:</strong> {candidate.dni}</p>
-          <p><strong>Género:</strong> {candidate.gender}</p>
-          <p><strong>Nacionalidad:</strong> {candidate.nationality}</p>
-          <p><strong>Dirección:</strong> {candidate.address}, {candidate.province}, {candidate.residenceCountry}</p>
-        </div>
+            <div className="flex-1 min-w-0">
+              <div className="relative flex items-center gap-2">
+                <div className="relative inline-block group">
+                  <h2 
+                    className="text-xl font-bold cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={() => setShowDetailsModal(true)}
+                  >
+                    {candidate.name} {candidate.lastName}
+                  </h2>
+                  <div className="absolute left-0 top-8 bg-gray-800 text-white text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                    Ver más datos del candidato
+                    <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45"></div>
+                  </div>
+                </div>
 
-        {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 && (
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-amber-800">
-                  El candidato no cumple con el/los siguientes requisitos excluyentes:
-                </p>
-                <ul className="mt-2 ml-5 list-disc">
-                  {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
-                    <li key={i} className="text-sm text-amber-700">
-                      <span className="font-medium">{req.campo}</span><br />
-                      Respuesta: <span className="italic">{Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="relative inline-block group">
+                  {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 ? (
+                    <AlertTriangle className="h-5 w-5 text-amber-500 cursor-help" />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5 text-green-500 cursor-help" />
+                  )}
+                  <div className={`absolute left-0 top-8 border text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-normal z-50 w-[400px] ${
+                    candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 
+                      ? 'bg-amber-50 border-amber-200 text-amber-800' 
+                      : 'bg-green-50 border-green-200 text-green-800'
+                  }`}>
+                    {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 ? (
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-amber-800 mb-1">
+                            El candidato no cumple con el/los siguientes requisitos excluyentes:
+                          </p>
+                          <ul className="ml-4 list-disc space-y-0.5">
+                            {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
+                              <li key={i} className="text-sm text-amber-700">
+                                <span className="font-medium">{req.campo}</span>
+                                <span className="text-xs italic ml-1">({Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta})</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm font-medium text-green-800">
+                          Este candidato cumple con todos los requisitos excluyentes
+                        </p>
+                      </div>
+                    )}
+                    <div className={`absolute -top-1 left-4 w-2 h-2 rotate-45 ${
+                      candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 
+                        ? 'bg-amber-50 border-l border-t border-amber-200' 
+                        : 'bg-green-50 border-l border-t border-green-200'
+                    }`}></div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
+                <p><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
+                <p><strong>Email:</strong> {candidate.email}</p>
               </div>
             </div>
           </div>
-        )}
 
-        <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
-          <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
-            <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
-          </Button>
-          <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
-            Finalizar proceso
-          </Button>
-        </div>
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
+                <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
+              </Button>
+              <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
+                Finalizar proceso
+              </Button>
+            </div>
+          </div>
 
-        <div className="mt-4 pt-4 border-t">
-          <Button 
-            className="h-8 text-xs flex items-center gap-1 mb-4 w-full" 
-            variant="outline"
-            onClick={() => {
-              if (candidate.postulacion?.id) {
-                window.open(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, '_blank');
-              }
-            }}
-          >
-            <FileText className="h-3 w-3" /> Ver CV Completo
-          </Button>
+          <div className="mb-6 space-y-4">
+            <Button 
+              className="h-8 text-xs flex items-center gap-1 w-full" 
+              variant="outline"
+              onClick={() => {
+                if (candidate.postulacion?.id) {
+                  window.open(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, '_blank');
+                }
+              }}
+            >
+              <FileText className="h-3 w-3" /> Ver CV Completo
+            </Button>
 
-          <div className="bg-gray-50 p-3 rounded-md">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-medium text-gray-700">Resumen del CV</h4>
-              {iaLoading ? (
-                <p className="text-xs text-gray-500">Generando resumen IA...</p>
-                  ) : iaSummary ? (
-                <div className="flex items-center gap-2">
-                  <p 
-                    className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
-                    title="Ver resumen completo"
-                    onClick={() => iaSummary && setShowFullSummary(true)}
-                  >
-                    Abrir resumen del CV de {candidate.name} {candidate.lastName}
-                  </p>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    disabled
-                    title="Ya existe un resumen generado"
-                    className="bg-transparent cursor-default"
-                  >
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                  </Button>
-                </div>
-                  ) : (
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-gray-400 italic">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-gray-700">Resumen del CV</h4>
+                {iaLoading ? (
+                  <p className="text-xs text-gray-500">Generando resumen IA...</p>
+                ) : iaSummary ? (
+                  <div className="flex items-center gap-2">
+                    <p 
+                      className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
+                      title="Ver resumen completo"
+                      onClick={() => iaSummary && setShowFullSummary(true)}
+                    >
+                      Abrir resumen del CV de {candidate.name} {candidate.lastName}
+                    </p>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      disabled
+                      title="Ya existe un resumen generado"
+                      className="bg-transparent cursor-default"
+                    >
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-400 italic">
                       Haz click en el botón de IA para generar el resumen del CV.
                     </p>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  onClick={handleIASummary} 
-                  disabled={iaLoading} 
-                  title="Generar resumen IA"
-                  className="hover:bg-purple-100"
-                >
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                </Button>
-                </div>
-              )}
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      onClick={handleIASummary} 
+                      disabled={iaLoading} 
+                      title="Generar resumen IA"
+                      className="hover:bg-purple-100"
+                    >
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-4 pt-4 border-t">
-          <Tabs defaultValue="feedbacks" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="feedbacks">Historial de comentarios</TabsTrigger>
-              <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
-            </TabsList>
+          <div className="border-t pt-4">
+            <Tabs defaultValue="feedbacks" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="feedbacks">Historial de comentarios</TabsTrigger>
+                <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="feedbacks" className="mt-4">
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h4 className="text-sm font-medium mb-2">Historial de comentarios</h4>
-                <p className="text-xs text-gray-600">
-                  Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores.
-                </p>
-              </div>
-              {loading ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <TabsContent value="feedbacks" className="mt-4">
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <h4 className="text-sm font-medium mb-2">Historial de comentarios</h4>
+                  <p className="text-xs text-gray-600">
+                    Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores.
+                  </p>
                 </div>
-              ) : feedbacks.length > 0 ? (
-                <div className="space-y-4">
-                  {feedbacks.map((f) => (
-                    <div key={f.id} className="border-b pb-4">
-                      <div className="flex justify-between mb-2">
-                        <div className="font-medium">
-                          {f.nombreReclutador} - {f.empresaReclutador}
+                {loading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : feedbacks.length > 0 ? (
+                  <div className="space-y-4">
+                    {feedbacks.map((f) => (
+                      <div key={f.id} className="border-b pb-4">
+                        <div className="flex justify-between mb-2">
+                          <div className="font-medium">
+                            {f.nombreReclutador} - {f.empresaReclutador}
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-500 text-sm">
+                            {formatDate(f.fecha)}
+                            {currentUserId && f.usuarioId && currentUserId === f.usuarioId && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingFeedback(f);
+                                    setEditText(f.texto);
+                                  }}
+                                  className="p-1 hover:text-blue-600 transition-colors"
+                                  title="Editar comentario"
+                                >
+                                  <Pencil className="h-4 w-4 text-gray-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteFeedback(f.id)}
+                                  className="p-1 hover:text-red-600 transition-colors"
+                                  title="Eliminar comentario"
+                                >
+                                  <Trash2 className="h-4 w-4 text-gray-500" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-500 text-sm">
-                          {formatDate(f.fecha)}
-                          {currentUserId && f.usuarioId && currentUserId === f.usuarioId && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingFeedback(f);
-                                  setEditText(f.texto);
-                                }}
-                                className="p-1 hover:text-blue-600 transition-colors"
-                                title="Editar comentario"
-                              >
-                                <Pencil className="h-4 w-4 text-gray-500" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFeedback(f.id)}
-                                className="p-1 hover:text-red-600 transition-colors"
-                                title="Eliminar comentario"
-                              >
-                                <Trash2 className="h-4 w-4 text-gray-500" />
-                              </button>
-                            </>
-                          )}
+                        <p className="text-sm whitespace-pre-wrap">{f.texto}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm text-center py-4">No hay comentarios disponibles.</p>
+                )}
+              </TabsContent>
+
+              <TabsContent value="notes" className="mt-4">
+                <div className="mb-4">
+                  <Textarea
+                    placeholder="Añadir una nueva nota..."
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    className="min-h-[80px] text-base"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
+                      Guardar nota
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {anotacionesOrdenadas.length > 0 && anotacionesOrdenadas.map((note) => (
+                    <div key={note.idx} className="border rounded-lg p-4 bg-gray-50 flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-base font-medium text-gray-800">{note.content}</span>
+                        <div className="flex gap-2">
+                          <Pencil className="h-5 w-5 cursor-pointer text-gray-500 hover:text-blue-600" onClick={() => { setEditingIndex(note.idx); setEditText(note.content); }} />
+                          <Trash2 className="h-5 w-5 cursor-pointer text-gray-500 hover:text-red-600" onClick={() => handleDeleteNote(note.idx)} />
                         </div>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{f.texto}</p>
+                      {note.fecha && (
+                        <span className="text-xs text-gray-500">{formatDate(note.fecha)}</span>
+                      )}
+                      {editingIndex === note.idx && (
+                        <div className="flex flex-col gap-2 mt-2">
+                          <input
+                            value={editText}
+                            onChange={e => setEditText(e.target.value)}
+                            className="border rounded px-2 py-1 text-base"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" onClick={() => handleEditNote(note.idx)} disabled={!editText.trim()}>
+                              Guardar
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-gray-500 text-sm text-center py-4">No hay comentarios disponibles.</p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="notes" className="mt-4">
-              <div className="mb-4">
-                <Textarea
-                  placeholder="Añadir una nueva nota..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  className="min-h-[80px] text-base"
-                />
-                <div className="flex justify-end mt-2">
-                  <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
-                    Guardar nota
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {anotacionesOrdenadas.length > 0 && anotacionesOrdenadas.map((note) => (
-                  <div key={note.idx} className="border rounded-lg p-4 bg-gray-50 flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-base font-medium text-gray-800">{note.content}</span>
-                      <div className="flex gap-2">
-                        <Pencil className="h-5 w-5 cursor-pointer text-gray-500 hover:text-blue-600" onClick={() => { setEditingIndex(note.idx); setEditText(note.content); }} />
-                        <Trash2 className="h-5 w-5 cursor-pointer text-gray-500 hover:text-red-600" onClick={() => handleDeleteNote(note.idx)} />
-                      </div>
-                    </div>
-                    {note.fecha && (
-                      <span className="text-xs text-gray-500">{formatDate(note.fecha)}</span>
-                    )}
-                    {editingIndex === note.idx && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <input
-                          value={editText}
-                          onChange={e => setEditText(e.target.value)}
-                          className="border rounded px-2 py-1 text-base"
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <Button size="sm" onClick={() => handleEditNote(note.idx)} disabled={!editText.trim()}>
-                            Guardar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
-      {/* Modal de edición */}
+
       <Dialog open={!!editingFeedback} onOpenChange={() => {
         setEditingFeedback(null);
         setEditText("");
@@ -713,6 +760,7 @@ export function CandidateDetails({
           </div>
         </DialogContent>
       </Dialog>
+
       <Dialog open={showFullSummary} onOpenChange={setShowFullSummary}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -724,6 +772,28 @@ export function CandidateDetails({
           <div className="py-4">
             <div className="whitespace-pre-wrap text-sm text-gray-800 bg-white p-4 rounded-lg">
               {iaSummary}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Información Personal</DialogTitle>
+            <DialogDescription>
+              Datos completos del candidato
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">{candidate.name} {candidate.lastName}</h3>
+              <p className="text-sm"><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
+              <p className="text-sm"><strong>Email:</strong> {candidate.email}</p>
+              <p className="text-sm"><strong>DNI:</strong> {candidate.dni}</p>
+              <p className="text-sm"><strong>Género:</strong> {candidate.gender}</p>
+              <p className="text-sm"><strong>Nacionalidad:</strong> {candidate.nationality}</p>
+              <p className="text-sm"><strong>Dirección:</strong> {candidate.address}, {candidate.province}, {candidate.residenceCountry}</p>
             </div>
           </div>
         </DialogContent>

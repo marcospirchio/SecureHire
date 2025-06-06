@@ -61,4 +61,5 @@ public class Candidato {
     private List<String> historialEntrevistas;
     private List<String> comentarioIds;
     private Date fechaRegistro;
+    
 }

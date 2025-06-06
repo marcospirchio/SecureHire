@@ -15,8 +15,11 @@ import com.securehire.backend.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.Base64;
 
 @Service
 public class CandidatoService {
@@ -205,6 +208,10 @@ public class CandidatoService {
 
     public Optional<Usuario> obtenerUsuarioPorId(String id) {
         return usuarioRepository.findById(id); 
+    }
+
+    public Candidato actualizarFotoPerfil(String candidatoId, MultipartFile foto) {
+        throw new UnsupportedOperationException("La foto de perfil ahora se maneja en la Postulacion, no en Candidato");
     }
     
 }

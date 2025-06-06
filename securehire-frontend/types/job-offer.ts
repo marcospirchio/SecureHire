@@ -15,6 +15,7 @@ export interface Candidate {
   age: number
   location: string
   cvUrl: string
+  fotoPerfil?: string
   postulacion: {
     id: string
     candidatoId: string
@@ -32,6 +33,7 @@ export interface Candidate {
       campo: string
       respuesta: string | string[]
     }[]
+    fotoPerfil?: string
   }
   entrevista?: {
     id: string

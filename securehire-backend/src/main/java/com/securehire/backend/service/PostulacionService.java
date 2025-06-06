@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.util.Base64;
 
 @Service
 public class PostulacionService {
@@ -48,7 +49,7 @@ public class PostulacionService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public Postulacion crearPostulacion(Postulacion postulacion, Candidato candidatoDatos, MultipartFile archivoCV) {
+    public Postulacion crearPostulacion(Postulacion postulacion, Candidato candidatoDatos, MultipartFile archivoCV, MultipartFile fotoPerfil) {
         Optional<Candidato> candidatoOpt = candidatoRepository.findByEmail(candidatoDatos.getEmail());
     
         if (candidatoOpt.isEmpty()) {
@@ -73,8 +74,15 @@ public class PostulacionService {
     
         try {
             postulacion.setCvArchivo(archivoCV.getBytes());
+            // Procesar y guardar la foto de perfil en la postulación
+            if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
+                String fotoBase64 = Base64.getEncoder().encodeToString(fotoPerfil.getBytes());
+                postulacion.setFotoPerfil(fotoBase64);
+            } else {
+                throw new IllegalStateException("La foto de perfil es obligatoria");
+            }
         } catch (IOException e) {
-            throw new RuntimeException("Error al leer el archivo CV", e);
+            throw new RuntimeException("Error al procesar los archivos", e);
         }
     
         postulacion.setCandidatoId(candidato.getId());

@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @Repository
 public interface CandidatoRepository extends MongoRepository<Candidato, String> {

@@ -32,6 +32,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 import java.io.IOException; 
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/postulaciones")
@@ -55,6 +56,7 @@ public class PostulacionController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> crearPostulacion(
             @RequestParam("cv") MultipartFile archivoCV,
+            @RequestParam("fotoPerfil") MultipartFile fotoPerfil,
             @RequestParam("busquedaId") String busquedaId,
             @RequestParam("nombre") String nombre,
             @RequestParam("apellido") String apellido,
@@ -106,7 +108,7 @@ public class PostulacionController {
         postulacion.setRespuestas(respuestas);
 
         try {
-            return ResponseEntity.ok(postulacionService.crearPostulacion(postulacion, candidato, archivoCV));
+            return ResponseEntity.ok(postulacionService.crearPostulacion(postulacion, candidato, archivoCV, fotoPerfil));
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -416,4 +418,44 @@ public class PostulacionController {
         postulacionRepository.save(postulacion);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{id}/foto-perfil")
+    public ResponseEntity<String> subirFotoPerfil( 
+            @PathVariable String id,
+            @RequestParam("archivo") MultipartFile archivo) {
+        try {
+            Optional<Postulacion> postulacionOpt = postulacionService.obtenerPostulacionPorId(id);
+            if (postulacionOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+    
+            String base64 = Base64.getEncoder().encodeToString(archivo.getBytes());
+            Postulacion postulacion = postulacionOpt.get();
+            postulacion.setFotoPerfil("data:" + archivo.getContentType() + ";base64," + base64);
+            postulacionService.actualizarPostulacion(postulacion);
+    
+            return ResponseEntity.ok("Foto guardada correctamente.");
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("Error al procesar el archivo.");
+        }
+    }
+    
+    @GetMapping("/{id}/foto-perfil")
+    public ResponseEntity<String> obtenerFotoPerfil(@PathVariable String id) {
+        Optional<Postulacion> postulacionOpt = postulacionService.obtenerPostulacionPorId(id);
+    
+        if (postulacionOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+    
+        String fotoPerfil = postulacionOpt.get().getFotoPerfil();
+        if (fotoPerfil == null || fotoPerfil.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+    
+        return ResponseEntity.ok(fotoPerfil); 
+    }
+    
+
+
 }

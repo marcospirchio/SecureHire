@@ -72,6 +72,7 @@ export default function OfertaPage({ params }: PageProps) {
   const [codigoPais, setCodigoPais] = useState("")
   const [cvUrl, setCvUrl] = useState("")
   const [curriculum, setCurriculum] = useState<File | null>(null)
+  const [fotoPerfil, setFotoPerfil] = useState<File | null>(null)
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [termsRead, setTermsRead] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -211,22 +212,68 @@ export default function OfertaPage({ params }: PageProps) {
       if (curriculum) {
         formData.append("cv", curriculum); 
       }
+
+      if (fotoPerfil) {
+        formData.append("fotoPerfil", fotoPerfil);
+      }
   
       const response = await fetch("http://localhost:8080/api/postulaciones", {
         method: "POST",
         body: formData 
       });
   
-      if (!response.ok) throw new Error("Error en la postulación");
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Error en la postulación");
+      }
+      
       setSuccess(true);
     } catch (err) {
       console.error(err);
-      alert("Hubo un error al enviar la postulación.");
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Hubo un error al enviar la postulación.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
   
+  const isDatosPersonalesCompleto = () => {
+    return nombre && 
+           apellido && 
+           documento && 
+           fechaNacimiento && 
+           genero && 
+           nacionalidad && 
+           pais && 
+           provincia && 
+           direccion && 
+           email && 
+           emailConfirmacion && 
+           email === emailConfirmacion && 
+           codigoPais && 
+           telefono && 
+           curriculum && 
+           fotoPerfil &&
+           aceptaTerminos;
+  };
+
+  const isPreguntasCompletas = () => {
+    if (!jobOffer?.camposAdicionales?.length) return true;
+    
+    return jobOffer.camposAdicionales.every((campo: any) => {
+      const respuesta = respuestasAdicionales[campo.nombre];
+      if (campo.obligatorio) {
+        if (Array.isArray(respuesta)) {
+          return respuesta.length > 0;
+        }
+        return respuesta && respuesta.trim() !== '';
+      }
+      return true;
+    });
+  };
 
   if (loading) {
     return (
@@ -327,7 +374,7 @@ export default function OfertaPage({ params }: PageProps) {
                 <form onSubmit={(e) => {
                   e.preventDefault()
                   
-                  if (nombre && apellido && documento && fechaNacimiento && genero && nacionalidad && pais && provincia && direccion && email && emailConfirmacion && email === emailConfirmacion && codigoPais && telefono && curriculum && aceptaTerminos) {
+                  if (nombre && apellido && documento && fechaNacimiento && genero && nacionalidad && pais && provincia && direccion && email && emailConfirmacion && email === emailConfirmacion && codigoPais && telefono && curriculum && fotoPerfil && aceptaTerminos) {
                     setTab("preguntas")
                   }
                 }}>
@@ -547,53 +594,105 @@ export default function OfertaPage({ params }: PageProps) {
                     </div>
                   </div>
 
-                {/* Curriculum */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Currículum <span className="text-red-500">*</span>
-                  </label>
-                  <div className="border border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="file"
-                      id="curriculum"
-                      className="hidden"
-                      accept=".pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-
-                        if (file.type !== "application/pdf") {
-                          alert("Por favor, seleccioná un archivo PDF.");
-                          e.target.value = "";
-                          return;
-                        }
-
-                        if (file.size > 10 * 1024 * 1024) {
-                          alert("El archivo excede el tamaño máximo de 10MB.");
-                          e.target.value = "";
-                          return;
-                        }
-
-                        setCurriculum(file);
-                      }}
-                    />
-                    <label htmlFor="curriculum" className="cursor-pointer flex flex-col items-center">
-                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                      {curriculum ? (
-                        <span className="text-blue-600 font-medium">{curriculum.name}</span>
-                      ) : (
-                        <>
-                          <span className="text-gray-700 font-medium">Seleccionar archivo</span>
-                          <span className="text-gray-500 text-sm mt-1">
-                            Único formato permitido: PDF. Tamaño máximo: 10MB
-                          </span>
-                        </>
-                      )}
+                  {/* Foto de Perfil */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Foto de Perfil <span className="text-red-500">*</span>
                     </label>
+                    <div className="border border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="file"
+                        id="fotoPerfil"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          if (!file.type.startsWith('image/')) {
+                            toast({
+                              title: "Error",
+                              description: "Por favor, seleccioná una imagen válida.",
+                              variant: "destructive",
+                            });
+                            e.target.value = "";
+                            return;
+                          }
+
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({
+                              title: "Error",
+                              description: "La imagen excede el tamaño máximo de 5MB.",
+                              variant: "destructive",
+                            });
+                            e.target.value = "";
+                            return;
+                          }
+
+                          setFotoPerfil(file);
+                        }}
+                      />
+                      <label htmlFor="fotoPerfil" className="cursor-pointer flex flex-col items-center">
+                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                        {fotoPerfil ? (
+                          <span className="text-blue-600 font-medium">{fotoPerfil.name}</span>
+                        ) : (
+                          <>
+                            <span className="text-gray-700 font-medium">Seleccionar foto de perfil</span>
+                            <span className="text-gray-500 text-sm mt-1">
+                              Formatos permitidos: JPG, PNG. Tamaño máximo: 5MB
+                            </span>
+                          </>
+                        )}
+                      </label>
+                    </div>
                   </div>
-                </div>
 
+                  {/* Curriculum */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Currículum <span className="text-red-500">*</span>
+                    </label>
+                    <div className="border border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="file"
+                        id="curriculum"
+                        className="hidden"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
 
+                          if (file.type !== "application/pdf") {
+                            alert("Por favor, seleccioná un archivo PDF.");
+                            e.target.value = "";
+                            return;
+                          }
+
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert("El archivo excede el tamaño máximo de 10MB.");
+                            e.target.value = "";
+                            return;
+                          }
+
+                          setCurriculum(file);
+                        }}
+                      />
+                      <label htmlFor="curriculum" className="cursor-pointer flex flex-col items-center">
+                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                        {curriculum ? (
+                          <span className="text-blue-600 font-medium">{curriculum.name}</span>
+                        ) : (
+                          <>
+                            <span className="text-gray-700 font-medium">Seleccionar archivo</span>
+                            <span className="text-gray-500 text-sm mt-1">
+                              Único formato permitido: PDF. Tamaño máximo: 10MB
+                            </span>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  </div>
 
                   {/* Términos y condiciones */}
                   <div className="mb-6">
@@ -658,6 +757,7 @@ export default function OfertaPage({ params }: PageProps) {
                         !codigoPais ||
                         !telefono ||
                         !curriculum ||
+                        !fotoPerfil ||
                         !aceptaTerminos ||
                         isSubmitting
                       }
@@ -694,7 +794,7 @@ export default function OfertaPage({ params }: PageProps) {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !isPreguntasCompletas()}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       {isSubmitting ? (

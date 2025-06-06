@@ -37,6 +37,8 @@ public class Postulacion {
 
     private String opinionComentariosIA; 
 
+    private String fotoPerfil;
+
     @Data
     @Builder
     @NoArgsConstructor
