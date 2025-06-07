@@ -243,7 +243,7 @@ export function CandidateCard({ candidate, isSelected, onClick, jobOffer, entrev
                 </div>
                 <div className="flex gap-1">
                   <span className="text-gray-500">Sexo:</span>
-                  <span>{candidate.gender}</span>
+                  <span>{candidate.gender ? candidate.gender.charAt(0).toUpperCase() + candidate.gender.slice(1).toLowerCase() : ''}</span>
                 </div>
               </div>
             </div>

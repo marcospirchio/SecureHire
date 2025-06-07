@@ -459,7 +459,8 @@ export function CandidateDetails({
     }
   };
   
-  console.log("Base64 recibido:", candidate.postulacion.fotoPerfil?.slice(0, 100));
+  // Extraer opinión IA de la postulación (evitar error TS)
+  const opinionIA = (candidate.postulacion as any)?.opinionComentariosIA;
 
   return (
     
@@ -468,143 +469,114 @@ export function CandidateDetails({
         <X className="h-4 w-4" />
       </button>
       <div className="flex-1 overflow-y-auto pr-2">
-        <div className="space-y-4 mb-6">
-          <div className="relative flex items-center gap-4 bg-[#f6fafd] rounded-xl p-6">
-            <div className="relative w-16 h-16 flex-shrink-0">
-              <ImagenPerfil postulacionId={candidate.postulacion.id} />
+        <div className="space-y-6 mb-6">
+          <div className="relative flex bg-[#f6fafd] rounded-xl p-5 gap-4">
+            <div className="flex flex-col items-center justify-center h-full py-2">
+              <ImagenPerfil postulacionId={candidate.postulacion.id} nombre={candidate.name} apellido={candidate.lastName} size={100} />
             </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="relative flex items-center gap-2">
-                <div className="relative inline-block group">
-                  <h2 
-                    className="text-xl font-bold cursor-pointer hover:text-blue-600 transition-colors"
-                    onClick={() => setShowDetailsModal(true)}
-                  >
-                    {candidate.name} {candidate.lastName}
-                  </h2>
-                  <div className="absolute left-0 top-8 bg-gray-800 text-white text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                    Ver más datos del candidato
-                    <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45"></div>
+            <div className="flex-1 min-w-0 flex flex-row">
+              <div className="flex flex-col flex-1 justify-center">
+                <div className="relative flex items-center gap-2">
+                  <div className="relative inline-block group">
+                    <h2 
+                      className="text-2xl font-bold cursor-pointer hover:text-blue-600 transition-colors"
+                      onClick={() => setShowDetailsModal(true)}
+                    >
+                      {candidate.name} {candidate.lastName}
+                    </h2>
+                    <div className="absolute left-0 top-8 bg-gray-800 text-white text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                      Ver más datos del candidato
+                      <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45"></div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="relative inline-block group">
-                  {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 ? (
-                    <AlertTriangle className="h-5 w-5 text-amber-500 cursor-help" />
-                  ) : (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 cursor-help" />
-                  )}
-                  <div className={`absolute left-0 top-8 border text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-normal z-50 w-[400px] ${
-                    candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 
-                      ? 'bg-amber-50 border-amber-200 text-amber-800' 
-                      : 'bg-green-50 border-green-200 text-green-800'
-                  }`}>
+                  <div className="relative inline-block group">
                     {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 ? (
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-amber-800 mb-1">
-                            El candidato no cumple con el/los siguientes requisitos excluyentes:
-                          </p>
-                          <ul className="ml-4 list-disc space-y-0.5">
-                            {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
-                              <li key={i} className="text-sm text-amber-700">
-                                <span className="font-medium">{req.campo}</span>
-                                <span className="text-xs italic ml-1">({Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta})</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
+                      <AlertTriangle className="h-5 w-5 text-amber-500 cursor-help" />
                     ) : (
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm font-medium text-green-800">
-                          Este candidato cumple con todos los requisitos excluyentes
-                        </p>
-                      </div>
+                      <CheckCircle2 className="h-5 w-5 text-green-500 cursor-help" />
                     )}
-                    <div className={`absolute -top-1 left-4 w-2 h-2 rotate-45 ${
+                    <div className={`absolute left-0 top-8 border text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-normal z-50 w-[400px] ${
                       candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 
-                        ? 'bg-amber-50 border-l border-t border-amber-200' 
-                        : 'bg-green-50 border-l border-t border-green-200'
-                    }`}></div>
+                        ? 'bg-amber-50 border-amber-200 text-amber-800' 
+                        : 'bg-green-50 border-green-200 text-green-800'
+                    }`}>
+                      {candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 ? (
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-amber-800 mb-1">
+                              El candidato no cumple con el/los siguientes requisitos excluyentes:
+                            </p>
+                            <ul className="ml-4 list-disc space-y-0.5">
+                              {candidate.postulacion.requisitosExcluyentes.map((req, i) => (
+                                <li key={i} className="text-sm text-amber-700">
+                                  <span className="font-medium">{req.campo}</span>
+                                  <span className="text-xs italic ml-1">({Array.isArray(req.respuesta) ? req.respuesta.join(", ") : req.respuesta})</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm font-medium text-green-800">
+                            Este candidato cumple con todos los requisitos excluyentes
+                          </p>
+                        </div>
+                      )}
+                      <div className={`absolute -top-1 left-4 w-2 h-2 rotate-45 ${
+                        candidate.postulacion.requisitosExcluyentes && candidate.postulacion.requisitosExcluyentes.length > 0 
+                          ? 'bg-amber-50 border-l border-t border-amber-200' 
+                          : 'bg-green-50 border-l border-t border-green-200'
+                      }`}></div>
+                    </div>
                   </div>
                 </div>
+                <div className="mt-0 flex flex-col gap-1 text-sm text-gray-700">
+                  <p><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
+                  <p><strong>Email:</strong> {candidate.email}</p>
+                </div>
               </div>
-              <div className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
-                <p><strong>Teléfono:</strong> {candidate.countryCode} {candidate.phone}</p>
-                <p><strong>Email:</strong> {candidate.email}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
-                <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
-              </Button>
-              <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
-                Finalizar proceso
-              </Button>
-            </div>
-          </div>
-
-          <div className="mb-6 space-y-4">
-            <Button 
-              className="h-8 text-xs flex items-center gap-1 w-full" 
-              variant="outline"
-              onClick={() => {
-                if (candidate.postulacion?.id) {
-                  window.open(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, '_blank');
-                }
-              }}
-            >
-              <FileText className="h-3 w-3" /> Ver CV Completo
-            </Button>
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-700">Resumen del CV</h4>
-                {iaLoading ? (
-                  <p className="text-xs text-gray-500">Generando resumen IA...</p>
-                ) : iaSummary ? (
-                  <div className="flex items-center gap-2">
-                    <p 
-                      className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
-                      title="Ver resumen completo"
-                      onClick={() => iaSummary && setShowFullSummary(true)}
-                    >
-                      Abrir resumen del CV de {candidate.name} {candidate.lastName}
-                    </p>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      disabled
-                      title="Ya existe un resumen generado"
-                      className="bg-transparent cursor-default"
-                    >
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                    </Button>
+              <div className="flex flex-col items-end justify-between ml-4">
+                <div className="ml-auto relative inline-block group mb-2">
+                  <button
+                    onClick={() => {
+                      if (candidate.postulacion?.id) {
+                        window.open(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, '_blank');
+                      }
+                    }}
+                    className="p-5 hover:bg-gray-100 rounded-full transition-colors"
+                    style={{ minWidth: '48px', minHeight: '48px' }}
+                  >
+                    <FileText className="h-7 w-7 text-gray-700" />
+                  </button>
+                  <div className="absolute right-0 top-8 bg-gray-900 text-white text-xs py-1.5 px-3 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                    Ver CV del candidato
+                    <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-800 rotate-45"></div>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-gray-400 italic">
-                      Haz click en el botón de IA para generar el resumen del CV.
-                    </p>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      onClick={handleIASummary} 
-                      disabled={iaLoading} 
-                      title="Generar resumen IA"
-                      className="hover:bg-purple-100"
-                    >
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                    </Button>
-                  </div>
-                )}
+                </div>
+                <div className="relative w-fit">
+                  <Button
+                    onClick={() => {
+                      if (iaSummary) {
+                        setShowFullSummary(true);
+                      } else {
+                        handleIASummary();
+                      }
+                    }}
+                    disabled={iaLoading}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg shadow border border-purple-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    style={{ minWidth: '170px', minHeight: '38px' }}
+                  >
+                    <Sparkles className="h-5 w-5 mr-1" />
+                    {iaSummary ? 'Ver resumen CV' : 'Resumir CV con IA'}
+                    <span className="ml-1 bg-white text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-300">IA</span>
+                  </Button>
+                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow border border-green-600 select-none">Nuevo</span>
+                </div>
               </div>
             </div>
           </div>
@@ -619,8 +591,14 @@ export function CandidateDetails({
               <TabsContent value="feedbacks" className="mt-4">
                 <div className="bg-gray-50 p-4 rounded-md mb-4">
                   <h4 className="text-sm font-medium mb-2">Historial de comentarios</h4>
-                  <p className="text-xs text-gray-600">
-                    Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores.
+                  <p className="text-xs text-gray-600 whitespace-pre-line">
+                    {opinionIA
+                      ? (() => {
+                          // Extraer solo el párrafo de 'Opinión general:'
+                          const match = opinionIA.match(/Opinión general:\s*([\s\S]*?)(?:Recomendación final:|$)/i);
+                          return match && match[1] ? match[1].trim() : opinionIA;
+                        })()
+                      : "Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores."}
                   </p>
                 </div>
                 {loading ? (
@@ -798,6 +776,18 @@ export function CandidateDetails({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Botones sticky abajo a la derecha */}
+      <div className="sticky bottom-0 right-0 px-2 pt-3 z-20 shadow-[0_-2px_8px_-2px_rgba(0,0,0,0.05)]   flex items-center" style={{ backgroundColor: '#fdfdfd' }}>
+        <div className="flex gap-2 w-full justify-end items-center h-full">
+          <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
+            <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
+          </Button>
+          <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
+            Finalizar proceso
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
