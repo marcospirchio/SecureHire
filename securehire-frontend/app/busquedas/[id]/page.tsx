@@ -135,6 +135,7 @@ export default function JobOfferPage({ params }: PageProps) {
                     requisitosExcluyentes: [],
                     notas: p.notas || [],
                     ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                    ...(p as any).opinionComentariosIA && { opinionComentariosIA: (p as any).opinionComentariosIA },
                     respuestas: p.respuestas || []
                   },
                   entrevista: undefined
@@ -203,6 +204,7 @@ export default function JobOfferPage({ params }: PageProps) {
                   requisitosExcluyentes: requisitosExcluyentes,
                   notas: p.notas || [],
                   ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                  ...(p as any).opinionComentariosIA && { opinionComentariosIA: (p as any).opinionComentariosIA },
                   respuestas: p.respuestas || []
                 },
                 entrevista: entrevista ? {
@@ -241,6 +243,7 @@ export default function JobOfferPage({ params }: PageProps) {
                   requisitosExcluyentes: [],
                   notas: p.notas || [],
                   ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                  ...(p as any).opinionComentariosIA && { opinionComentariosIA: (p as any).opinionComentariosIA },
                   respuestas: p.respuestas || []
                 },
                 entrevista: undefined
@@ -490,6 +493,7 @@ export default function JobOfferPage({ params }: PageProps) {
                   requisitosExcluyentes: [],
                   notas: p.notas || [],
                   ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                  ...(p as any).opinionComentariosIA && { opinionComentariosIA: (p as any).opinionComentariosIA },
                   respuestas: p.respuestas || []
                 },
                 entrevista: entrevista ? {

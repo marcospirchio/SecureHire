@@ -34,6 +34,7 @@ export interface Candidate {
       respuesta: string | string[]
     }[]
     fotoPerfil?: string
+    opinionComentariosIA?: string
   }
   entrevista?: {
     id: string

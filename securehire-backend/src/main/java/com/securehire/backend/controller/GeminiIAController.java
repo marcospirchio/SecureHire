@@ -151,5 +151,18 @@ public class GeminiIAController {
         return ResponseEntity.ok(respuesta);
     }
 
-
+    @PutMapping("/eliminar-opinion-ia/{postulacionId}")
+    public ResponseEntity<?> eliminarOpinionIA(@PathVariable String postulacionId) {
+        Optional<Postulacion> postulacionOpt = postulacionRepository.findById(postulacionId);
+        if (postulacionOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Postulación no encontrada");
+        }
+    
+        Postulacion postulacion = postulacionOpt.get();
+        postulacion.setOpinionComentariosIA(null); // o .setOpinionComentariosIA("")
+        postulacionRepository.save(postulacion);
+    
+        return ResponseEntity.ok("Opinión eliminada correctamente");
+    }
+    
 }
