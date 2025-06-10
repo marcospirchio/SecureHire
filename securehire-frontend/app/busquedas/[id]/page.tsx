@@ -580,49 +580,52 @@ export default function JobOfferPage({ params }: PageProps) {
         body: JSON.stringify(entrevistaData)
       })
 
-      if (!response.ok) {
-        throw new Error("Error al crear la entrevista")
-      }
+      // Si la respuesta es 201 (Created) o 200 (OK), consideramos que la entrevista se creó exitosamente
+      if (response.status === 201 || response.status === 200) {
+        const entrevistaId = await response.text();
 
-      const entrevista = await response.json()
-
-      // Actualizar el estado local
-      setJobOffer(prev => {
-        if (!prev) return null
-          return {
-          ...prev,
-          candidates: prev.candidates.map(c => 
-            c.id === selectedCandidate.id 
-              ? {
-                  ...c,
-                  entrevista: {
-                    id: entrevista.id,
-                    fechaProgramada: date,
-                    horaProgramada: time,
-                    estado: "Pendiente de confirmación",
-                    linkEntrevista: entrevista.linkEntrevista
-                  },
-                  postulacion: {
-                    ...c.postulacion,
-                    fase: "Entrevista agendada"
+        // Actualizar el estado local
+        setJobOffer(prev => {
+          if (!prev) return null
+            return {
+            ...prev,
+            candidates: prev.candidates.map(c => 
+              c.id === selectedCandidate.id 
+                ? {
+                    ...c,
+                    entrevista: {
+                      id: entrevistaId,
+                      fechaProgramada: date,
+                      horaProgramada: time,
+                      estado: "Pendiente de confirmación",
+                      linkEntrevista: "https://meet.google.com/xyz-123"
+                    },
+                    postulacion: {
+                      ...c.postulacion,
+                      fase: "Entrevista agendada"
+                    }
                   }
-                }
-              : c
-          )
-        }
-      })
+                : c
+            )
+          }
+        })
 
-      toast({
-        title: "Entrevista agendada",
-        description: "La entrevista ha sido agendada correctamente.",
-      })
+        toast({
+          title: "Entrevista agendada",
+          description: "La entrevista ha sido agendada correctamente.",
+        })
 
-      setIsInterviewModalOpen(false)
+        setIsInterviewModalOpen(false)
+      } else {
+        // Solo lanzamos error si la respuesta no es exitosa
+        const errorText = await response.text();
+        throw new Error(`Error al crear la entrevista: ${errorText}`);
+      }
     } catch (error) {
       console.error("Error al agendar entrevista:", error)
       toast({
         title: "Error",
-        description: "No se pudo agendar la entrevista.",
+        description: error instanceof Error ? error.message : "No se pudo agendar la entrevista.",
         variant: "destructive",
       })
     }

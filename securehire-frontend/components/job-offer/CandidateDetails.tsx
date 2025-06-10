@@ -33,6 +33,8 @@ interface CandidateDetailsProps {
   onOpenFeedbackModal: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onScheduleInterview?: (date: string, time: string) => Promise<void>;
+  onEndProcess?: (feedback: string, finalizationReason: string) => Promise<void>;
 }
 
 export function CandidateDetails({
@@ -41,7 +43,9 @@ export function CandidateDetails({
   onOpenInterviewModal,
   onOpenFeedbackModal,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  onScheduleInterview,
+  onEndProcess
 }: CandidateDetailsProps) {
   const [newNote, setNewNote] = useState("")
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
@@ -485,6 +489,97 @@ export function CandidateDetails({
     }
   };
 
+  const handleScheduleInterview = async (date: string, time: string) => {
+    if (!candidate) return;
+
+    try {
+      // Formatear la fecha para el backend (YYYY-MM-DD)
+      const [day, month, year] = date.split("/");
+      const formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${time}:00`;
+
+      const entrevistaData = {
+        busquedaId: candidate.postulacion.busquedaId,
+        postulacionId: candidate.postulacion.id,
+        fechaProgramada: formattedDate,
+        horaProgramada: time,
+        estado: "Pendiente de confirmación",
+        linkEntrevista: "https://meet.google.com/xyz-123", // Esto debería venir del backend
+        motivoCancelacion: null,
+        comentarios: []
+      };
+
+      const response = await fetch("http://localhost:8080/api/entrevistas", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify(entrevistaData)
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al crear la entrevista");
+      }
+
+      const entrevista = await response.json();
+
+      toast({
+        title: "Entrevista agendada",
+        description: "La entrevista ha sido agendada correctamente.",
+      });
+
+      onOpenInterviewModal();
+    } catch (error) {
+      console.error("Error al agendar entrevista:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo agendar la entrevista.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEndProcess = async () => {
+    if (!candidate) return;
+
+    try {
+      // Si hay una entrevista pendiente o confirmada, cancelarla
+      if (candidate.entrevista && 
+          (candidate.entrevista.estado.toLowerCase() === "pendiente de confirmación" || 
+           candidate.entrevista.estado.toLowerCase() === "confirmada")) {
+        
+        const entrevistaData = {
+          estado: "cancelada",
+          motivoCancelacion: "El reclutador canceló la entrevista."
+        };
+
+        const entrevistaResponse = await fetch(`http://localhost:8080/api/entrevistas/${candidate.entrevista.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify(entrevistaData)
+        });
+
+        if (!entrevistaResponse.ok) {
+          throw new Error("Error al cancelar la entrevista");
+        }
+      }
+
+      onOpenFeedbackModal();
+    } catch (error) {
+      console.error("Error al finalizar proceso:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo finalizar el proceso.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     
     <div className="w-3/4 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
@@ -893,12 +988,19 @@ export function CandidateDetails({
       </Dialog>
 
       {/* Botones sticky abajo a la derecha */}
-      <div className="sticky bottom-0 right-0 px-2 pt-3 z-20 shadow-[0_-2px_8px_-2px_rgba(0,0,0,0.05)]   flex items-center" style={{ backgroundColor: '#fdfdfd' }}>
+      <div className="sticky bottom-0 right-0 px-2 pt-3 z-20 shadow-[0_-2px_8px_-2px_rgba(0,0,0,0.05)] flex items-center" style={{ backgroundColor: '#fdfdfd' }}>
         <div className="flex gap-2 w-full justify-end items-center h-full">
-          <Button className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" onClick={onOpenInterviewModal}>
+          <Button 
+            className="h-9 text-xs bg-green-600 hover:bg-green-700 w-full sm:w-48" 
+            onClick={onOpenInterviewModal}
+          >
             <Calendar className="mr-1 h-3 w-3" /> Agendar Entrevista
           </Button>
-          <Button variant="destructive" className="h-9 text-xs w-full sm:w-48" onClick={onOpenFeedbackModal}>
+          <Button 
+            variant="destructive" 
+            className="h-9 text-xs w-full sm:w-48" 
+            onClick={handleEndProcess}
+          >
             Finalizar proceso
           </Button>
         </div>
