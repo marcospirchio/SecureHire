@@ -1,5 +1,5 @@
-import { Search, Filter } from 'lucide-react'
-import { useState } from 'react'
+import { Search, Filter, Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { Candidate, JobOffer } from "@/types/job-offer"
 import { CandidateCard } from "./candidate-card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -16,6 +16,8 @@ interface CandidatesListProps {
   isCollapsed: boolean
   jobOffer?: JobOffer
   entrevistas?: any[]
+  busquedaId: string
+  onCandidatesUpdate: (candidates: Candidate[]) => void
 }
 
 export function CandidatesList({
@@ -26,9 +28,14 @@ export function CandidatesList({
   onCandidateClick,
   isCollapsed,
   jobOffer,
-  entrevistas
+  entrevistas,
+  busquedaId,
+  onCandidatesUpdate
 }: CandidatesListProps) {
   const [showFilterModal, setShowFilterModal] = useState(false)
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [favoriteCandidates, setFavoriteCandidates] = useState<Candidate[]>([])
+  const [originalCandidates, setOriginalCandidates] = useState<Candidate[]>(candidates)
   const [minAge, setMinAge] = useState("")
   const [maxAge, setMaxAge] = useState("")
   const [gender, setGender] = useState("todos")
@@ -39,7 +46,108 @@ export function CandidatesList({
   const [tempGender, setTempGender] = useState("todos")
   const [tempRequisitosFilter, setTempRequisitosFilter] = useState("todos")
 
-  const activeCandidates = candidates.filter(candidate => {
+  // Actualizar originalCandidates cuando cambia candidates
+  useEffect(() => {
+    if (!showOnlyFavorites) {
+      setOriginalCandidates(candidates);
+    }
+  }, [candidates, showOnlyFavorites]);
+
+  const handleToggleFavorites = async () => {
+    try {
+      if (!showOnlyFavorites) {
+        // Si vamos a mostrar favoritos, los obtenemos
+        const response = await fetch(`http://localhost:8080/api/postulaciones/busqueda/${busquedaId}/favoritos`, {
+          credentials: "include",
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (response.ok) {
+          const postulacionesData = await response.json();
+          
+          const candidates = await Promise.all(
+            (Array.isArray(postulacionesData) ? postulacionesData : []).map(async (p: any) => {
+              try {
+                // Buscar el candidato original para mantener los requisitosExcluyentes
+                const originalCandidate = originalCandidates.find(c => c.postulacion.id === p.id);
+                
+                const candidatoRes = await fetch(`http://localhost:8080/api/candidatos/${p.candidatoId}`, {
+                  credentials: "include",
+                  headers: { 'Accept': 'application/json' }
+                });
+
+                if (!candidatoRes.ok) {
+                  console.warn(`No se pudo obtener el candidato ${p.candidatoId}:`, candidatoRes.status);
+                  return null;
+                }
+
+                const candidato = await candidatoRes.json();
+
+                return {
+                  id: p.id,
+                  name: candidato.nombre || "",
+                  lastName: candidato.apellido || "",
+                  email: candidato.email || "",
+                  phone: candidato.telefono || "",
+                  countryCode: candidato.codigoPais || "+54",
+                  dni: candidato.dni || "",
+                  gender: candidato.genero || "No especificado",
+                  nationality: candidato.nacionalidad || "",
+                  residenceCountry: candidato.paisResidencia || "",
+                  province: candidato.provincia || "",
+                  address: candidato.direccion || "",
+                  birthDate: candidato.fechaNacimiento || "",
+                  age: candidato.fechaNacimiento ? calcularEdad(candidato.fechaNacimiento) : 0,
+                  location: candidato.provincia || "",
+                  cvUrl: candidato.cvUrl || "",
+                  postulacion: {
+                    id: p.id,
+                    candidatoId: p.candidatoId,
+                    busquedaId: p.busquedaId,
+                    estado: p.estado || "",
+                    requisitosExcluyentes: originalCandidate?.postulacion.requisitosExcluyentes || [],
+                    notas: p.notas || [],
+                    ...(p as any).resumenCv && { resumenCv: (p as any).resumenCv },
+                    ...(p as any).opinionComentariosIA && { opinionComentariosIA: (p as any).opinionComentariosIA },
+                    respuestas: p.respuestas || []
+                  }
+                } as Candidate;
+              } catch (err) {
+                console.warn("Error al mapear candidato para postulación:", p, err);
+                return null;
+              }
+            })
+          );
+
+          const validCandidates = candidates.filter((c): c is Candidate => c !== null);
+          setFavoriteCandidates(validCandidates);
+          onCandidatesUpdate(validCandidates);
+        }
+      } else {
+        // Si volvemos a mostrar todos, restauramos la lista original
+        onCandidatesUpdate(originalCandidates);
+      }
+      setShowOnlyFavorites(!showOnlyFavorites);
+    } catch (error) {
+      console.error('Error al obtener favoritos:', error);
+    }
+  };
+
+  function calcularEdad(fechaNacimiento: string): number {
+    const hoy = new Date();
+    const fechaNac = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+    const mesActual = hoy.getMonth();
+    const mesNacimiento = fechaNac.getMonth();
+
+    if (mesActual < mesNacimiento || (mesActual === mesNacimiento && hoy.getDate() < fechaNac.getDate())) {
+      edad--;
+    }
+
+    return edad;
+  }
+
+  const activeCandidates = (showOnlyFavorites ? favoriteCandidates : candidates).filter(candidate => {
     const estado = candidate.postulacion.estado?.toUpperCase() || ""
     return estado !== "FINALIZADA"
   })
@@ -93,15 +201,26 @@ export function CandidatesList({
             className="h-8 w-full rounded-md border border-gray-200 bg-white pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-gray-200"
           />
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 flex-shrink-0"
-          onClick={handleOpenFilterModal}
-          title="Filtrar candidatos"
-        >
-          <Filter className="h-4 w-4 text-gray-500" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            className={`h-8 w-8 flex-shrink-0 ${showOnlyFavorites ? 'text-yellow-400' : 'text-gray-500'}`}
+            onClick={handleToggleFavorites}
+            title={showOnlyFavorites ? "Mostrar todos" : "Mostrar favoritos"}
+          >
+            <Star className="h-4 w-4" fill={showOnlyFavorites ? "currentColor" : "none"} />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 flex-shrink-0"
+            onClick={handleOpenFilterModal}
+            title="Filtrar candidatos"
+          >
+            <Filter className="h-4 w-4 text-gray-500" />
+          </Button>
+        </div>
       </div>
 
       <Dialog open={showFilterModal} onOpenChange={setShowFilterModal}>

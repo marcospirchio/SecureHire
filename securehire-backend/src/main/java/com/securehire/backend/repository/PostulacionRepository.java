@@ -39,4 +39,6 @@ public interface PostulacionRepository extends MongoRepository<Postulacion, Stri
 
 
     List<Postulacion> findByBusquedaIdAndEstadoNot(String busquedaId, String estado);
+
+    List<Postulacion> findByBusquedaIdAndEsFavoritoTrue(String busquedaId);
 }

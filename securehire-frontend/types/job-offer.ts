@@ -35,6 +35,7 @@ export interface Candidate {
     }[]
     fotoPerfil?: string
     opinionComentariosIA?: string
+    esFavorito?: boolean
   }
   entrevista?: {
     id: string
@@ -129,4 +130,27 @@ export interface Interview {
   createdAt: string
   updatedAt: string
   linkEntrevista?: string
+}
+
+export interface Postulacion {
+  id: string;
+  candidatoId: string;
+  busquedaId: string;
+  estado?: string;
+  requisitosExcluyentes?: {
+    campo: string;
+    respuesta: string | string[];
+  }[];
+  notas?: {
+    author: string;
+    company: string;
+    date: string;
+    content: string;
+  }[];
+  resumenCv?: string;
+  respuestas?: {
+    campo: string;
+    respuesta: string | string[];
+  }[];
+  esFavorito?: boolean;
 } 

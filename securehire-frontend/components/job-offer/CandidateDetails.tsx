@@ -630,7 +630,7 @@ export function CandidateDetails({
                         try {
                           // Si ya existe una opinión, primero la eliminamos
                           if (opinionIA) {
-                            const delRes = await fetch(`http://localhost:8080/api/geminiIA/eliminar-opinion-ia/${candidate.postulacion.id}`, {
+                            const delRes = await fetch(`http://localhost:8080/api/postulaciones/eliminar-opinion-ia/${candidate.postulacion.id}`, {
                               method: 'DELETE',
                               credentials: 'include',
                               headers: {

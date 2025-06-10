@@ -39,6 +39,8 @@ public class Postulacion {
 
     private String fotoPerfil;
 
+    private Boolean esFavorito = false;
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -82,5 +84,13 @@ public class Postulacion {
             }
             return false;
         }
+    }
+
+    public Boolean getEsFavorito() {
+        return esFavorito != null ? esFavorito : false;
+    }
+
+    public void setEsFavorito(Boolean esFavorito) {
+        this.esFavorito = esFavorito != null ? esFavorito : false;
     }
 }

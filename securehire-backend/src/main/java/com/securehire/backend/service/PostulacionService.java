@@ -320,5 +320,12 @@ public class PostulacionService {
         return postulacionRepository.save(p);
     }
     
+    public List<Postulacion> obtenerPostulacionesFavoritasPorBusqueda(String busquedaId, String usuarioId) {
+        Optional<Busqueda> busquedaOpt = busquedaRepository.findById(busquedaId);
+        if (busquedaOpt.isEmpty() || !busquedaOpt.get().getUsuarioId().equals(usuarioId)) {
+            return List.of();
+        }
+        return postulacionRepository.findByBusquedaIdAndEsFavoritoTrue(busquedaId);
+    }
 
 }

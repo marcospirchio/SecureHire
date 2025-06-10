@@ -660,6 +660,10 @@ export default function JobOfferPage({ params }: PageProps) {
             isCollapsed={!!selectedCandidate}
             jobOffer={jobOffer}
             entrevistas={entrevistasHook}
+            busquedaId={resolvedParams.id}
+            onCandidatesUpdate={(newCandidates) => {
+              setJobOffer(prev => prev ? { ...prev, candidates: newCandidates } : null);
+            }}
           />
 
           {/* Panel de detalles del candidato */}

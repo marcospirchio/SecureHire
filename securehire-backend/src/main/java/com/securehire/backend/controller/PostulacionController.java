@@ -456,6 +456,22 @@ public class PostulacionController {
         return ResponseEntity.ok(fotoPerfil); 
     }
     
+    @PatchMapping("/{id}/favorito")
+    public ResponseEntity<Postulacion> marcarComoFavorito(
+            @PathVariable String id,
+            @RequestParam boolean esFavorito,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        Optional<Postulacion> opt = postulacionService.obtenerPostulacionSiPerteneceAUsuario(id, usuario.getId());
+        if (opt.isEmpty()) return ResponseEntity.status(403).build();
+        
+        Postulacion postulacion = opt.get();
+        postulacion.setEsFavorito(esFavorito);
+        postulacionRepository.save(postulacion);
+        
+        return ResponseEntity.ok(postulacion);
+    }
 
+  
 
 }
