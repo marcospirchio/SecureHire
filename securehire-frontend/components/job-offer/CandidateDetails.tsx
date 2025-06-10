@@ -52,6 +52,7 @@ export function CandidateDetails({
   const { toast } = useToast()
   const [iaSummary, setIaSummary] = useState<string | null>(null)
   const [iaLoading, setIaLoading] = useState(false)
+  const [iaCommentsLoading, setIaCommentsLoading] = useState(false)
   const [showFullSummary, setShowFullSummary] = useState(false)
   const [opinionIA, setOpinionIA] = useState<string | null>(null)
   const [filters, setFilters] = useState({
@@ -625,10 +626,26 @@ export function CandidateDetails({
                           return;
                         }
 
-                        setIaLoading(true);
+                        setIaCommentsLoading(true);
                         try {
-                          // Mostrar mensaje de confirmación si ya existe una opinión
+                          // Si ya existe una opinión, primero la eliminamos
                           if (opinionIA) {
+                            const delRes = await fetch(`http://localhost:8080/api/geminiIA/eliminar-opinion-ia/${candidate.postulacion.id}`, {
+                              method: 'DELETE',
+                              credentials: 'include',
+                              headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                              }
+                            });
+                            
+                            if (!delRes.ok) {
+                              const errorText = await delRes.text();
+                              console.error("Error al eliminar opinión:", errorText);
+                              throw new Error("No se pudo eliminar la opinión anterior");
+                            }
+                            
+                            setOpinionIA(null);
                             toast({
                               title: "Actualizando opinión",
                               description: "Generando una nueva opinión IA basada en los comentarios actuales...",
@@ -664,38 +681,10 @@ export function CandidateDetails({
                           const fullText = await response.text();
                           setOpinionIA(fullText);
 
-                          const updateResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
-                            method: 'PATCH',
-                            credentials: "include",
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({ opinionComentariosIA: fullText })
-                          });
-
-                          if (!updateResponse.ok) {
-                            throw new Error('Error al guardar la opinión');
-                          }
-
-                          // Volver a leer la opinión desde el backend para asegurar que se actualiza correctamente
-                          const refreshed = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
-                            credentials: "include",
-                            headers: { 'Accept': 'application/json' }
-                          });
-                          if (refreshed.ok) {
-                            const data = await refreshed.json();
-                            setOpinionIA(data.opinionComentariosIA || fullText);
-                          } else {
-                            setOpinionIA(fullText);
-                          }
-
                           // Mostrar mensaje de éxito
                           toast({
-                            title: opinionIA ? "Opinión actualizada" : "Opinión generada",
-                            description: opinionIA 
-                              ? "La opinión IA ha sido actualizada correctamente."
-                              : "Se ha generado una nueva opinión IA basada en los comentarios.",
+                            title: "Opinión generada",
+                            description: "Se ha generado una nueva opinión IA basada en los comentarios.",
                           });
 
                         } catch (error) {
@@ -706,94 +695,16 @@ export function CandidateDetails({
                             variant: "destructive"
                           });
                         } finally {
-                          setIaLoading(false);
+                          setIaCommentsLoading(false);
                         }
                       }}
-                      disabled={iaLoading}
+                      disabled={iaCommentsLoading}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg shadow border border-purple-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
                     >
                       <Sparkles className="h-5 w-5 mr-1" />
-                      {iaLoading ? 'Generando...' : opinionIA ? 'Actualizar resumen' : 'Resumir comentarios'}
+                      {iaCommentsLoading ? 'Generando...' : opinionIA ? 'Actualizar resumen' : 'Resumir comentarios'}
                       <span className="ml-1 bg-white text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-300">IA</span>
                     </Button>
-                    {/* Botón Regenerar opinión IA */}
-                    {opinionIA && (
-                      <Button
-                        onClick={async () => {
-                          if (!candidate?.postulacion?.id) return;
-                          setIaLoading(true);
-                          try {
-                            // Eliminar la opinión IA
-                            const delRes = await fetch(`http://localhost:8080/api/postulaciones/eliminar-opinion-ia/${candidate.postulacion.id}`, {
-                              method: 'PUT',
-                              credentials: 'include',
-                            });
-                            if (!delRes.ok) throw new Error('No se pudo eliminar la opinión IA');
-                            setOpinionIA(null);
-                            toast({
-                              title: 'Opinión eliminada',
-                              description: 'La opinión IA fue eliminada. Generando una nueva...',
-                            });
-                            // Generar nueva opinión IA
-                            const response = await fetch('http://localhost:8080/api/geminiIA/generar-opinion-candidato', {
-                              method: 'POST',
-                              credentials: "include",
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                              },
-                              body: JSON.stringify({ 
-                                candidatoId: candidate.postulacion.candidatoId,
-                                postulacionId: candidate.postulacion.id
-                              })
-                            });
-                            if (!response.ok) throw new Error('No se pudo generar la nueva opinión IA');
-                            const fullText = await response.text();
-                            setOpinionIA(fullText);
-                            // Guardar la nueva opinión en la BD
-                            const updateResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
-                              method: 'PATCH',
-                              credentials: "include",
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                              },
-                              body: JSON.stringify({ opinionComentariosIA: fullText })
-                            });
-                            if (!updateResponse.ok) throw new Error('No se pudo guardar la nueva opinión IA');
-                            // Refrescar desde backend
-                            const refreshed = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
-                              credentials: "include",
-                              headers: { 'Accept': 'application/json' }
-                            });
-                            if (refreshed.ok) {
-                              const data = await refreshed.json();
-                              setOpinionIA(data.opinionComentariosIA || fullText);
-                            } else {
-                              setOpinionIA(fullText);
-                            }
-                            toast({
-                              title: 'Opinión regenerada',
-                              description: 'La opinión IA fue regenerada correctamente.',
-                            });
-                          } catch (error) {
-                            toast({
-                              title: 'Error',
-                              description: error instanceof Error ? error.message : 'No se pudo regenerar la opinión IA',
-                              variant: 'destructive'
-                            });
-                          } finally {
-                            setIaLoading(false);
-                          }
-                        }}
-                        disabled={iaLoading}
-                        variant="outline"
-                        className="ml-2 flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 rounded-lg shadow transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
-                      >
-                        <Sparkles className="h-5 w-5 mr-1" />
-                        {iaLoading ? 'Regenerando...' : 'Regenerar opinión IA'}
-                      </Button>
-                    )}
                   </div>
                   <p className="text-xs text-gray-600 whitespace-pre-line">
                     {opinionIA
