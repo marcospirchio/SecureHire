@@ -19,6 +19,11 @@ interface Busqueda {
   id: string
   titulo: string
   empresa: string
+  camposAdicionales?: {
+    nombre: string
+    tipo: string
+    valoresExcluyentes?: string[]
+  }[]
 }
 
 interface Postulacion {
@@ -33,6 +38,40 @@ interface Postulacion {
     nombre: string
     apellido: string
   }
+  adecuacion?: string
+  comentarioIA?: string
+}
+
+// Función inline para quitar tildes
+function removeDiacritics(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Helper para parsear y ordenar resultados IA
+function parseResultadosIA(resultado: string) {
+  if (!resultado) return [];
+  return resultado
+    .split('\n')
+    .map(linea => {
+      // Acepta nombres compuestos: (nombre apellido(s)) tiene un XX% de adecuación al puesto. comentario
+      const match = linea.match(/^([\wáéíóúüñ ]+)\s+tiene\s+un\s+(\d+)% de adecuación al puesto\.\s*(.*)$/i);
+      if (match) {
+        return {
+          nombre: match[1].trim(),
+          porcentaje: parseInt(match[2], 10),
+          comentario: match[3]?.trim() || ''
+        };
+      }
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b!.porcentaje - a!.porcentaje));
+}
+
+function getColorByPorcentaje(p: number) {
+  if (p <= 40) return 'bg-red-100 text-red-800 border-red-200';
+  if (p <= 70) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  return 'bg-green-100 text-green-800 border-green-200';
 }
 
 export default function EvaluarCandidatosPage() {
@@ -119,6 +158,29 @@ export default function EvaluarCandidatosPage() {
     cargarPostulaciones()
   }, [busquedaSeleccionada])
 
+  type PostulacionType = {
+    respuestas?: { campo: string; respuesta: string | string[] }[];
+  };
+  type BusquedaType = {
+    camposAdicionales?: { nombre: string; tipo: string; valoresExcluyentes?: string[] }[];
+  };
+  const cumpleExcluyentes = (postulacion: PostulacionType, busqueda?: BusquedaType) => {
+    if (!busqueda || !busqueda.camposAdicionales) return true;
+    // Solo campos excluyentes
+    const camposExcluyentes = busqueda.camposAdicionales.filter((c) => c.valoresExcluyentes && c.valoresExcluyentes.length > 0);
+    if (camposExcluyentes.length === 0) return true;
+    return camposExcluyentes.every((campo) => {
+      const respuesta = (postulacion.respuestas || []).find((r) => r.campo === campo.nombre);
+      if (!respuesta) return false;
+      if (campo.tipo === 'checkbox') {
+        const respuestasCandidato = Array.isArray(respuesta.respuesta) ? respuesta.respuesta : [respuesta.respuesta];
+        return (campo.valoresExcluyentes ?? []).every((valor) => respuestasCandidato.includes(valor));
+      } else {
+        return (campo.valoresExcluyentes ?? []).includes(String(respuesta.respuesta));
+      }
+    });
+  };
+
   const handleEvaluar = async () => {
     if (postulacionesSeleccionadas.length === 0) return
 
@@ -137,22 +199,48 @@ export default function EvaluarCandidatosPage() {
 
       if (!response.ok) throw new Error("Error al evaluar candidatos")
       const data = await response.text()
-      
       // Extraer solo el texto del resultado
       const match = data.match(/"resultado":\s*"([^"]+)"/)
+      let resultadoPlano = data
       if (match && match[1]) {
-        // Reemplazar los caracteres escapados
-        const cleanText = match[1]
+        resultadoPlano = match[1]
           .replace(/\\n/g, '\n')
           .replace(/\\u00f3/g, 'ó')
           .replace(/\\u00e1/g, 'á')
           .replace(/\\u00e9/g, 'é')
           .replace(/\\u00ed/g, 'í')
           .replace(/\\u00fa/g, 'ú')
-        setResultado(cleanText)
-      } else {
-        setResultado(data)
       }
+      setResultado(resultadoPlano)
+
+      // Asociación robusta: nombre y apellido exactos, sin tildes, lower
+      const lineas = resultadoPlano.split('\n').filter(Boolean)
+      setPostulaciones((prev) => prev.map((post) => {
+        const nombreCompleto = removeDiacritics(`${post.candidato?.nombre || ''} ${post.candidato?.apellido || ''}`.trim().toLowerCase());
+        const linea = lineas.find(l => {
+          // Extraer nombre y apellido de la línea
+          const matchNombre = l.match(/^([\wáéíóúüñ]+)\s+([\wáéíóúüñ]+)\s+tiene\s+un\s+\d+%/i);
+          if (matchNombre) {
+            const lineaNombre = removeDiacritics(`${matchNombre[1]} ${matchNombre[2]}`.trim().toLowerCase());
+            return lineaNombre === nombreCompleto;
+          }
+          return false;
+        });
+        if (linea) {
+          const porcentajeMatch = linea.match(/(\d+%) de adecuación/)
+          const comentario = linea.replace(/^[^ ]+ [^ ]+ tiene un \d+% de adecuación al puesto\. ?/, "")
+          return {
+            ...post,
+            adecuacion: porcentajeMatch ? porcentajeMatch[1] : undefined,
+            comentarioIA: comentario.trim()
+          }
+        }
+        return {
+          ...post,
+          adecuacion: undefined,
+          comentarioIA: undefined
+        }
+      }))
     } catch (error) {
       toast({
         title: "Error",
@@ -222,57 +310,81 @@ export default function EvaluarCandidatosPage() {
         </div>
 
         {busquedaSeleccionada && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {postulaciones.map((postulacion) => (
-              <div
-                key={postulacion.id}
-                className={`border rounded-xl p-5 shadow-sm bg-card hover:shadow-lg transition cursor-pointer flex flex-col gap-2 ${postulacionesSeleccionadas.includes(postulacion.id) ? 'ring-2 ring-purple-400' : ''}`}
-                onClick={() => togglePostulacion(postulacion.id)}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-bold text-lg text-foreground">
-                    {postulacion.candidato?.nombre} {postulacion.candidato?.apellido}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={postulacionesSeleccionadas.includes(postulacion.id)}
-                    onChange={() => {}}
-                    className="h-4 w-4 accent-purple-500 ml-auto"
-                  />
-                </div>
-                {postulacion.resumenCv && (
-                  <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-line">
-                    {postulacion.resumenCv}
-                  </p>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {postulaciones.map((postulacion) => {
+                const esVerde = cumpleExcluyentes(postulacion as PostulacionType, busquedas.find(b => b.id === busquedaSeleccionada));
+                return (
+                  <div
+                    key={postulacion.id}
+                    className={`border rounded-xl p-5 shadow-sm hover:shadow-lg transition cursor-pointer flex flex-col gap-2 ${postulacionesSeleccionadas.includes(postulacion.id) ? 'ring-2 ring-purple-400' : ''} ${esVerde ? 'bg-green-50 border-green-200' : 'bg-white'}`}
+                    onClick={() => togglePostulacion(postulacion.id)}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="font-bold text-lg text-foreground">
+                        {postulacion.candidato?.nombre} {postulacion.candidato?.apellido}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={postulacionesSeleccionadas.includes(postulacion.id)}
+                        onChange={() => {}}
+                        className="h-4 w-4 accent-purple-500 ml-auto"
+                      />
+                    </div>
+                    {/* Mostrar adecuación y comentario IA si existen */}
+                    {postulacion.adecuacion && (
+                      <div className="text-base font-semibold text-purple-700 mb-1">{postulacion.adecuacion} de adecuación</div>
+                    )}
+                    {postulacion.comentarioIA && (
+                      <div className="text-sm text-muted-foreground whitespace-pre-line">{postulacion.comentarioIA}</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {/* Output de resultados IA ordenados y coloreados, entre las cards y el botón */}
+            {resultado && (
+              <div className="mb-8 p-4 rounded-xl shadow-lg border bg-white max-w-3xl mx-auto">
+                <h2 className="font-bold text-lg mb-3 text-foreground">Resultados de la evaluación IA</h2>
+                {parseResultadosIA(resultado).length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {parseResultadosIA(resultado).map((r, idx) => {
+                      const res = r as { nombre: string; porcentaje: number; comentario: string };
+                      return (
+                        <div
+                          key={res.nombre + idx}
+                          className={`flex items-center gap-3 px-4 py-2 rounded-lg border font-medium ${getColorByPorcentaje(res.porcentaje)}`}
+                        >
+                          <span className="w-40 truncate font-bold">{res.nombre}</span>
+                          <span className="text-lg font-bold">{res.porcentaje}%</span>
+                          <span className="flex-1 text-sm text-foreground/80 ml-2">{res.comentario}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm whitespace-pre-line">{resultado}</div>
                 )}
               </div>
-            ))}
-          </div>
+            )}
+            {postulacionesSeleccionadas.length > 0 && (
+              <div className="mb-8">
+                <button
+                  onClick={handleEvaluar}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-600 transition disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2"><Sparkles className="animate-spin h-5 w-5" /> Evaluando...</span>
+                  ) : (
+                    <span className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> Evaluar Candidatos Seleccionados</span>
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
-        {postulacionesSeleccionadas.length > 0 && (
-          <div className="mb-8">
-            <button
-              onClick={handleEvaluar}
-              disabled={loading}
-              className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-600 transition disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2"><Sparkles className="animate-spin h-5 w-5" /> Evaluando...</span>
-              ) : (
-                <span className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> Evaluar Candidatos Seleccionados</span>
-              )}
-            </button>
-          </div>
-        )}
-
-        {resultado && (
-          <div className="mt-6 rounded-xl border bg-card p-6 shadow-lg">
-            <pre className="whitespace-pre-wrap font-mono text-base text-foreground">
-              {resultado}
-            </pre>
-          </div>
-        )}
         <style jsx global>{`
           @keyframes blink {
             0%, 100% { opacity: 1; }
