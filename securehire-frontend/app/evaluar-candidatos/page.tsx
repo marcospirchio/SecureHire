@@ -48,16 +48,24 @@ function removeDiacritics(str: string): string {
 }
 
 // Helper para parsear y ordenar resultados IA
-function parseResultadosIA(resultado: string) {
+function parseResultadosIA(resultado: string, postulaciones: any[]) {
   if (!resultado) return [];
   return resultado
     .split('\n')
     .map(linea => {
-      // Acepta nombres compuestos: (nombre apellido(s)) tiene un XX% de adecuación al puesto. comentario
-      const match = linea.match(/^([\wáéíóúüñ ]+)\s+tiene\s+un\s+(\d+)% de adecuación al puesto\.\s*(.*)$/i);
+      // Acepta nombres compuestos: (nombre) tiene un XX% de adecuación al puesto. comentario
+      const match = linea.match(/^([\wáéíóúüñ ]+?)\s+tiene\s+un\s+(\d+)% de adecuación al puesto\.\s*(.*)$/i);
       if (match) {
+        const nombreIA = match[1].trim();
+        // Buscar el apellido real en las postulaciones
+        const candidato = postulaciones.find(post => {
+          const nombreCard = removeDiacritics((post.candidato?.nombre || '').trim().toLowerCase());
+          const nombreIAComp = removeDiacritics(nombreIA.toLowerCase());
+          return nombreCard === nombreIAComp;
+        });
+        const apellido = candidato?.candidato?.apellido ? ` ${candidato.candidato.apellido}` : '';
         return {
-          nombre: match[1].trim(),
+          nombre: nombreIA + apellido,
           porcentaje: parseInt(match[2], 10),
           comentario: match[3]?.trim() || ''
         };
@@ -346,9 +354,9 @@ export default function EvaluarCandidatosPage() {
             {resultado && (
               <div className="mb-8 p-4 rounded-xl shadow-lg border bg-white max-w-3xl mx-auto">
                 <h2 className="font-bold text-lg mb-3 text-foreground">Resultados de la evaluación IA</h2>
-                {parseResultadosIA(resultado).length > 0 ? (
+                {parseResultadosIA(resultado, postulaciones).length > 0 ? (
                   <div className="flex flex-col gap-2">
-                    {parseResultadosIA(resultado).map((r, idx) => {
+                    {parseResultadosIA(resultado, postulaciones).map((r, idx) => {
                       const res = r as { nombre: string; porcentaje: number; comentario: string };
                       return (
                         <div
