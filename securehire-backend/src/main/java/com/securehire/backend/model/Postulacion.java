@@ -61,7 +61,7 @@ public class Postulacion {
     }
 
     public enum Estado {
-        ACTIVA, FINALIZADA, RECHAZADA, INACTIVA;
+        PENDIENTE, ACTIVA, FINALIZADA, RECHAZADA, INACTIVA;
 
         public static boolean isValid(String valor) {
             for (Estado estado : values()) {

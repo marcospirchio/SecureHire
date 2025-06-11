@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Calendar, Users, Bell, MoreVertical, ChevronLeft, ChevronRight, Menu, User, LogOut } from "lucide-react"
+import { Home, Calendar, Users, Bell, MoreVertical, ChevronLeft, ChevronRight, Menu, User, LogOut, Brain } from "lucide-react"
 import React from "react"
 import Image from "next/image"
 import { useAuth } from "@/hooks/use-auth"
@@ -170,6 +170,22 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
             >
               <Users className="h-5 w-5" />
               {!collapsed && <span>Mis ofertas de trabajo</span>}
+            </Link>
+            <Link
+              href="/evaluar-candidatos"
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                isActive("/evaluar-candidatos") ? "bg-gray-100 font-medium text-gray-900" : "text-gray-500 hover:bg-gray-50"
+              }`}
+            >
+              <Brain className="h-5 w-5 text-purple-500" />
+              {!collapsed && (
+                <div className="flex items-center gap-2">
+                  <span>Evaluar candidatos</span>
+                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">
+                    IA
+                  </span>
+                </div>
+              )}
             </Link>
           </nav>
         </div>
