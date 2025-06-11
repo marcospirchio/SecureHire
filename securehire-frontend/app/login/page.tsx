@@ -32,7 +32,7 @@ export default function LoginPage() {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8 z-10">
         <div className="flex flex-col items-center mb-6">
           <div className="bg-gray-100 p-3 rounded-lg mb-4">
-            <Image src="/logo-securehire.png" alt="SecureHire Logo" width={32} height={32} />
+          <Image src="/logo-securehire.png" alt="SecureHire Logo" width={32} height={32} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">SecureHire</h1>
           <p className="text-gray-600 text-center mt-2">Ingrese sus credenciales para acceder a su cuenta</p>

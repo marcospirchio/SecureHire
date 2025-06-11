@@ -31,25 +31,42 @@ export function useLogin() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json"
         },
-        credentials: "include", 
+        credentials: "include",
         body: JSON.stringify(credentials),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Error al iniciar sesión")
+        let errorMessage = "Error al iniciar sesión"
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorMessage
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
-      const data: LoginResponse = await response.json()
-      
+      let data: LoginResponse
+      try {
+        data = await response.json()
+      } catch (e) {
+        throw new Error("Error al procesar la respuesta del servidor")
+      }
+
+      if (!data.token || !data.user) {
+        throw new Error("Respuesta del servidor incompleta")
+      }
+
       localStorage.setItem("token", data.token)
       
       router.push("/")
       
       return data
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
+      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión"
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)

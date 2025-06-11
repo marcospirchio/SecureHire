@@ -14,7 +14,8 @@ interface InterviewModalProps {
 }
 
 export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: InterviewModalProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 13)); 
+  const today = new Date();
+  const [currentMonth, setCurrentMonth] = useState(today);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
@@ -88,22 +89,20 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
   }).format(currentMonth);
 
   const isToday = (day: number, month: number, year: number) => {
-    const today = new Date(2025, 4, 13); 
+    const today = new Date();
     return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
 
   const isDateSelected = (day: number, month: number, year: number) => {
     if (!selectedDate) return false;
-
     const [selectedDay, selectedMonth, selectedYear] = selectedDate.split("/").map(Number);
     return day === selectedDay && month + 1 === selectedMonth && year === selectedYear;
   };
 
   const handleDateSelect = (day: number, month: number, year: number) => {
-    
     if (month === currentMonth.getMonth() && year === currentMonth.getFullYear()) {
       setSelectedDate(`${day}/${month + 1}/${year}`);
-      setSelectedTime(null); 
+      setSelectedTime(null);
     }
   };
 
@@ -197,18 +196,24 @@ export function InterviewModal({ isOpen, onClose, candidate, onConfirm }: Interv
                 {calendarDays.map((date, index) => (
                   <div
                     key={index}
-                    className={`py-2 ${
+                    className={`py-2 relative ${
                       !date.isCurrentMonth
                         ? "text-gray-400"
                         : isToday(date.day, date.month, date.year)
-                          ? "border border-gray-900 rounded-md"
-                          : isDateSelected(date.day, date.month, date.year)
-                            ? "bg-blue-100"
-                            : "hover:bg-gray-50"
-                    } ${date.isCurrentMonth ? "cursor-pointer" : ""}`}
+                          ? "font-semibold"
+                          : ""
+                    } ${date.isCurrentMonth ? "cursor-pointer hover:bg-gray-50" : ""}`}
                     onClick={() => date.isCurrentMonth && handleDateSelect(date.day, date.month, date.year)}
                   >
-                    {date.day}
+                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
+                      isDateSelected(date.day, date.month, date.year)
+                        ? "bg-blue-100 text-blue-700 border-2 border-blue-500"
+                        : isToday(date.day, date.month, date.year)
+                          ? "border-2 border-gray-900"
+                          : ""
+                    }`}>
+                      {date.day}
+                    </span>
                   </div>
                 ))}
               </div>

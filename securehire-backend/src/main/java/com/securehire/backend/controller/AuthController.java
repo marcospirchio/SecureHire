@@ -22,7 +22,7 @@ import java.time.Duration;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000"}, allowCredentials = "true", maxAge = 3600)
 @Tag(name = "Authentication", description = "Authentication management APIs")
 public class AuthController {
 
@@ -47,10 +47,13 @@ public class AuthController {
         }
     )
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(
-        @RequestBody @Schema(description = "User registration data") AuthRequest request
-    ) {
-        return ResponseEntity.ok(authService.register(request));
+    public ResponseEntity<AuthResponse> register(@RequestBody @Schema(description = "User registration data") AuthRequest request) {
+        try {
+            AuthResponse response = authService.register(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @Operation(
@@ -72,23 +75,27 @@ public class AuthController {
     )
     
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(
-        @RequestBody @Schema(description = "User login credentials") AuthRequest request,
-        HttpServletResponse response
-    ) {
-        AuthResponse authResponse = authService.login(request);
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request, HttpServletResponse response) {
+        try {
+            AuthResponse authResponse = authService.login(request);
 
-        ResponseCookie jwtCookie = ResponseCookie.from("jwt", authResponse.getToken())
-            .httpOnly(true)
-            .secure(false) 
-            .path("/")
-            .maxAge(Duration.ofDays(1))
-            .sameSite("Lax")
-            .build();
+            ResponseCookie jwtCookie = ResponseCookie.from("jwt", authResponse.getToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ofDays(1))
+                .sameSite("Lax")
+                .domain("localhost")
+                .build();
 
-        response.addHeader("Set-Cookie", jwtCookie.toString());
+            response.addHeader("Set-Cookie", jwtCookie.toString());
+            response.addHeader("Access-Control-Allow-Credentials", "true");
+            response.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
 
-        return ResponseEntity.ok(authResponse);
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).build();
+        }
     }
 
 
@@ -122,8 +129,9 @@ public class AuthController {
             .httpOnly(true)
             .secure(false)
             .path("/")
-            .maxAge(0) 
+            .maxAge(0)
             .sameSite("Lax")
+            .domain("localhost")
             .build();
 
         response.addHeader("Set-Cookie", deleteCookie.toString());

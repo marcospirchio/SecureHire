@@ -1,0 +1,96 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./securehire-frontend         # Carpeta del frontend donde está el Dockerfile
+    ports:
+      - "3000:3000"                          # Puerto local:contenedor (localhost:3000)
+    volumes:
+      - ./securehire-frontend:/app           # Monta tu código local en /app del contenedor
+      - /app/node_modules                    # Evita sobreescribir node_modules del contenedor
+    working_dir: /app
+    command: npm run dev                     # Corre modo desarrollo con hot reload
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api
+      - NEXT_PUBLIC_N8N_URL=http://localhost:5678
+      - NEXT_PUBLIC_N8N_TOKEN=n8n-token-aqui
+      - NEXT_PUBLIC_N8N_WORKFLOW_ID=workflow-id-aqui
+      - NEXT_PUBLIC_N8N_NODE_ID=node-id-aqui
+      - NEXT_PUBLIC_N8N_NODE_INPUT_ID=node-input-id-aqui
+      - NEXT_PUBLIC_N8N_NODE_OUTPUT_ID=node-output-id-aqui
+    networks:
+      - securehire-network
+    depends_on:
+      - backend                              # Espera que el backend esté disponible
+
+  backend:
+    build:
+      context: ./securehire-backend          # Carpeta del backend Spring Boot
+    ports:
+      - "8080:8080"                          # Exponer puerto de la API
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/securehire
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_SECURITY_CORS_ALLOWED_ORIGINS=http://localhost:3000
+      - SPRING_SECURITY_CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS
+      - SPRING_SECURITY_CORS_ALLOWED_HEADERS=*
+      - SPRING_SECURITY_CORS_ALLOW_CREDENTIALS=true
+      - SPRING_SECURITY_CORS_MAX_AGE=3600
+      - JWT_SECRET=your-secret-key-here-make-it-long-and-secure-in-production
+      - JWT_EXPIRATION=86400000
+    networks:
+      - securehire-network
+    depends_on:
+      - mongo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/auth/me"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"                         # Puerto local:contenedor (solo si lo necesitás local)
+    volumes:
+      - mongo_data:/data/db                   # Volumen persistente de MongoDB
+    networks:
+      - securehire-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    ports:
+      - "5678:5678"                           # Acceso a n8n en localhost:5678
+    environment:
+      - DB_TYPE=mongodb
+      - DB_MONGODB_CONNECTION_URL=mongodb://mongo:27017/securehire
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin             # Usuario para ingresar a n8n
+      - N8N_BASIC_AUTH_PASSWORD=admin123      # Contraseña
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+    networks:
+      - securehire-network
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    volumes:
+      - n8n_data:/home/node/.n8n              # Guarda los workflows y datos de n8n
+
+networks:
+  securehire-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  n8n_data:
