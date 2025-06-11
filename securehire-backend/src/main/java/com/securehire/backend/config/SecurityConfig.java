@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/ofertas/**").permitAll()
 
                 .requestMatchers(HttpMethod.GET, "/api/busquedas/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/postulaciones/**").permitAll() // ← Habilita acceso GET desde n8n
 
                 .requestMatchers(HttpMethod.POST, "/api/postulaciones/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/postulaciones/**").authenticated()
@@ -63,7 +64,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); 
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://192.168.0.10:3000",
+            "http://192.168.0.10:8080" // ← Permite que n8n acceda directamente por IP
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

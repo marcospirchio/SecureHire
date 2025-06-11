@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -24,16 +24,8 @@ const timeSlots = [
 ]
 
 export function InterviewModal({ isOpen, onClose, onConfirm }: InterviewModalProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedTime, setSelectedTime] = useState<string>("")
-
-  // Resetear la fecha cuando se abre el modal
-  useEffect(() => {
-    if (isOpen) {
-      const today = new Date()
-      setSelectedDate(today)
-    }
-  }, [isOpen])
 
   const handleConfirm = () => {
     if (selectedDate && selectedTime) {
@@ -56,11 +48,10 @@ export function InterviewModal({ isOpen, onClose, onConfirm }: InterviewModalPro
             <Calendar
               mode="single"
               selected={selectedDate}
-              onSelect={setSelectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
               locale={es}
               disabled={(date) => date < new Date()}
               className="rounded-md border"
-              defaultMonth={new Date()}
             />
           </div>
           <div className="space-y-2">

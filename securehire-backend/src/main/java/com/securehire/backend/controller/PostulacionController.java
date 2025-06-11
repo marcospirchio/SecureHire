@@ -472,6 +472,12 @@ public class PostulacionController {
         return ResponseEntity.ok(postulacion);
     }
 
-  
+    @GetMapping("/busqueda/{busquedaId}/favoritos")
+    public ResponseEntity<List<Postulacion>> obtenerPostulacionesFavoritas(
+            @PathVariable String busquedaId,
+            @AuthenticationPrincipal Usuario usuario
+    ) {
+        return ResponseEntity.ok(postulacionService.obtenerPostulacionesFavoritasPorBusqueda(busquedaId, usuario.getId()));
+    }
 
 }
