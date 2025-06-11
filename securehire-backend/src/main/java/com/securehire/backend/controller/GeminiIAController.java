@@ -236,15 +236,13 @@ public class GeminiIAController {
         String prompt = """
             Actuás como un asistente de selección de personal. A continuación, se listan comentarios de distintos reclutadores sobre un candidato.
 
-            Tu tarea es analizarlos y generar solamente los siguientes dos apartados, como si fueras un asesor de recursos humanos:
-
-            1. Una opinión general que resuma lo más relevante de los comentarios.
-            2. Una recomendación final sobre si el candidato debería continuar en el proceso de selección.
+            Tu tarea es generar una opinión general que resuma lo más relevante de los comentarios.
 
             ⚠️ IMPORTANTE:
             - Podés hacer clasificaciones internas (positivos, negativos, patrones, etc.) solo para ayudarte a escribir, pero no las muestres en el resultado.
             - No uses markdown, ni listas.
-            - Devolvé únicamente los dos párrafos (opinión general y recomendación), como texto plano legible por humanos.
+            - Devolvé únicamente un párrafo con la opinión general, como texto plano legible por humanos.
+            - No incluyas recomendaciones ni sugerencias sobre continuar o no en el proceso.
 
             Comentarios:
             %s

@@ -702,14 +702,14 @@ export function CandidateDetails({
           <div className="border-t pt-4">
             <Tabs defaultValue="feedbacks" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="feedbacks">{opinionIA ? 'Resumen de comentarios del candidato' : 'Historial de comentarios'}</TabsTrigger>
+                <TabsTrigger value="feedbacks">Historial de Feedbacks</TabsTrigger>
                 <TabsTrigger value="notes">Mis anotaciones</TabsTrigger>
               </TabsList>
 
               <TabsContent value="feedbacks" className="mt-4">
                 <div className="bg-gray-50 p-4 rounded-md mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-sm font-medium">{opinionIA ? 'Resumen de comentarios del candidato' : 'Historial de comentarios'}</h4>
+                    <h4 className="text-sm font-medium">Historial de Feedbacks</h4>
                     <Button
                       onClick={async () => {
                         if (!candidate?.postulacion?.id || !candidate?.postulacion?.candidatoId) {
@@ -723,30 +723,29 @@ export function CandidateDetails({
 
                         setIaCommentsLoading(true);
                         try {
-                          // Si ya existe una opinión, primero la eliminamos
-                          if (opinionIA) {
-                            const delRes = await fetch(`http://localhost:8080/api/postulaciones/eliminar-opinion-ia/${candidate.postulacion.id}`, {
-                              method: 'DELETE',
-                              credentials: 'include',
-                              headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                              }
-                            });
-                            
-                            if (!delRes.ok) {
-                              const errorText = await delRes.text();
-                              console.error("Error al eliminar opinión:", errorText);
-                              throw new Error("No se pudo eliminar la opinión anterior");
+                          // Primero eliminamos la opinión existente
+                          const delRes = await fetch(`http://localhost:8080/api/geminiIA/eliminar-opinion-ia/${candidate.postulacion.id}`, {
+                            method: 'DELETE',
+                            credentials: 'include',
+                            headers: {
+                              'Accept': 'application/json',
+                              'Content-Type': 'application/json'
                             }
-                            
-                            setOpinionIA(null);
-                            toast({
-                              title: "Actualizando opinión",
-                              description: "Generando una nueva opinión IA basada en los comentarios actuales...",
-                            });
+                          });
+                          
+                          if (!delRes.ok) {
+                            const errorText = await delRes.text();
+                            console.error("Error al eliminar opinión:", errorText);
+                            throw new Error("No se pudo eliminar la opinión anterior");
                           }
+                          
+                          setOpinionIA(null);
+                          toast({
+                            title: "Actualizando opinión",
+                            description: "Generando una nueva opinión IA basada en los comentarios actuales...",
+                          });
 
+                          // Luego generamos la nueva opinión
                           const response = await fetch('http://localhost:8080/api/geminiIA/generar-opinion-candidato', {
                             method: 'POST',
                             credentials: "include",
@@ -776,7 +775,6 @@ export function CandidateDetails({
                           const fullText = await response.text();
                           setOpinionIA(fullText);
 
-                          // Mostrar mensaje de éxito
                           toast({
                             title: "Opinión generada",
                             description: "Se ha generado una nueva opinión IA basada en los comentarios.",
