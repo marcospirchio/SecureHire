@@ -709,7 +709,7 @@ export function CandidateDetails({
               <TabsContent value="feedbacks" className="mt-4">
                 <div className="bg-gray-50 p-4 rounded-md mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-sm font-medium">Historial de Feedbacks</h4>
+                    <h4 className="text-sm font-medium">{opinionIA ? 'Resumen de Feedbacks por IA' : 'Historial de comentarios'}</h4>
                     <Button
                       onClick={async () => {
                         if (!candidate?.postulacion?.id || !candidate?.postulacion?.candidatoId) {
@@ -801,11 +801,7 @@ export function CandidateDetails({
                   </div>
                   <p className="text-xs text-gray-600 whitespace-pre-line">
                     {opinionIA
-                      ? (() => {
-                          // Extraer solo el párrafo de 'Opinión general:' hasta 'Recomendación final:'
-                          const match = opinionIA.match(/Opinión general:\s*([\s\S]*?)(?:Recomendación final:|$)/i);
-                          return match && match[1] ? match[1].trim() : opinionIA;
-                        })()
+                      ? opinionIA
                       : "Aquí podrás ver todos los comentarios registrados para este candidato por diferentes reclutadores."}
                   </p>
                 </div>
