@@ -39,14 +39,20 @@ public class GeminiService {
     
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.getBody());
-    
-            return root
+
+            String raw = root
                     .path("candidates").get(0)
                     .path("content").path("parts").get(0)
                     .path("text").asText();
-    
+
+            // Limpiar backticks de bloque Markdown si existen
+            return raw.replaceAll("(?i)^```json", "")
+                      .replaceAll("^```", "")
+                      .replaceAll("```$", "")
+                      .trim();
+
         } catch (Exception e) {
             throw new RuntimeException("Error al llamar o procesar respuesta de Gemini: " + e.getMessage(), e);
         }
-}
+    }
 }

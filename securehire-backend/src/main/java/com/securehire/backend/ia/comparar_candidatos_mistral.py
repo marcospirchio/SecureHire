@@ -60,6 +60,7 @@ def main():
 
         resultados.sort(key=lambda x: x["score"], reverse=True)
 
+        # ✅ Agregado: resumen corto por candidato (útil para mostrar texto plano)
         parrafos = []
         for r in resultados:
             nombre = r["nombre"]
@@ -83,8 +84,12 @@ def main():
 
             parrafos.append(resumen)
 
-        output = "\n".join(parrafos)
-        print(json.dumps({"resultado": output}))
+        output = {
+            "resultados": resultados,
+            "resumenTexto": "\n".join(parrafos)
+        }
+
+        print(json.dumps(output, ensure_ascii=False))
         print("✅ Fin del script sin errores", file=sys.stderr)
 
     except Exception as e:

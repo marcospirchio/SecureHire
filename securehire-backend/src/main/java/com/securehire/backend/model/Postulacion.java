@@ -41,6 +41,17 @@ public class Postulacion {
 
     private Boolean esFavorito = false;
 
+    private String perfilDetectadoIA;
+    private Integer puntajeIA;
+    private List<String> motivosIA;
+
+    private Integer puntajeRequisitosClave;
+    private Integer puntajeExperienciaLaboral;
+    private Integer puntajeFormacionAcademica;
+    private Integer puntajeIdiomasYSoftSkills;
+    private Integer puntajeOtros;
+    private Integer puntajeGeneral;
+
     @Data
     @Builder
     @NoArgsConstructor

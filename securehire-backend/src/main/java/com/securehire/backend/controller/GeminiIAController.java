@@ -14,6 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.securehire.backend.service.ComentarioService;
 import com.securehire.backend.model.Comentario;
 import com.securehire.backend.dto.OpinionRequest;
+import com.securehire.backend.dto.EvaluacionIAResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException; 
 import java.util.Optional;
 import java.util.List;
@@ -37,7 +40,7 @@ public class GeminiIAController {
     private ComentarioService comentarioService;
 
     @PostMapping("/extraer-cv-y-resumir")
-    public ResponseEntity<String> extraerCvYResumir(
+    public ResponseEntity<?> extraerCvYResumir(
             @RequestParam("file") MultipartFile file,
             @RequestParam("busquedaId") String busquedaId,
             @RequestParam(value = "postulacionId", required = false) String postulacionId
@@ -54,90 +57,116 @@ public class GeminiIAController {
                 return ResponseEntity.badRequest().body("El archivo CV está vacío o no fue enviado.");
             }
 
-            // Extraer texto del CV PDF
             PDDocument document = PDDocument.load(file.getInputStream());
             PDFTextStripper stripper = new PDFTextStripper();
             String textoCV = stripper.getText(document);
             document.close();
 
-            // Inicializar datos adicionales para el resumen
             StringBuilder preguntasRespuestas = new StringBuilder();
             StringBuilder exclusiones = new StringBuilder();
 
             if (postulacionId != null && !postulacionId.isBlank()) {
-                Optional<Postulacion> postulacionOpt = postulacionRepository.findById(postulacionId);
-                if (postulacionOpt.isPresent()) {
-                    Postulacion postulacion = postulacionOpt.get();
-
+                postulacionRepository.findById(postulacionId).ifPresent(postulacion -> {
                     for (Postulacion.RespuestaFormulario respuesta : postulacion.getRespuestas()) {
                         String campo = respuesta.getCampo();
                         String valor = respuesta.getRespuesta();
 
                         preguntasRespuestas.append("- ").append(campo).append(": ").append(valor).append("\n");
 
-                        // Verificar si el campo es excluyente
-                        Optional<Busqueda.CampoFormulario> campoExcluyente = busqueda.getCamposAdicionales().stream()
-                            .filter(c -> c.getNombre().equalsIgnoreCase(campo) && c.isEsExcluyente())
-                            .findFirst();
-
-                        if (campoExcluyente.isPresent()) {
-                            List<String> valoresEsperados = campoExcluyente.get().getValoresExcluyentes();
-                            if (!valoresEsperados.isEmpty() && !valoresEsperados.contains(valor)) {
-                                exclusiones.append("- ").append(campo)
-                                    .append(" → respondió \"").append(valor)
-                                    .append("\" (esperado: ").append(String.join("/", valoresEsperados)).append(")\n");
-                            }
-                        }
+                        busqueda.getCamposAdicionales().stream()
+                                .filter(c -> c.getNombre().equalsIgnoreCase(campo) && c.isEsExcluyente())
+                                .findFirst()
+                                .ifPresent(campoExcluyente -> {
+                                    List<String> valoresEsperados = campoExcluyente.getValoresExcluyentes();
+                                    if (!valoresEsperados.isEmpty() && !valoresEsperados.contains(valor)) {
+                                        exclusiones.append("- ").append(campo)
+                                                .append(" → respondió \"").append(valor)
+                                                .append("\" (esperado: ").append(String.join("/", valoresEsperados)).append(")\n");
+                                    }
+                                });
                     }
-                }
+                });
             }
 
-            // Prompt para Gemini
-            String prompt = """
-                Sos un asistente de selección de personal. Recibiste el CV de un candidato que se postuló a una búsqueda laboral.
+            String prompt =
+                    "Sos un asistente experto y objetivo en selección de personal. Vas a evaluar un CV en función de una búsqueda laboral específica.\n\n" +
+                    "Tu objetivo es generar un análisis claro, imparcial y repetible. No uses opiniones ni supuestos. Solo analizá la información concreta que figura en el CV, las respuestas del postulante y los requisitos de la búsqueda.\n\n" +
+                    "⚠️ No asumas experiencia laboral por formación, duración de estudios o nivel académico. Si el CV no indica explícitamente experiencia laboral (con palabras como \"trabajé\", \"empresa\", \"freelance\", \"proyecto laboral\", algún puesto de trabajo, etc.), asumí que NO tiene experiencia laboral.\n\n" +
+                    "📌 No infieras experiencia laboral a partir de años de estudios o menciones vagas. Solo considerá experiencia si se menciona explícitamente como experiencia laboral.\n\n" +
+                    "📌 Antes de devolver la respuesta, validá que no hay contradicciones. Si una sección no está presente, dejala fuera sin intentar completarla con suposiciones.\n\n" +
+                    "📌 La suma de todos los puntajes debe ser como máximo 100. No devuelvas campos fuera de los siguientes:\n" +
+                    "- requisitosClave\n" +
+                    "- experienciaLaboral\n" +
+                    "- formacionAcademica\n" +
+                    "- idiomasYSoftSkills\n" +
+                    "- otros (solo si hay proyectos personales, portfolio o logros extracurriculares, con un peso máximo del 10%)\n\n" +
+                    "Respondé en formato JSON con la siguiente estructura:\n\n" +
+                    "{\n" +
+                    "  \"perfilDetectado\": \"...\",\n" +
+                    "  \"resumen\": \"...\",\n" +
+                    "  \"puntajeGeneral\": 0–100,\n" +
+                    "  \"motivos\": [ \"frase 1\", \"frase 2\", ... ],\n" +
+                    "  \"puntajesDetalle\": {\n" +
+                    "    \"requisitosClave\": number,\n" +
+                    "    \"experienciaLaboral\": number,\n" +
+                    "    \"formacionAcademica\": number,\n" +
+                    "    \"idiomasYSoftSkills\": number,\n" +
+                    "    \"otros\": number (opcional)\n" +
+                    "  }\n" +
+                    "}\n\n" +
+                    "Para calcular el campo \"puntajeGeneral\", seguí estas reglas de ponderación:\n" +
+                    "- Coincidencia con requisitos y tecnologías clave: 50%\n" +
+                    "- Experiencia laboral relacionada (solo si está explícitamente indicada): 20%\n" +
+                    "- Formación académica relevante: 10%\n" +
+                    "- Idiomas y soft skills: 10%\n" +
+                    "- Otros (proyectos personales o logros diferenciadores): máximo 10%, solo si son claros y relevantes\n" +
+                    "- Penalizá con fuerza si no cumple con requisitos excluyentes.\n\n" +
+                    "Título de la búsqueda: " + busqueda.getTitulo() + "\n" +
+                    "Descripción del puesto: " + busqueda.getDescripcion() + "\n\n" +
+                    "Respuestas brindadas por el candidato:\n" + preguntasRespuestas + "\n\n" +
+                    "Requisitos excluyentes que NO cumple:\n" + (exclusiones.isEmpty() ? "Ninguno" : exclusiones) + "\n\n" +
+                    "CV completo:\n" + textoCV;
 
-                🎯 Objetivo: resumí en pocas líneas la información más relevante del CV, incluyendo:
-                - Si tiene o no experiencia laboral
-                - Lenguajes o tecnologías clave
-                - Formación académica resumida
-                - Nivel de idiomas
-                - Si cumple o no con los requisitos excluyentes (listalos brevemente si falla)
+            String respuestaJson = geminiService.obtenerRespuestaDesdeGemini(prompt);
 
-                💡 Mostralo de forma rápida de leer, sin repetir detalles innecesarios. Todo debe caber en un solo bloque breve y directo, como si el reclutador solo tuviera 20 segundos para leerlo. No uses formato Markdown (nada de negritas ni listas con asteriscos). Solo texto plano y limpio, con frases cortas separadas por punto y seguido.
+            String jsonLimpio = respuestaJson
+                    .replaceAll("(?i)^```json", "")
+                    .replaceAll("^```", "")
+                    .replaceAll("```$", "")
+                    .trim();
 
-                Título de la búsqueda: %s  
-                Descripción del puesto: %s  
+            ObjectMapper mapper = new ObjectMapper();
+            EvaluacionIAResponse evaluacion = mapper.readValue(jsonLimpio, EvaluacionIAResponse.class);
 
-                📋 Respuestas brindadas por el candidato:
-                %s
-
-                ⚠️ Requisitos excluyentes que NO cumple:
-                %s
-
-                📝 CV completo:
-                %s
-            """.formatted(
-                busqueda.getTitulo(),
-                busqueda.getDescripcion(),
-                preguntasRespuestas.toString(),
-                exclusiones.toString().isBlank() ? "Ninguno" : exclusiones.toString(),
-                textoCV
-            );
-
-            // Obtener respuesta de Gemini
-            String resumen = geminiService.obtenerRespuestaDesdeGemini(prompt);
-
-            // Guardar resumen si corresponde
             if (postulacionId != null && !postulacionId.isBlank()) {
                 postulacionRepository.findById(postulacionId).ifPresent(postulacion -> {
-                    postulacion.setResumenCv(resumen);
+                    if (postulacion.getPuntajeGeneral() != null) {
+                        System.out.println("⚠️ Puntajes ya existentes, se evita regenerarlos para la postulación: " + postulacionId);
+                        // Solo se actualiza el resumen si ya fue evaluada
+                        postulacion.setResumenCv(evaluacion.getResumen());
+                        postulacionRepository.save(postulacion);
+                        return;
+                    }
+
+                    Map<String, Integer> detalle = evaluacion.getPuntajesDetalle();
+                    postulacion.setPuntajeGeneral(evaluacion.getPuntajeGeneral());
+                    postulacion.setPuntajeRequisitosClave(detalle.getOrDefault("requisitosClave", 0));
+                    postulacion.setPuntajeExperienciaLaboral(detalle.getOrDefault("experienciaLaboral", 0));
+                    postulacion.setPuntajeFormacionAcademica(detalle.getOrDefault("formacionAcademica", 0));
+                    postulacion.setPuntajeIdiomasYSoftSkills(detalle.getOrDefault("idiomasYSoftSkills", 0));
+                    postulacion.setPuntajeOtros(detalle.getOrDefault("otros", 0));
+                    postulacion.setMotivosIA(evaluacion.getMotivos());
+                    postulacion.setPerfilDetectadoIA(evaluacion.getPerfilDetectado());
+                    postulacion.setResumenCv(evaluacion.getResumen());
                     postulacionRepository.save(postulacion);
                 });
             }
 
-            return ResponseEntity.ok(resumen);
+            return ResponseEntity.ok(evaluacion);
         } catch (IOException e) {
             return ResponseEntity.badRequest().body("Error extrayendo texto del PDF: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error procesando la evaluación: " + e.getMessage());
         }
     }
 

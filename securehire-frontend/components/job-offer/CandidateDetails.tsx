@@ -7,6 +7,7 @@ import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ImagenPerfil } from "./ImagenPerfil"
+import AIResumeModalV4 from "./ai-resume-modal-v4"
 
 interface Feedback {
   id: string;
@@ -66,6 +67,9 @@ export function CandidateDetails({
     name: ""
   })
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null)
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false)
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -580,6 +584,94 @@ export function CandidateDetails({
     }
   };
 
+  const handleAnalyzeCV = async () => {
+    if (!candidate?.postulacion?.id || !candidate?.postulacion?.candidatoId) {
+      toast({
+        title: "Faltan datos",
+        description: "No se puede generar el análisis. Postulación o candidato no válidos.",
+        variant: "destructive"
+      });
+      return;
+    }
+  
+    setAiAnalysisLoading(true);
+    setShowAIModal(true);
+    try {
+      // 1. Obtener el CV
+      const cvResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}/cv`, {
+        credentials: "include",
+        headers: { 'Accept': 'application/pdf' }
+      });
+  
+      if (!cvResponse.ok) {
+        const errorText = await cvResponse.text();
+        throw new Error(`Error al obtener CV: ${cvResponse.status} ${errorText}`);
+      }
+  
+      const blob = await cvResponse.blob();
+      if (blob.size === 0) throw new Error('El archivo CV está vacío');
+  
+      const file = new File([blob], 'cv.pdf', { type: 'application/pdf' });
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('postulacionId', candidate.postulacion.id);
+      formData.append('busquedaId', candidate.postulacion.busquedaId || "");
+  
+      // 2. Obtener el nuevo resumen
+      const iaRes = await fetch(`http://localhost:8080/api/geminiIA/extraer-cv-y-resumir`, {
+        method: 'POST',
+        credentials: "include",
+        body: formData
+      });
+  
+      if (!iaRes.ok) {
+        const errorText = await iaRes.text();
+        throw new Error(`Error al obtener análisis IA: ${iaRes.status} ${errorText}`);
+      }
+  
+      const result = await iaRes.json();
+
+      // 3. Obtener los datos actualizados de la postulación
+      const postulacionResponse = await fetch(`http://localhost:8080/api/postulaciones/${candidate.postulacion.id}`, {
+        credentials: "include",
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!postulacionResponse.ok) {
+        throw new Error('Error al obtener datos de la postulación');
+      }
+
+      const postulacionData = await postulacionResponse.json();
+      
+      // 4. Construir el resultado usando los puntajes de la postulación y el nuevo resumen
+      const transformedResult = {
+        perfilDetectado: postulacionData.perfilDetectadoIA || "Perfil no especificado",
+        resumen: result.resumen || "", // Usar el resumen nuevo
+        puntajeGeneral: postulacionData.puntajeGeneral || 0,
+        motivos: postulacionData.motivosIA || [],
+        puntajesDetalle: {
+          requisitosClave: postulacionData.puntajeRequisitosClave || 0,
+          experienciaLaboral: postulacionData.puntajeExperienciaLaboral || 0,
+          formacionAcademica: postulacionData.puntajeFormacionAcademica || 0,
+          idiomasYSoftSkills: postulacionData.puntajeIdiomasYSoftSkills || 0,
+          otros: postulacionData.puntajeOtros || 0
+        }
+      };
+      
+      setAiAnalysisResult(transformedResult);
+  
+    } catch (e) {
+      setAiAnalysisResult(null);
+      toast({
+        title: "Error IA",
+        description: e instanceof Error ? e.message : 'No se pudo obtener el análisis IA. Por favor, intente nuevamente.',
+        variant: "destructive"
+      });
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  };
+
   return (
     
     <div className="w-3/4 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
@@ -678,22 +770,15 @@ export function CandidateDetails({
                 </div>
                 <div className="relative w-fit">
                   <Button
-                    onClick={() => {
-                      if (iaSummary) {
-                        setShowFullSummary(true);
-                      } else {
-                        handleIASummary();
-                      }
-                    }}
-                    disabled={iaLoading}
+                    onClick={handleAnalyzeCV}
+                    disabled={aiAnalysisLoading}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg shadow border border-purple-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
                     style={{ minWidth: '170px', minHeight: '38px' }}
                   >
                     <Sparkles className="h-5 w-5 mr-1" />
-                    {iaSummary ? 'Ver resumen CV' : 'Resumir CV con IA'}
+                    {aiAnalysisResult ? 'Ver análisis CV' : 'Analizar CV con IA'}
                     <span className="ml-1 bg-white text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-300">IA</span>
                   </Button>
-                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow border border-green-600 select-none">Nuevo</span>
                 </div>
               </div>
             </div>
@@ -980,6 +1065,15 @@ export function CandidateDetails({
           </div>
         </DialogContent>
       </Dialog>
+
+      <AIResumeModalV4
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        candidateName={`${candidate.name} ${candidate.lastName}`}
+        jobTitle="Puesto de trabajo"
+        result={aiAnalysisResult}
+        isLoading={aiAnalysisLoading}
+      />
 
       {/* Botones sticky abajo a la derecha */}
       <div className="sticky bottom-0 right-0 px-2 pt-3 z-20 shadow-[0_-2px_8px_-2px_rgba(0,0,0,0.05)] flex items-center" style={{ backgroundColor: '#fdfdfd' }}>

@@ -36,6 +36,14 @@ export interface Candidate {
     fotoPerfil?: string
     opinionComentariosIA?: string
     esFavorito?: boolean
+    puntajeGeneral?: number | null
+    motivosIA?: string[] | null
+    puntajeRequisitosClave?: number | null
+    puntajeExperienciaLaboral?: number | null
+    puntajeFormacionAcademica?: number | null
+    puntajeIdiomasYSoftSkills?: number | null
+    puntajeOtros?: number | null
+    perfilDetectadoIA?: string | null
   }
   entrevista?: {
     id: string
@@ -153,4 +161,12 @@ export interface Postulacion {
     respuesta: string | string[];
   }[];
   esFavorito?: boolean;
+  puntajeGeneral?: number | null;
+  motivosIA?: string[] | null;
+  puntajeRequisitosClave?: number | null;
+  puntajeExperienciaLaboral?: number | null;
+  puntajeFormacionAcademica?: number | null;
+  puntajeIdiomasYSoftSkills?: number | null;
+  puntajeOtros?: number | null;
+  perfilDetectadoIA?: string | null;
 } 

@@ -1,408 +1,571 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Brain, Loader2, Check, X } from "lucide-react"
-import { toast } from "sonner"
-import { AIBackground } from "@/components/ui/ai-background"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sidebar } from "@/components/dashboard/sidebar"
-import { DashboardLayout } from "@/components/dashboard/layout"
-import { ArrowLeft, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/components/ui/use-toast"
-
-interface Busqueda {
-  id: string
-  titulo: string
-  empresa: string
-  camposAdicionales?: {
-    nombre: string
-    tipo: string
-    valoresExcluyentes?: string[]
-  }[]
-}
-
-interface Postulacion {
-  id: string
-  candidatoId: string
-  busquedaId: string
-  faseActual: string
-  estado: string
-  fechaPostulacion: string
-  resumenCv?: string
-  candidato?: {
-    nombre: string
-    apellido: string
-  }
-  adecuacion?: string
-  comentarioIA?: string
-}
+import { motion } from "framer-motion"
+import { ArrowLeft, Users, CheckCircle2, XCircle, AlertTriangle, BarChart3, Sparkles, Brain, RefreshCw, UserCheck, ChevronLeft, ChevronRight, Briefcase, Calendar } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // Función inline para quitar tildes
 function removeDiacritics(str: string): string {
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-// Helper para parsear y ordenar resultados IA
-function parseResultadosIA(resultado: string, postulaciones: any[]) {
-  if (!resultado) return [];
-  return resultado
-    .split('\n')
-    .map(linea => {
-      // Acepta nombres compuestos: (nombre) tiene un XX% de adecuación al puesto. comentario
-      const match = linea.match(/^([\wáéíóúüñ ]+?)\s+tiene\s+un\s+(\d+)% de adecuación al puesto\.\s*(.*)$/i);
-      if (match) {
-        const nombreIA = match[1].trim();
-        // Buscar el apellido real en las postulaciones
-        const candidato = postulaciones.find(post => {
-          const nombreCard = removeDiacritics((post.candidato?.nombre || '').trim().toLowerCase());
-          const nombreIAComp = removeDiacritics(nombreIA.toLowerCase());
-          return nombreCard === nombreIAComp;
-        });
-        const apellido = candidato?.candidato?.apellido ? ` ${candidato.candidato.apellido}` : '';
-        return {
-          nombre: nombreIA + apellido,
-          porcentaje: parseInt(match[2], 10),
-          comentario: match[3]?.trim() || ''
-        };
-      }
-      return null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => (b!.porcentaje - a!.porcentaje));
-}
-
-function getColorByPorcentaje(p: number) {
-  if (p <= 40) return 'bg-red-100 text-red-800 border-red-200';
-  if (p <= 70) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-  return 'bg-green-100 text-green-800 border-green-200';
+  return str.normalize('NFD').replace(/\u0300-\u036f/g, '');
 }
 
 export default function EvaluarCandidatosPage() {
   const router = useRouter()
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [resultado, setResultado] = useState<string | null>(null)
-  const [busquedas, setBusquedas] = useState<Busqueda[]>([])
-  const [busquedaSeleccionada, setBusquedaSeleccionada] = useState<string>("")
-  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([])
-  const [postulacionesSeleccionadas, setPostulacionesSeleccionadas] = useState<string[]>([])
+  const [busquedas, setBusquedas] = useState<any[]>([])
+  const [conteos, setConteos] = useState<any[]>([])
+  const [selectedJobSearch, setSelectedJobSearch] = useState<string>("")
+  const [postulaciones, setPostulaciones] = useState<any[]>([])
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([])
+  const [comparisonResults, setComparisonResults] = useState<any>(null)
+  const [isComparing, setIsComparing] = useState(false)
+  const [activeTab, setActiveTab] = useState("general")
+  const [currentPage, setCurrentPage] = useState(1)
+  const candidatesPerPage = 6
+  const [loadingBusquedas, setLoadingBusquedas] = useState(false)
+  const [loadingPostulaciones, setLoadingPostulaciones] = useState(false)
+  const [iaResult, setIaResult] = useState<string | null>(null)
+  const [iaLoading, setIaLoading] = useState(false)
+  const [iaResults, setIaResults] = useState<any[]>([])
+  const [busquedaData, setBusquedaData] = useState<any>(null)
 
+  // Paginación de resultados IA
+  const iaCandidatesPerPage = 2; // Puedes ajustar este valor
+  const [iaCurrentPage, setIaCurrentPage] = useState(1);
+  // Filtrar solo los que cumplen todos los requisitos excluyentes
+  const iaResultsWithPostulacion = iaResults.map((resultado) => {
+    const postulacion = postulaciones.find(p =>
+      p.candidato && p.candidato.nombre && resultado.nombre &&
+      p.candidato.nombre.trim().toLowerCase() === resultado.nombre.trim().toLowerCase()
+    );
+    return { ...resultado, postulacion };
+  });
+  const iaResultsFiltered = iaResultsWithPostulacion.filter(r => {
+    const isExcluido = r.postulacion?.requisitosExcluyentes && r.postulacion.requisitosExcluyentes.length > 0;
+    return !isExcluido;
+  });
+  const iaTotalPages = Math.ceil(iaResultsFiltered.length / iaCandidatesPerPage);
+  const iaIndexOfLast = iaCurrentPage * iaCandidatesPerPage;
+  const iaIndexOfFirst = iaIndexOfLast - iaCandidatesPerPage;
+  const iaCurrentResults = iaResultsFiltered.slice(iaIndexOfFirst, iaIndexOfLast);
+
+  // Fetch de búsquedas del usuario
   useEffect(() => {
-    const cargarBusquedas = async () => {
-      try {
-        const response = await fetch("http://localhost:8080/api/busquedas", {
-          credentials: "include",
-        })
-        if (!response.ok) throw new Error("Error al cargar búsquedas")
-        const data = await response.json()
-        setBusquedas(data)
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Error al cargar búsquedas",
-          variant: "destructive"
-        })
-        console.error(error)
-      }
-    }
-    cargarBusquedas()
+    setLoadingBusquedas(true)
+    fetch("http://localhost:8080/api/busquedas", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => setBusquedas(data))
+      .catch(() => setBusquedas([]))
+      .finally(() => setLoadingBusquedas(false))
   }, [])
 
+  // Fetch de conteo de postulaciones por búsqueda
   useEffect(() => {
-    const cargarPostulaciones = async () => {
-      if (!busquedaSeleccionada) return;
-      
-      try {
-        const response = await fetch(`http://localhost:8080/api/postulaciones/busqueda/${busquedaSeleccionada}?estado=pendiente`, {
-          credentials: "include",
-        })
-        if (!response.ok) throw new Error("Error al cargar postulaciones")
-        const postulacionesData = await response.json()
+    fetch("http://localhost:8080/api/postulaciones/conteo-por-busqueda", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => setConteos(data))
+      .catch(() => setConteos([]))
+  }, [])
 
-        // Obtener los datos de cada candidato
-        const postulacionesConCandidatos = await Promise.all(
-          postulacionesData.map(async (postulacion: any) => {
+  // Fetch de postulaciones por búsqueda seleccionada
+  useEffect(() => {
+    if (!selectedJobSearch) return;
+    setLoadingPostulaciones(true)
+    fetch(`http://localhost:8080/api/postulaciones/busqueda/${selectedJobSearch}?estado=pendiente`, { credentials: "include" })
+      .then(res => res.json())
+      .then(async (data) => {
+        // Para cada postulacion, obtener datos del candidato
+        const postulacionesConCandidato = await Promise.all(
+          data.map(async (postulacion: any) => {
             try {
-              const candidatoResponse = await fetch(`http://localhost:8080/api/candidatos/${postulacion.candidatoId}`, {
-                credentials: "include",
-              })
-              if (!candidatoResponse.ok) throw new Error("Error al cargar datos del candidato")
-              const candidatoData = await candidatoResponse.json()
-              return {
-                ...postulacion,
-                candidato: {
-                  nombre: candidatoData.nombre,
-                  apellido: candidatoData.apellido
-                }
-              }
-            } catch (error) {
-              console.error("Error al cargar datos del candidato:", error)
-              return {
-                ...postulacion,
-                candidato: {
-                  nombre: "Error al cargar",
-                  apellido: ""
-                }
-              }
+              const candidatoRes = await fetch(`http://localhost:8080/api/candidatos/${postulacion.candidatoId}`, { credentials: "include" })
+              const candidato = await candidatoRes.json()
+              return { ...postulacion, candidato }
+            } catch {
+              return { ...postulacion, candidato: { nombre: "Error", apellido: "" } }
             }
           })
         )
-
-        setPostulaciones(postulacionesConCandidatos)
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Error al cargar postulaciones",
-          variant: "destructive"
-        })
-        console.error(error)
-      }
-    }
-    cargarPostulaciones()
-  }, [busquedaSeleccionada])
-
-  type PostulacionType = {
-    respuestas?: { campo: string; respuesta: string | string[] }[];
-  };
-  type BusquedaType = {
-    camposAdicionales?: { nombre: string; tipo: string; valoresExcluyentes?: string[] }[];
-  };
-  const cumpleExcluyentes = (postulacion: PostulacionType, busqueda?: BusquedaType) => {
-    if (!busqueda || !busqueda.camposAdicionales) return true;
-    // Solo campos excluyentes
-    const camposExcluyentes = busqueda.camposAdicionales.filter((c) => c.valoresExcluyentes && c.valoresExcluyentes.length > 0);
-    if (camposExcluyentes.length === 0) return true;
-    return camposExcluyentes.every((campo) => {
-      const respuesta = (postulacion.respuestas || []).find((r) => r.campo === campo.nombre);
-      if (!respuesta) return false;
-      if (campo.tipo === 'checkbox') {
-        const respuestasCandidato = Array.isArray(respuesta.respuesta) ? respuesta.respuesta : [respuesta.respuesta];
-        return (campo.valoresExcluyentes ?? []).every((valor) => respuestasCandidato.includes(valor));
-      } else {
-        return (campo.valoresExcluyentes ?? []).includes(String(respuesta.respuesta));
-      }
-    });
-  };
-
-  const handleEvaluar = async () => {
-    if (postulacionesSeleccionadas.length === 0) return
-
-    setLoading(true)
-    try {
-      const response = await fetch("http://localhost:8080/api/ia/comparar", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          postulacionIds: postulacionesSeleccionadas,
-        }),
+        setPostulaciones(postulacionesConCandidato)
       })
+      .catch(() => setPostulaciones([]))
+      .finally(() => setLoadingPostulaciones(false))
+  }, [selectedJobSearch])
 
-      if (!response.ok) throw new Error("Error al evaluar candidatos")
-      const data = await response.text()
-      // Extraer solo el texto del resultado
-      const match = data.match(/"resultado":\s*"([^"]+)"/)
-      let resultadoPlano = data
-      if (match && match[1]) {
-        resultadoPlano = match[1]
-          .replace(/\\n/g, '\n')
-          .replace(/\\u00f3/g, 'ó')
-          .replace(/\\u00e1/g, 'á')
-          .replace(/\\u00e9/g, 'é')
-          .replace(/\\u00ed/g, 'í')
-          .replace(/\\u00fa/g, 'ú')
-      }
-      setResultado(resultadoPlano)
+  // Fetch de la búsqueda seleccionada para obtener camposAdicionales
+  useEffect(() => {
+    if (!selectedJobSearch) return;
+    fetch(`http://localhost:8080/api/busquedas/${selectedJobSearch}`, { credentials: "include" })
+      .then(res => res.json())
+      .then(data => setBusquedaData(data))
+      .catch(() => setBusquedaData(null))
+  }, [selectedJobSearch])
 
-      // Asociación robusta: nombre y apellido exactos, sin tildes, lower
-      const lineas = resultadoPlano.split('\n').filter(Boolean)
-      setPostulaciones((prev) => prev.map((post) => {
-        const nombreCompleto = removeDiacritics(`${post.candidato?.nombre || ''} ${post.candidato?.apellido || ''}`.trim().toLowerCase());
-        const linea = lineas.find(l => {
-          // Extraer nombre y apellido de la línea
-          const matchNombre = l.match(/^([\wáéíóúüñ]+)\s+([\wáéíóúüñ]+)\s+tiene\s+un\s+\d+%/i);
-          if (matchNombre) {
-            const lineaNombre = removeDiacritics(`${matchNombre[1]} ${matchNombre[2]}`.trim().toLowerCase());
-            return lineaNombre === nombreCompleto;
-          }
-          return false;
-        });
-        if (linea) {
-          const porcentajeMatch = linea.match(/(\d+%) de adecuación/)
-          const comentario = linea.replace(/^[^ ]+ [^ ]+ tiene un \d+% de adecuación al puesto\. ?/, "")
-          return {
-            ...post,
-            adecuacion: porcentajeMatch ? porcentajeMatch[1] : undefined,
-            comentarioIA: comentario.trim()
-          }
-        }
-        return {
-          ...post,
-          adecuacion: undefined,
-          comentarioIA: undefined
-        }
-      }))
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al evaluar candidatos",
-        variant: "destructive"
-      })
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Paginación de candidatos
+  const indexOfLastCandidate = currentPage * candidatesPerPage
+  const indexOfFirstCandidate = indexOfLastCandidate - candidatesPerPage
+  const currentCandidates = postulaciones.slice(indexOfFirstCandidate, indexOfLastCandidate)
+  const totalPages = Math.ceil(postulaciones.length / candidatesPerPage)
 
-  const togglePostulacion = (id: string) => {
-    setPostulacionesSeleccionadas(prev =>
-      prev.includes(id) ? prev.filter(postId => postId !== id) : [...prev, id]
+  // Manejar selección de candidatos
+  const toggleCandidateSelection = (candidateId: string) => {
+    setSelectedCandidates((prev) =>
+      prev.includes(candidateId) ? prev.filter((id) => id !== candidateId) : [...prev, candidateId],
     )
   }
 
+  // Cambiar de página
+  const paginate = (pageNumber: number) => {
+    setCurrentPage(pageNumber)
+  }
+
+  // Función para obtener el color según el puntaje
+  const getScoreColor = (score: number) => {
+    if (score < 50) return "text-red-500"
+    if (score < 75) return "text-amber-500"
+    return "text-green-500"
+  }
+
+  // Función para obtener el color de fondo según el puntaje
+  const getScoreBgColor = (score: number) => {
+    if (score < 50) return "bg-red-50"
+    if (score < 75) return "bg-amber-50"
+    return "bg-green-50"
+  }
+
+  // Función para obtener el color de borde según el puntaje
+  const getScoreBorderColor = (score: number) => {
+    if (score < 50) return "border-red-200"
+    if (score < 75) return "border-amber-200"
+    return "border-green-200"
+  }
+
+  // Función para obtener el icono según el puntaje
+  const getScoreIcon = (score: number) => {
+    if (score < 50) return <XCircle className="h-4 w-4" />
+    if (score < 75) return <AlertTriangle className="h-4 w-4" />
+    return <CheckCircle2 className="h-4 w-4" />
+  }
+
+  // Obtener el icono para las búsquedas
+  const getJobIcon = () => {
+    return <Briefcase className="h-4 w-4" />
+  }
+
+  // Obtener conteo de postulaciones para una búsqueda
+  const getConteoForBusqueda = (busquedaId: string) => {
+    const conteo = conteos.find((c: any) => c.busquedaId === busquedaId)
+    return conteo ? conteo.cantidad : 0
+  }
+
+  // Función para calcular si un candidato cumple todos los requisitos excluyentes
+  const cumpleRequisitosExcluyentes = (postulacion: any) => {
+    if (!busquedaData?.camposAdicionales || !Array.isArray(busquedaData.camposAdicionales)) return true;
+    const campos = busquedaData.camposAdicionales.filter((campo: any) => campo.valoresExcluyentes && campo.valoresExcluyentes.length > 0)
+    for (const campo of campos) {
+      const respuesta = (postulacion.respuestas || []).find((r: any) => r.campo === campo.nombre);
+      if (!respuesta) return false;
+      if (campo.tipo === "checkbox") {
+        const respuestasCandidato = Array.isArray(respuesta.respuesta) ? respuesta.respuesta : [respuesta.respuesta];
+        const valoresExcluyentes = campo.valoresExcluyentes || [];
+        const noCumple = valoresExcluyentes.some((valor: string) => !respuestasCandidato.includes(valor));
+        if (noCumple) return false;
+      } else {
+        const valoresExcluyentes = campo.valoresExcluyentes || [];
+        if (valoresExcluyentes.length > 0 && !valoresExcluyentes.includes(respuesta.respuesta)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // Comparar candidatos usando el endpoint real de IA
+  const compareSelectedCandidates = async () => {
+    setIsComparing(true)
+    setIaLoading(true)
+    setIaResult(null)
+    setComparisonResults(null)
+    try {
+      // 1. Verificar si todos los seleccionados tienen resumenCv
+      for (const postulacionId of selectedCandidates) {
+        const postulacion = postulaciones.find(p => p.id === postulacionId);
+        if (!postulacion) throw new Error("No se encontró la postulación seleccionada");
+        if (!postulacion.resumenCv) {
+          // Obtener el CV
+          const cvResponse = await fetch(`http://localhost:8080/api/postulaciones/${postulacion.id}/cv`, {
+            credentials: "include",
+            headers: { 'Accept': 'application/pdf' }
+          });
+          if (!cvResponse.ok) {
+            const errorText = await cvResponse.text();
+            throw new Error(`Error al obtener CV: ${cvResponse.status} ${errorText}`);
+          }
+          const blob = await cvResponse.blob();
+          if (blob.size === 0) throw new Error('El archivo CV está vacío');
+          const file = new File([blob], 'cv.pdf', { type: 'application/pdf' });
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('postulacionId', postulacion.id);
+          formData.append('busquedaId', postulacion.busquedaId || "");
+          // Generar el resumen
+          const iaRes = await fetch(`http://localhost:8080/api/geminiIA/extraer-cv-y-resumir`, {
+            method: 'POST',
+            credentials: "include",
+            body: formData
+          });
+          if (!iaRes.ok) {
+            const errorText = await iaRes.text();
+            throw new Error(`Error al generar resumen IA: ${iaRes.status} ${errorText}`);
+          }
+          // Opcional: podrías refrescar la postulación aquí si quieres el resumen actualizado en el frontend
+        }
+      }
+      // 2. Ejecutar la comparación IA
+      const response = await fetch("http://localhost:8080/api/ia/comparar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ postulacionIds: selectedCandidates })
+      })
+      if (!response.ok) throw new Error("Error al comparar candidatos")
+      const data = await response.json()
+      setIaResults(data.resultados || [])
+    } catch (e) {
+      setIaResult("Error al comparar candidatos")
+    } finally {
+      setIsComparing(false)
+      setIaLoading(false)
+    }
+  }
+
   return (
-    <Sidebar>
-      <DashboardLayout>
-        <div className="flex items-center gap-4 mb-8 mt-2">
-          <button
-            onClick={() => router.back()}
-            className="mr-2"
-            aria-label="Volver"
-          >
-            <ArrowLeft className="h-7 w-7 text-foreground" />
-          </button>
-          <div className="flex items-center gap-5">
-            <span className="flex items-center justify-center h-16 w-16 bg-gradient-to-br from-purple-400 via-indigo-400 to-blue-400 rounded-2xl shadow-lg">
-              <Sparkles className="h-10 w-10 text-white drop-shadow-lg" />
-            </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground flex items-center">
-              Evaluar mejores candidatos
-              <span
-                className="ml-3 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 bg-clip-text text-transparent font-extrabold"
-                style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-              >
-                IA
-              </span>
-              <span className="ml-1 animate-blink text-3xl font-extrabold text-purple-400">|</span>
-            </h1>
+    <div className="flex flex-col min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="bg-white border-b sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold flex items-center">
+                  Comparar Candidatos
+                  <Badge className="ml-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    IA
+                  </Badge>
+                </h1>
+                <p className="text-sm text-slate-500">Análisis comparativo con inteligencia artificial</p>
+              </div>
+            </div>
           </div>
         </div>
+      </header>
 
-        <div className="max-w-2xl mb-8">
-          <p className="text-muted-foreground text-lg">
-            Utiliza nuestra IA para evaluar y comparar candidatos de forma objetiva. Selecciona una búsqueda y los candidatos que deseas comparar.
-          </p>
-        </div>
-
-        <div className="mb-6 max-w-md">
-          <label className="block text-sm font-medium mb-2">Seleccionar Búsqueda</label>
-          <select
-            value={busquedaSeleccionada}
-            onChange={(e) => setBusquedaSeleccionada(e.target.value)}
-            className="w-full p-2 border rounded bg-background text-foreground"
-          >
-            <option value="">Seleccione una búsqueda</option>
-            {busquedas.map((busqueda) => (
-              <option key={busqueda.id} value={busqueda.id}>
-                {busqueda.titulo}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {busquedaSeleccionada && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {postulaciones.map((postulacion) => {
-                const esVerde = cumpleExcluyentes(postulacion as PostulacionType, busquedas.find(b => b.id === busquedaSeleccionada));
-                return (
-                  <div
-                    key={postulacion.id}
-                    className={`border rounded-xl p-5 shadow-sm hover:shadow-lg transition cursor-pointer flex flex-col gap-2 ${postulacionesSeleccionadas.includes(postulacion.id) ? 'ring-2 ring-purple-400' : ''} ${esVerde ? 'bg-green-50 border-green-200' : 'bg-white'}`}
-                    onClick={() => togglePostulacion(postulacion.id)}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-bold text-lg text-foreground">
-                        {postulacion.candidato?.nombre} {postulacion.candidato?.apellido}
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={postulacionesSeleccionadas.includes(postulacion.id)}
-                        onChange={() => {}}
-                        className="h-4 w-4 accent-purple-500 ml-auto"
-                      />
-                    </div>
-                    {/* Mostrar adecuación y comentario IA si existen */}
-                    {postulacion.adecuacion && (
-                      <div className="text-base font-semibold text-purple-700 mb-1">{postulacion.adecuacion} de adecuación</div>
-                    )}
-                    {postulacion.comentarioIA && (
-                      <div className="text-sm text-muted-foreground whitespace-pre-line">{postulacion.comentarioIA}</div>
-                    )}
+      {/* Main content */}
+      <main className="flex-1 container mx-auto px-4 py-6">
+        <div className="max-w-5xl mx-auto">
+          {/* Instrucciones */}
+          <Card className="mb-6 overflow-hidden border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[2px]"></div>
+                  <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/50 flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-indigo-600" />
                   </div>
-                )
-              })}
-            </div>
-            {/* Output de resultados IA ordenados y coloreados, entre las cards y el botón */}
-            {resultado && (
-              <div className="mb-8 p-4 rounded-xl shadow-lg border bg-white max-w-3xl mx-auto">
-                <h2 className="font-bold text-lg mb-3 text-foreground">Resultados de la evaluación IA</h2>
-                {parseResultadosIA(resultado, postulaciones).length > 0 ? (
-                  <div className="flex flex-col gap-2">
-                    {parseResultadosIA(resultado, postulaciones).map((r, idx) => {
-                      const res = r as { nombre: string; porcentaje: number; comentario: string };
-                      return (
-                        <div
-                          key={res.nombre + idx}
-                          className={`flex items-center gap-3 px-4 py-2 rounded-lg border font-medium ${getColorByPorcentaje(res.porcentaje)}`}
-                        >
-                          <span className="w-40 truncate font-bold">{res.nombre}</span>
-                          <span className="text-lg font-bold">{res.porcentaje}%</span>
-                          <span className="flex-1 text-sm text-foreground/80 ml-2">{res.comentario}</span>
+                </div>
+                <div>
+                  <h2 className="text-sm font-medium text-slate-800 flex items-center gap-2">
+                    Análisis inteligente
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-50 text-indigo-700 text-[10px] font-normal py-0 h-4 border-indigo-200"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      IA
+                    </Badge>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Seleccione candidatos para comparar sus perfiles con precisión mediante nuestro sistema de
+                    inteligencia artificial.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Selector de búsqueda */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-3">Seleccionar búsqueda</h3>
+            <Select
+              value={selectedJobSearch}
+              onValueChange={(value) => {
+                setSelectedJobSearch(value)
+                setCurrentPage(1)
+                setSelectedCandidates([])
+              }}
+            >
+              <SelectTrigger className="w-full bg-white border-slate-200">
+                <SelectValue placeholder="Selecciona una búsqueda" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Búsquedas activas</SelectLabel>
+                  {busquedas.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      <div className="flex items-center gap-3">
+                        <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                          {getJobIcon()}
                         </div>
-                      );
-                    })}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{job.titulo || job.title}</div>
+                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              <span>{getConteoForBusqueda(job.id)} candidatos</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Lista de candidatos */}
+          {selectedJobSearch && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-lg font-medium">Candidatos disponibles</h3>
+                  {postulaciones.length > 0 && (
+                    <p className="text-sm text-slate-500">
+                      Mostrando {indexOfFirstCandidate + 1}-{Math.min(indexOfLastCandidate, postulaciones.length)} de {postulaciones.length} candidatos
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-white">
+                    {selectedCandidates.length} seleccionados
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedCandidates([])}
+                    disabled={selectedCandidates.length === 0}
+                  >
+                    Limpiar selección
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {currentCandidates.map((postulacion) => (
+                    <div
+                      key={postulacion.id}
+                      className={
+                        `relative rounded-lg border overflow-hidden transition-all cursor-pointer
+                        ${cumpleRequisitosExcluyentes(postulacion) ? "bg-green-50 border-green-200" : "bg-white border-slate-200"}
+                        ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-indigo-500 ring-offset-2" : ""}`
+                      }
+                      onClick={() => toggleCandidateSelection(postulacion.id)}
+                    >
+                      <div className="absolute top-3 right-3" onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedCandidates.includes(postulacion.id)}
+                          onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
+                          className={`h-5 w-5 ${selectedCandidates.includes(postulacion.id) ? "bg-indigo-600 text-white" : "border-slate-300"}`}
+                        />
+                      </div>
+                      <div className="p-4">
+                        <h4 className="font-medium mb-2">{postulacion.candidato?.nombre} {postulacion.candidato?.apellido}</h4>
+                        {/* Aquí puedes mostrar más info del candidato si lo deseas */}
+                        {/* Puedes agregar compatibilidad, experiencia, etc. si tienes esos datos */}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Paginación */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center mt-6 gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => paginate(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {Array.from({ length: totalPages }).map((_, index) => (
+                      <Button
+                        key={index}
+                        variant={currentPage === index + 1 ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => paginate(index + 1)}
+                        className={`h-8 w-8 p-0 ${currentPage === index + 1 ? "bg-indigo-600" : ""}`}
+                      >
+                        {index + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => paginate(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
-                ) : (
-                  <div className="text-muted-foreground text-sm whitespace-pre-line">{resultado}</div>
                 )}
               </div>
-            )}
-            {postulacionesSeleccionadas.length > 0 && (
-              <div className="mb-8">
-                <button
-                  onClick={handleEvaluar}
-                  disabled={loading}
-                  className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-600 transition disabled:opacity-50"
-                >
-                  {loading ? (
-                    <span className="flex items-center gap-2"><Sparkles className="animate-spin h-5 w-5" /> Evaluando...</span>
-                  ) : (
-                    <span className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> Evaluar Candidatos Seleccionados</span>
-                  )}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
 
-        <style jsx global>{`
-          @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-          }
-          .animate-blink {
-            animation: blink 1s steps(2, start) infinite;
-          }
-        `}</style>
-      </DashboardLayout>
-    </Sidebar>
+          {/* Botón de comparar */}
+          {selectedCandidates.length > 0 && (
+            <div className="flex justify-center mb-8">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md"
+                onClick={compareSelectedCandidates}
+                disabled={isComparing}
+              >
+                {isComparing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Comparando candidatos...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Comparar {selectedCandidates.length} candidatos con IA
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Resultados de la comparación IA */}
+          {iaResultsFiltered.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                Resultados de la comparación IA
+                <Badge className="bg-gradient-to-r from-indigo-500 to-purple-600">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  IA
+                </Badge>
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {iaCurrentResults.map((resultado, index) => {
+                  const postulacion = resultado.postulacion;
+                  const apellido = postulacion?.candidato?.apellido || "";
+                  const isVerde = cumpleRequisitosExcluyentes(postulacion);
+                  const cardBg = isVerde ? "bg-green-50 border-green-200" : "bg-white border-slate-200";
+                  return (
+                    <Card key={index} className={`overflow-hidden ${getScoreBorderColor(resultado.score)} ${cardBg}`}>
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <h3 className="text-lg font-semibold">{resultado.nombre} {apellido}</h3>
+                          <div className={`flex items-center gap-1 ${getScoreColor(resultado.score)}`}>
+                            {getScoreIcon(resultado.score)}
+                            <span className="font-medium">{resultado.score}%</span>
+                          </div>
+                        </div>
+                        {/* Barra de progreso */}
+                        <div className="mb-4">
+                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 ${getScoreBgColor(resultado.score)}`}
+                              style={{ width: `${resultado.score}%` }}
+                            />
+                          </div>
+                        </div>
+                        {/* Explicaciones */}
+                        <div className="space-y-2">
+                          {resultado.explicacion.map((exp: string, i: number) => (
+                            <div 
+                              key={i}
+                              className={`text-sm p-2 rounded-md ${
+                                exp.toLowerCase().includes('no cumple') 
+                                  ? 'bg-red-50 text-red-700 border border-red-200'
+                                  : 'bg-green-50 text-green-700 border border-green-200'
+                              }`}
+                            >
+                              {exp}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+              {/* Paginación IA */}
+              {iaTotalPages > 1 && (
+                <div className="flex items-center justify-center mt-6 gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIaCurrentPage(iaCurrentPage - 1)}
+                    disabled={iaCurrentPage === 1}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {Array.from({ length: iaTotalPages }).map((_, index) => (
+                    <Button
+                      key={index}
+                      variant={iaCurrentPage === index + 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIaCurrentPage(index + 1)}
+                      className={`h-8 w-8 p-0 ${iaCurrentPage === index + 1 ? "bg-indigo-600" : ""}`}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIaCurrentPage(iaCurrentPage + 1)}
+                    disabled={iaCurrentPage === iaTotalPages}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   )
 } 
