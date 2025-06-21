@@ -33,6 +33,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 import java.io.IOException; 
 import java.util.Base64;
+import com.securehire.backend.service.SendGridEmailService;
 
 @RestController
 @RequestMapping("/api/postulaciones")
@@ -52,6 +53,9 @@ public class PostulacionController {
 
     @Autowired
     private PostulacionRepository postulacionRepository;
+
+    @Autowired
+    private SendGridEmailService sendGridEmailService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> crearPostulacion(
@@ -102,13 +106,26 @@ public class PostulacionController {
         if (busquedaOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("La búsqueda indicada no existe");
         }
+        Busqueda busqueda = busquedaOpt.get();
 
         Postulacion postulacion = new Postulacion();
         postulacion.setBusquedaId(busquedaId);
         postulacion.setRespuestas(respuestas);
 
         try {
-            return ResponseEntity.ok(postulacionService.crearPostulacion(postulacion, candidato, archivoCV, fotoPerfil));
+            Object result = postulacionService.crearPostulacion(postulacion, candidato, archivoCV, fotoPerfil);
+            // Enviar email de confirmación SOLO si la postulación se creó correctamente
+            try {
+                String asunto = "Confirmación de postulación en " + busqueda.getTitulo();
+                String contenido = "Hola " + nombre + ",\n\n" +
+                        "Te confirmamos que tu postulación a la búsqueda '" + busqueda.getTitulo() + "' fue registrada con éxito.\n" +
+                        "Pronto el equipo de selección revisará tu perfil.\n\n" +
+                        "¡Gracias por confiar en nosotros!";
+                sendGridEmailService.enviarCorreo(email, asunto, contenido);
+            } catch (Exception ex) {
+                System.err.println("[WARN] No se pudo enviar el mail de confirmación: " + ex.getMessage());
+            }
+            return ResponseEntity.ok(result);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

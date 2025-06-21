@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, Users, CheckCircle2, XCircle, AlertTriangle, BarChart3, Sparkles, Brain, RefreshCw, UserCheck, ChevronLeft, ChevronRight, Briefcase, Calendar } from 'lucide-react'
+import { ArrowLeft, Users, CheckCircle2, XCircle, AlertTriangle, BarChart3, Sparkles, Brain, RefreshCw, User, ChevronLeft, ChevronRight, Briefcase, Calendar } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -20,6 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { DashboardLayout } from "@/components/dashboard/layout"
+import { ImagenPerfil } from "@/components/job-offer/ImagenPerfil"
 
 // Función inline para quitar tildes
 function removeDiacritics(str: string): string {
@@ -203,6 +206,9 @@ export default function EvaluarCandidatosPage() {
     setIaResult(null)
     setComparisonResults(null)
     try {
+      // Delay de 4 segundos para simular procesamiento
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      
       // 1. Verificar si todos los seleccionados tienen resumenCv
       for (const postulacionId of selectedCandidates) {
         const postulacion = postulaciones.find(p => p.id === postulacionId);
@@ -246,7 +252,24 @@ export default function EvaluarCandidatosPage() {
       })
       if (!response.ok) throw new Error("Error al comparar candidatos")
       const data = await response.json()
-      setIaResults(data.resultados || [])
+      const resultados = data.resultados || []
+      setIaResults(resultados)
+
+      // 3. Actualizar estado de postulaciones para marcarlas como analizadas
+      setPostulaciones(prevPostulaciones =>
+        prevPostulaciones.map(p => {
+            const resultado = resultados.find((res: any) => res.nombre.trim().toLowerCase() === p.candidato?.nombre?.trim().toLowerCase());
+            if (resultado) {
+                return {
+                    ...p,
+                    hasBeenAnalyzed: true,
+                    score: resultado.score,
+                };
+            }
+            return p;
+        })
+      )
+
     } catch (e) {
       setIaResult("Error al comparar candidatos")
     } finally {
@@ -256,180 +279,398 @@ export default function EvaluarCandidatosPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+    <Sidebar>
+      <DashboardLayout>
+        {/* Header */}
+        <header className="bg-white border-b sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold flex items-center">
-                  Comparar Candidatos
-                  <Badge className="ml-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    IA
-                  </Badge>
-                </h1>
-                <p className="text-sm text-slate-500">Análisis comparativo con inteligencia artificial</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="flex-1 container mx-auto px-4 py-6">
-        <div className="max-w-5xl mx-auto">
-          {/* Instrucciones */}
-          <Card className="mb-6 overflow-hidden border-0 shadow-sm">
-            <CardContent className="p-4">
+              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <div className="flex items-center gap-3">
-                <div className="relative flex-shrink-0">
-                  <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[2px]"></div>
-                  <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/50 flex items-center justify-center">
-                    <Brain className="h-5 w-5 text-indigo-600" />
-                  </div>
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-medium text-slate-800 flex items-center gap-2">
-                    Análisis inteligente
-                    <Badge
-                      variant="outline"
-                      className="bg-indigo-50 text-indigo-700 text-[10px] font-normal py-0 h-4 border-indigo-200"
-                    >
+                  <h1 className="text-xl font-bold flex items-center">
+                    Comparar Candidatos
+                    <Badge className="ml-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
                       <Sparkles className="h-3 w-3 mr-1" />
                       IA
                     </Badge>
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                    Seleccione candidatos para comparar sus perfiles con precisión mediante nuestro sistema de
-                    inteligencia artificial.
-                  </p>
+                  </h1>
+                  <p className="text-sm text-slate-500">Análisis comparativo con inteligencia artificial</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </header>
 
-          {/* Selector de búsqueda */}
-          <div className="mb-6">
-            <h3 className="text-lg font-medium mb-3">Seleccionar búsqueda</h3>
-            <Select
-              value={selectedJobSearch}
-              onValueChange={(value) => {
-                setSelectedJobSearch(value)
-                setCurrentPage(1)
-                setSelectedCandidates([])
-              }}
-            >
-              <SelectTrigger className="w-full bg-white border-slate-200">
-                <SelectValue placeholder="Selecciona una búsqueda" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Búsquedas activas</SelectLabel>
-                  {busquedas.map((job) => (
-                    <SelectItem key={job.id} value={job.id}>
-                      <div className="flex items-center gap-3">
-                        <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                          {getJobIcon()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm">{job.titulo || job.title}</div>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              <span>{getConteoForBusqueda(job.id)} candidatos</span>
+        {/* Main content */}
+        <main className="flex-1 container mx-auto px-4 py-6">
+          <div className="max-w-5xl mx-auto">
+            {/* Instrucciones */}
+            <Card className="mb-6 overflow-hidden border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[2px]"></div>
+                    <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/50 flex items-center justify-center">
+                      <Brain className="h-5 w-5 text-indigo-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-medium text-slate-800 flex items-center gap-2">
+                      Análisis inteligente
+                      <Badge
+                        variant="outline"
+                        className="bg-indigo-50 text-indigo-700 text-[10px] font-normal py-0 h-4 border-indigo-200"
+                      >
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        IA
+                      </Badge>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      Seleccione candidatos para comparar sus perfiles con precisión mediante nuestro sistema de
+                      inteligencia artificial.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Selector de búsqueda */}
+            <div className="mb-6">
+              <h3 className="text-lg font-medium mb-3">Seleccionar búsqueda</h3>
+              <Select
+                value={selectedJobSearch}
+                onValueChange={(value) => {
+                  setSelectedJobSearch(value)
+                  setCurrentPage(1)
+                  setSelectedCandidates([])
+                }}
+              >
+                <SelectTrigger className="w-full bg-white border-slate-200">
+                  <SelectValue placeholder="Selecciona una búsqueda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Búsquedas activas</SelectLabel>
+                    {busquedas.map((job) => (
+                      <SelectItem key={job.id} value={job.id}>
+                        <div className="flex items-center gap-3">
+                          <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                            {getJobIcon()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{job.titulo || job.title}</div>
+                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                              <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                <span>{getConteoForBusqueda(job.id)} candidatos</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Lista de candidatos */}
-          {selectedJobSearch && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="text-lg font-medium">Candidatos disponibles</h3>
-                  {postulaciones.length > 0 && (
-                    <p className="text-sm text-slate-500">
-                      Mostrando {indexOfFirstCandidate + 1}-{Math.min(indexOfLastCandidate, postulaciones.length)} de {postulaciones.length} candidatos
-                    </p>
+            {/* Lista de candidatos */}
+            {selectedJobSearch && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-lg font-medium">Candidatos disponibles</h3>
+                    {postulaciones.length > 0 && (
+                      <p className="text-sm text-slate-500">
+                        Mostrando {indexOfFirstCandidate + 1}-{Math.min(indexOfLastCandidate, postulaciones.length)} de {postulaciones.length} candidatos
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-white">
+                      {selectedCandidates.length} seleccionados
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedCandidates([])}
+                      disabled={selectedCandidates.length === 0}
+                    >
+                      Limpiar selección
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border border-slate-200 p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {currentCandidates.map((postulacion) => {
+                      const hasBeenAnalyzed = postulacion.hasBeenAnalyzed || false;
+                      const score = postulacion.score || 0;
+                      const matchesRequirements = cumpleRequisitosExcluyentes(postulacion);
+                      const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`;
+                      const perfilDetectado = postulacion.perfilDetectadoIA || "Perfil no detectado.";
+
+                      if (hasBeenAnalyzed) {
+                        // Card para candidato YA ANALIZADO
+                        return (
+                          <div
+                            key={postulacion.id}
+                            className={`
+                              relative rounded-lg border overflow-hidden transition-all cursor-pointer hover:shadow-sm
+                              ${matchesRequirements ? "bg-green-50/50 border-green-200" : "bg-white border-slate-200"}
+                              ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-indigo-500 ring-offset-2" : ""}
+                            `}
+                            onClick={() => toggleCandidateSelection(postulacion.id)}
+                          >
+                            <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedCandidates.includes(postulacion.id)}
+                                onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
+                                className={`h-5 w-5 ${selectedCandidates.includes(postulacion.id) ? "bg-indigo-600 text-white" : "border-slate-300"}`}
+                              />
+                            </div>
+                            <div className="p-4">
+                              <div className="flex items-center gap-3 mb-3">
+                                <ImagenPerfil 
+                                  postulacionId={postulacion.id} 
+                                  nombre={postulacion.candidato?.nombre || ''} 
+                                  apellido={postulacion.candidato?.apellido || ''}
+                                  size={40}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-slate-900 truncate">{candidateName}</h4>
+                                  <p className="text-sm text-slate-500 truncate">{perfilDetectado}</p>
+                                </div>
+                              </div>
+
+                              <div className="mb-3">
+                                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                                  <span>Compatibilidad</span>
+                                  <span className={`font-medium ${
+                                    score >= 75 ? "text-green-600" : score >= 50 ? "text-amber-600" : "text-red-600"
+                                  }`}>
+                                    {score}%
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      score < 50 ? "bg-red-500" : score < 75 ? "bg-amber-500" : "bg-green-500"
+                                    }`}
+                                    style={{ width: `${score}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-end text-xs">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      {matchesRequirements ? (
+                                        <Badge className="bg-green-100 text-green-800 border-0 flex items-center gap-1 cursor-default hover:bg-green-100">
+                                          <CheckCircle2 className="h-3 w-3" /> Requisitos
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-red-100 text-red-800 border-0 flex items-center gap-1 cursor-default hover:bg-red-100">
+                                          <XCircle className="h-3 w-3" /> Requisitos
+                                        </Badge>
+                                      )}
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{matchesRequirements ? 'El candidato cumple con todos los requisitos excluyentes.' : 'El candidato NO cumple con todos los requisitos excluyentes.'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        // Card para candidato SIN ANALIZAR
+                        return (
+                          <div
+                            key={postulacion.id}
+                            className={`
+                              relative rounded-lg border overflow-hidden transition-all cursor-pointer hover:shadow-sm
+                              ${matchesRequirements ? "bg-green-50/30 border-green-100" : "bg-white border-slate-200"}
+                              ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-indigo-500 ring-offset-2" : ""}
+                            `}
+                            onClick={() => toggleCandidateSelection(postulacion.id)}
+                          >
+                            <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedCandidates.includes(postulacion.id)}
+                                onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
+                                className={`h-5 w-5 ${selectedCandidates.includes(postulacion.id) ? "bg-indigo-600 text-white" : "border-slate-300"}`}
+                              />
+                            </div>
+                            <div className="p-4 flex flex-col justify-between h-full">
+                              <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                  <ImagenPerfil 
+                                    postulacionId={postulacion.id} 
+                                    nombre={postulacion.candidato?.nombre || ''} 
+                                    apellido={postulacion.candidato?.apellido || ''}
+                                    size={40}
+                                  />
+                                  <h4 className="font-medium text-slate-900 truncate">{candidateName}</h4>
+                                </div>
+                              </div>
+                              <div className="mt-3 pt-3 border-t border-slate-100">
+                                <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                                  <Brain className="h-4 w-4" />
+                                  <span>Sin analizar</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center mt-6 gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="h-8 w-8"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      {Array.from({ length: totalPages }).map((_, index) => (
+                        <Button
+                          key={index}
+                          variant={currentPage === index + 1 ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => paginate(index + 1)}
+                          className={`h-8 w-8 p-0 ${currentPage === index + 1 ? "bg-indigo-600" : ""}`}
+                        >
+                          {index + 1}
+                        </Button>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="h-8 w-8"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-white">
-                    {selectedCandidates.length} seleccionados
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedCandidates([])}
-                    disabled={selectedCandidates.length === 0}
-                  >
-                    Limpiar selección
-                  </Button>
-                </div>
               </div>
+            )}
 
-              <div className="bg-white rounded-lg border border-slate-200 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {currentCandidates.map((postulacion) => (
-                    <div
-                      key={postulacion.id}
-                      className={
-                        `relative rounded-lg border overflow-hidden transition-all cursor-pointer
-                        ${cumpleRequisitosExcluyentes(postulacion) ? "bg-green-50 border-green-200" : "bg-white border-slate-200"}
-                        ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-indigo-500 ring-offset-2" : ""}`
-                      }
-                      onClick={() => toggleCandidateSelection(postulacion.id)}
-                    >
-                      <div className="absolute top-3 right-3" onClick={e => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedCandidates.includes(postulacion.id)}
-                          onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
-                          className={`h-5 w-5 ${selectedCandidates.includes(postulacion.id) ? "bg-indigo-600 text-white" : "border-slate-300"}`}
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h4 className="font-medium mb-2">{postulacion.candidato?.nombre} {postulacion.candidato?.apellido}</h4>
-                        {/* Aquí puedes mostrar más info del candidato si lo deseas */}
-                        {/* Puedes agregar compatibilidad, experiencia, etc. si tienes esos datos */}
-                      </div>
-                    </div>
-                  ))}
+            {/* Botón de comparar */}
+            {selectedCandidates.length > 0 && (
+              <div className="flex justify-center mb-8">
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md"
+                  onClick={compareSelectedCandidates}
+                  disabled={isComparing}
+                >
+                  {isComparing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Comparando candidatos...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Comparar {selectedCandidates.length} candidatos con IA
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Resultados de la comparación IA */}
+            {iaResultsFiltered.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  Resultados de la comparación IA
+                  <Badge className="bg-gradient-to-r from-indigo-500 to-purple-600">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    IA
+                  </Badge>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {iaCurrentResults.map((resultado, index) => {
+                    const postulacion = resultado.postulacion;
+                    const apellido = postulacion?.candidato?.apellido || "";
+                    const isVerde = cumpleRequisitosExcluyentes(postulacion);
+                    const cardBg = isVerde ? "bg-green-50 border-green-200" : "bg-white border-slate-200";
+                    return (
+                      <Card key={index} className={`overflow-hidden ${getScoreBorderColor(resultado.score)} ${cardBg}`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <h3 className="text-lg font-semibold">{resultado.nombre} {apellido}</h3>
+                            <div className={`flex items-center gap-1 ${getScoreColor(resultado.score)}`}>
+                              {getScoreIcon(resultado.score)}
+                              <span className="font-medium">{resultado.score}%</span>
+                            </div>
+                          </div>
+                          {/* Barra de progreso */}
+                          <div className="mb-4">
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-500 ${getScoreBgColor(resultado.score)}`}
+                                style={{ width: `${resultado.score}%` }}
+                              />
+                            </div>
+                          </div>
+                          {/* Explicaciones */}
+                          <div className="space-y-2">
+                            {resultado.explicacion.map((exp: string, i: number) => (
+                              <div 
+                                key={i}
+                                className={`text-sm p-2 rounded-md ${
+                                  exp.toLowerCase().includes('no cumple') 
+                                    ? 'bg-red-50 text-red-700 border border-red-200'
+                                    : 'bg-green-50 text-green-700 border border-green-200'
+                                }`}
+                              >
+                                {exp}
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
-
-                {/* Paginación */}
-                {totalPages > 1 && (
+                {/* Paginación IA */}
+                {iaTotalPages > 1 && (
                   <div className="flex items-center justify-center mt-6 gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => paginate(currentPage - 1)}
-                      disabled={currentPage === 1}
+                      onClick={() => setIaCurrentPage(iaCurrentPage - 1)}
+                      disabled={iaCurrentPage === 1}
                       className="h-8 w-8"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    {Array.from({ length: totalPages }).map((_, index) => (
+                    {Array.from({ length: iaTotalPages }).map((_, index) => (
                       <Button
                         key={index}
-                        variant={currentPage === index + 1 ? "default" : "outline"}
+                        variant={iaCurrentPage === index + 1 ? "default" : "outline"}
                         size="sm"
-                        onClick={() => paginate(index + 1)}
-                        className={`h-8 w-8 p-0 ${currentPage === index + 1 ? "bg-indigo-600" : ""}`}
+                        onClick={() => setIaCurrentPage(index + 1)}
+                        className={`h-8 w-8 p-0 ${iaCurrentPage === index + 1 ? "bg-indigo-600" : ""}`}
                       >
                         {index + 1}
                       </Button>
@@ -437,8 +678,8 @@ export default function EvaluarCandidatosPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => paginate(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                      onClick={() => setIaCurrentPage(iaCurrentPage + 1)}
+                      disabled={iaCurrentPage === iaTotalPages}
                       className="h-8 w-8"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -446,126 +687,10 @@ export default function EvaluarCandidatosPage() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Botón de comparar */}
-          {selectedCandidates.length > 0 && (
-            <div className="flex justify-center mb-8">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md"
-                onClick={compareSelectedCandidates}
-                disabled={isComparing}
-              >
-                {isComparing ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Comparando candidatos...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Comparar {selectedCandidates.length} candidatos con IA
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* Resultados de la comparación IA */}
-          {iaResultsFiltered.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                Resultados de la comparación IA
-                <Badge className="bg-gradient-to-r from-indigo-500 to-purple-600">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  IA
-                </Badge>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {iaCurrentResults.map((resultado, index) => {
-                  const postulacion = resultado.postulacion;
-                  const apellido = postulacion?.candidato?.apellido || "";
-                  const isVerde = cumpleRequisitosExcluyentes(postulacion);
-                  const cardBg = isVerde ? "bg-green-50 border-green-200" : "bg-white border-slate-200";
-                  return (
-                    <Card key={index} className={`overflow-hidden ${getScoreBorderColor(resultado.score)} ${cardBg}`}>
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <h3 className="text-lg font-semibold">{resultado.nombre} {apellido}</h3>
-                          <div className={`flex items-center gap-1 ${getScoreColor(resultado.score)}`}>
-                            {getScoreIcon(resultado.score)}
-                            <span className="font-medium">{resultado.score}%</span>
-                          </div>
-                        </div>
-                        {/* Barra de progreso */}
-                        <div className="mb-4">
-                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all duration-500 ${getScoreBgColor(resultado.score)}`}
-                              style={{ width: `${resultado.score}%` }}
-                            />
-                          </div>
-                        </div>
-                        {/* Explicaciones */}
-                        <div className="space-y-2">
-                          {resultado.explicacion.map((exp: string, i: number) => (
-                            <div 
-                              key={i}
-                              className={`text-sm p-2 rounded-md ${
-                                exp.toLowerCase().includes('no cumple') 
-                                  ? 'bg-red-50 text-red-700 border border-red-200'
-                                  : 'bg-green-50 text-green-700 border border-green-200'
-                              }`}
-                            >
-                              {exp}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-              {/* Paginación IA */}
-              {iaTotalPages > 1 && (
-                <div className="flex items-center justify-center mt-6 gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIaCurrentPage(iaCurrentPage - 1)}
-                    disabled={iaCurrentPage === 1}
-                    className="h-8 w-8"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  {Array.from({ length: iaTotalPages }).map((_, index) => (
-                    <Button
-                      key={index}
-                      variant={iaCurrentPage === index + 1 ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setIaCurrentPage(index + 1)}
-                      className={`h-8 w-8 p-0 ${iaCurrentPage === index + 1 ? "bg-indigo-600" : ""}`}
-                    >
-                      {index + 1}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIaCurrentPage(iaCurrentPage + 1)}
-                    disabled={iaCurrentPage === iaTotalPages}
-                    className="h-8 w-8"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+            )}
+          </div>
+        </main>
+      </DashboardLayout>
+    </Sidebar>
   )
 } 
