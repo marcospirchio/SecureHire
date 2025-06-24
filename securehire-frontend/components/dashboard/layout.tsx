@@ -6,10 +6,11 @@ import { useSidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
 
 interface DashboardLayoutProps {
-  children: ReactNode
+  children: ReactNode,
+  customHeader?: ReactNode
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, customHeader }: DashboardLayoutProps) {
   const { collapsed, hidden } = useSidebar()
   const pathname = usePathname()
 
@@ -39,8 +40,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           overflowX: "hidden"
         }}
       >
-        {/* Mostrar el Header solo en la página de inicio */}
-        {isHomePage && <Header />}
+        {/* HEADER: custom o global solo en home */}
+        {customHeader ? customHeader : isHomePage && <Header />}
         <main
           className="flex flex-1 flex-col gap-4 p-3 md:p-4 pb-16"
           style={{

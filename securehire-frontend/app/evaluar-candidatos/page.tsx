@@ -3,13 +3,35 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, Users, CheckCircle2, XCircle, AlertTriangle, BarChart3, Sparkles, Brain, RefreshCw, User, ChevronLeft, ChevronRight, Briefcase, Calendar } from 'lucide-react'
+import {
+  ArrowLeft,
+  Users,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  BarChart3,
+  Brain,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Briefcase,
+  Calendar,
+  Sparkles,
+  UserCheck,
+  TrendingUp,
+  Award,
+  Target,
+  Zap,
+  Filter,
+  Search
+} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Select,
@@ -27,6 +49,20 @@ import { ImagenPerfil } from "@/components/job-offer/ImagenPerfil"
 // Función inline para quitar tildes
 function removeDiacritics(str: string): string {
   return str.normalize('NFD').replace(/\u0300-\u036f/g, '');
+}
+
+function CompararCandidatosHeader() {
+  return (
+    <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-white px-4 md:px-6 w-full">
+      <div className="flex items-center gap-4">
+        <img src="/Comparar_candidato_logo.png" alt="Comparar Candidatos" className="h-10 w-10 object-contain" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 leading-tight">Comparar Candidatos</h1>
+          <p className="text-gray-600 leading-tight text-sm">Análisis comparativo con inteligencia artificial</p>
+        </div>
+      </div>
+    </header>
+  )
 }
 
 export default function EvaluarCandidatosPage() {
@@ -47,6 +83,7 @@ export default function EvaluarCandidatosPage() {
   const [iaLoading, setIaLoading] = useState(false)
   const [iaResults, setIaResults] = useState<any[]>([])
   const [busquedaData, setBusquedaData] = useState<any>(null)
+  const [searchTerm, setSearchTerm] = useState("")
 
   // Paginación de resultados IA
   const iaCandidatesPerPage = 2; // Puedes ajustar este valor
@@ -120,11 +157,16 @@ export default function EvaluarCandidatosPage() {
       .catch(() => setBusquedaData(null))
   }, [selectedJobSearch])
 
+  // Filtrar candidatos por término de búsqueda
+  const filteredCandidates = postulaciones.filter((postulacion) =>
+    `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
   // Paginación de candidatos
   const indexOfLastCandidate = currentPage * candidatesPerPage
   const indexOfFirstCandidate = indexOfLastCandidate - candidatesPerPage
-  const currentCandidates = postulaciones.slice(indexOfFirstCandidate, indexOfLastCandidate)
-  const totalPages = Math.ceil(postulaciones.length / candidatesPerPage)
+  const currentCandidates = filteredCandidates.slice(indexOfFirstCandidate, indexOfLastCandidate)
+  const totalPages = Math.ceil(filteredCandidates.length / candidatesPerPage)
 
   // Manejar selección de candidatos
   const toggleCandidateSelection = (candidateId: string) => {
@@ -140,9 +182,9 @@ export default function EvaluarCandidatosPage() {
 
   // Función para obtener el color según el puntaje
   const getScoreColor = (score: number) => {
-    if (score < 50) return "text-red-500"
-    if (score < 75) return "text-amber-500"
-    return "text-green-500"
+    if (score < 50) return "text-red-600"
+    if (score < 75) return "text-amber-600"
+    return "text-green-600"
   }
 
   // Función para obtener el color de fondo según el puntaje
@@ -252,13 +294,20 @@ export default function EvaluarCandidatosPage() {
       })
       if (!response.ok) throw new Error("Error al comparar candidatos")
       const data = await response.json()
-      const resultados = data.resultados || []
+      // Ordenar por puntaje descendente
+      const resultados = (data.resultados || []).sort((a: any, b: any) => b.score - a.score)
       setIaResults(resultados)
+      setComparisonResults({ candidates: resultados }) // Para compatibilidad con nuevo diseño
 
       // 3. Actualizar estado de postulaciones para marcarlas como analizadas
       setPostulaciones(prevPostulaciones =>
         prevPostulaciones.map(p => {
-            const resultado = resultados.find((res: any) => res.nombre.trim().toLowerCase() === p.candidato?.nombre?.trim().toLowerCase());
+            const resultado = resultados.find((res: any) => {
+                const postulationName = `${p.candidato?.nombre?.trim().toLowerCase()} ${p.candidato?.apellido?.trim().toLowerCase()}`;
+                const resultName = res.nombre.trim().toLowerCase();
+                return postulationName === resultName;
+            });
+
             if (resultado) {
                 return {
                     ...p,
@@ -278,419 +327,622 @@ export default function EvaluarCandidatosPage() {
     }
   }
 
+  // Estadísticas de candidatos
+  const analyzedCandidates = postulaciones.filter((c) => c.hasBeenAnalyzed)
+  const highScoreCandidates = analyzedCandidates.filter((c) => (c.score || 0) >= 75)
+  const avgScore =
+    analyzedCandidates.length > 0
+      ? Math.round(analyzedCandidates.reduce((sum, c) => sum + (c.score || 0), 0) / analyzedCandidates.length)
+      : 0
+
   return (
     <Sidebar>
-      <DashboardLayout>
-        {/* Header */}
-        <header className="bg-white border-b sticky top-0 z-10">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.back()}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold flex items-center">
-                    Comparar Candidatos
-                    <Badge className="ml-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      IA
-                    </Badge>
-                  </h1>
-                  <p className="text-sm text-slate-500">Análisis comparativo con inteligencia artificial</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main content */}
-        <main className="flex-1 container mx-auto px-4 py-6">
-          <div className="max-w-5xl mx-auto">
-            {/* Instrucciones */}
-            <Card className="mb-6 overflow-hidden border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-shrink-0">
-                    <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[2px]"></div>
-                    <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/50 flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-indigo-600" />
+      <DashboardLayout customHeader={<CompararCandidatosHeader />}>
+        <div className="px-6 py-8">
+          <div className="max-w-7xl mx-auto space-y-4">
+            {/* Panel de control */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+            >
+              {/* Selector de búsqueda */}
+              <Card className="lg:col-span-2 border border-gray-200 shadow-sm">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-10 w-10 rounded-xl bg-gray-900 flex items-center justify-center">
+                      <Target className="h-5 w-5 text-white" />
                     </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Seleccionar Búsqueda</h3>
                   </div>
-                  <div>
-                    <h2 className="text-sm font-medium text-slate-800 flex items-center gap-2">
-                      Análisis inteligente
-                      <Badge
-                        variant="outline"
-                        className="bg-indigo-50 text-indigo-700 text-[10px] font-normal py-0 h-4 border-indigo-200"
-                      >
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        IA
-                      </Badge>
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                      Seleccione candidatos para comparar sus perfiles con precisión mediante nuestro sistema de
-                      inteligencia artificial.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Selector de búsqueda */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3">Seleccionar búsqueda</h3>
-              <Select
-                value={selectedJobSearch}
-                onValueChange={(value) => {
-                  setSelectedJobSearch(value)
-                  setCurrentPage(1)
-                  setSelectedCandidates([])
-                }}
-              >
-                <SelectTrigger className="w-full bg-white border-slate-200">
-                  <SelectValue placeholder="Selecciona una búsqueda" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Búsquedas activas</SelectLabel>
-                    {busquedas.map((job) => (
-                      <SelectItem key={job.id} value={job.id}>
-                        <div className="flex items-center gap-3">
-                          <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                            {getJobIcon()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{job.titulo || job.title}</div>
-                            <div className="flex items-center gap-3 text-xs text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                <span>{getConteoForBusqueda(job.id)} candidatos</span>
+                  <Select
+                    value={selectedJobSearch}
+                    onValueChange={(value) => {
+                      setSelectedJobSearch(value)
+                      setCurrentPage(1)
+                      setSelectedCandidates([])
+                    }}
+                  >
+                    <SelectTrigger className="w-full h-12 bg-white border-gray-300 rounded-lg">
+                      <SelectValue placeholder="Elige una búsqueda activa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Búsquedas disponibles</SelectLabel>
+                        {busquedas.map((job) => (
+                          <SelectItem key={job.id} value={job.id}>
+                            <div className="flex items-center gap-3 py-2">
+                              <div className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                                <Briefcase className="h-4 w-4 text-gray-600" />
                               </div>
-                            </div>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Lista de candidatos */}
-            {selectedJobSearch && (
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-lg font-medium">Candidatos disponibles</h3>
-                    {postulaciones.length > 0 && (
-                      <p className="text-sm text-slate-500">
-                        Mostrando {indexOfFirstCandidate + 1}-{Math.min(indexOfLastCandidate, postulaciones.length)} de {postulaciones.length} candidatos
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-white">
-                      {selectedCandidates.length} seleccionados
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedCandidates([])}
-                      disabled={selectedCandidates.length === 0}
-                    >
-                      Limpiar selección
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg border border-slate-200 p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {currentCandidates.map((postulacion) => {
-                      const hasBeenAnalyzed = postulacion.hasBeenAnalyzed || false;
-                      const score = postulacion.score || 0;
-                      const matchesRequirements = cumpleRequisitosExcluyentes(postulacion);
-                      const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`;
-                      const perfilDetectado = postulacion.perfilDetectadoIA || "Perfil no detectado.";
-
-                      if (hasBeenAnalyzed) {
-                        // Card para candidato YA ANALIZADO
-                        return (
-                          <div
-                            key={postulacion.id}
-                            className={`
-                              relative rounded-lg border overflow-hidden transition-all cursor-pointer hover:shadow-sm
-                              ${matchesRequirements ? "bg-green-50/50 border-green-200" : "bg-white border-slate-200"}
-                              ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-indigo-500 ring-offset-2" : ""}
-                            `}
-                            onClick={() => toggleCandidateSelection(postulacion.id)}
-                          >
-                            <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedCandidates.includes(postulacion.id)}
-                                onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
-                                className={`h-5 w-5 ${selectedCandidates.includes(postulacion.id) ? "bg-indigo-600 text-white" : "border-slate-300"}`}
-                              />
-                            </div>
-                            <div className="p-4">
-                              <div className="flex items-center gap-3 mb-3">
-                                <ImagenPerfil 
-                                  postulacionId={postulacion.id} 
-                                  nombre={postulacion.candidato?.nombre || ''} 
-                                  apellido={postulacion.candidato?.apellido || ''}
-                                  size={40}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-medium text-slate-900 truncate">{candidateName}</h4>
-                                  <p className="text-sm text-slate-500 truncate">{perfilDetectado}</p>
-                                </div>
-                              </div>
-
-                              <div className="mb-3">
-                                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                                  <span>Compatibilidad</span>
-                                  <span className={`font-medium ${
-                                    score >= 75 ? "text-green-600" : score >= 50 ? "text-amber-600" : "text-red-600"
-                                  }`}>
-                                    {score}%
+                              <div>
+                                <div className="font-medium text-gray-900">{job.titulo || job.title}</div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  <span className="flex items-center gap-1">
+                                    <Users className="h-3 w-3" />
+                                    {getConteoForBusqueda(job.id)} candidatos
                                   </span>
                                 </div>
-                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      score < 50 ? "bg-red-500" : score < 75 ? "bg-amber-500" : "bg-green-500"
-                                    }`}
-                                    style={{ width: `${score}%` }}
-                                  ></div>
-                                </div>
                               </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
 
-                              <div className="flex items-center justify-end text-xs">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      {matchesRequirements ? (
-                                        <Badge className="bg-green-100 text-green-800 border-0 flex items-center gap-1 cursor-default hover:bg-green-100">
-                                          <CheckCircle2 className="h-3 w-3" /> Requisitos
-                                        </Badge>
-                                      ) : (
-                                        <Badge className="bg-red-100 text-red-800 border-0 flex items-center gap-1 cursor-default hover:bg-red-100">
-                                          <XCircle className="h-3 w-3" /> Requisitos
-                                        </Badge>
-                                      )}
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{matchesRequirements ? 'El candidato cumple con todos los requisitos excluyentes.' : 'El candidato NO cumple con todos los requisitos excluyentes.'}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      } else {
-                        // Card para candidato SIN ANALIZAR
-                        return (
-                          <div
-                            key={postulacion.id}
-                            className={`
-                              relative rounded-lg border overflow-hidden transition-all cursor-pointer hover:shadow-sm
-                              ${matchesRequirements ? "bg-green-50/30 border-green-100" : "bg-white border-slate-200"}
-                              ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-indigo-500 ring-offset-2" : ""}
-                            `}
-                            onClick={() => toggleCandidateSelection(postulacion.id)}
-                          >
-                            <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedCandidates.includes(postulacion.id)}
-                                onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
-                                className={`h-5 w-5 ${selectedCandidates.includes(postulacion.id) ? "bg-indigo-600 text-white" : "border-slate-300"}`}
-                              />
-                            </div>
-                            <div className="p-4 flex flex-col justify-between h-full">
-                              <div>
-                                <div className="flex items-center gap-3 mb-2">
-                                  <ImagenPerfil 
-                                    postulacionId={postulacion.id} 
-                                    nombre={postulacion.candidato?.nombre || ''} 
-                                    apellido={postulacion.candidato?.apellido || ''}
-                                    size={40}
-                                  />
-                                  <h4 className="font-medium text-slate-900 truncate">{candidateName}</h4>
-                                </div>
-                              </div>
-                              <div className="mt-3 pt-3 border-t border-slate-100">
-                                <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                                  <Brain className="h-4 w-4" />
-                                  <span>Sin analizar</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                    })}
+              {/* Panel de estadísticas en blanco y negro con acento azul */}
+              <Card className="border border-gray-200 shadow-sm bg-gray-900 text-white">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-3 mb-4">
+                    <TrendingUp className="h-6 w-6 text-blue-400" />
+                    <h3 className="text-lg font-semibold">Estadísticas</h3>
                   </div>
 
-                  {/* Paginación */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-center mt-6 gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => paginate(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="h-8 w-8"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      {Array.from({ length: totalPages }).map((_, index) => (
-                        <Button
-                          key={index}
-                          variant={currentPage === index + 1 ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => paginate(index + 1)}
-                          className={`h-8 w-8 p-0 ${currentPage === index + 1 ? "bg-indigo-600" : ""}`}
-                        >
-                          {index + 1}
-                        </Button>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => paginate(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="h-8 w-8"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-300">Candidatos de alto nivel</span>
+                      <span className="text-2xl font-bold text-blue-400">{highScoreCandidates.length}</span>
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-300">Seleccionados</span>
+                      <span className="text-2xl font-bold">{selectedCandidates.length}</span>
+                    </div>
+                    {avgScore > 0 && (
+                      <div className="pt-2 border-t border-gray-700">
+                        <div className="text-sm text-gray-300 mb-1">Puntuación promedio</div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${avgScore}%` }}></div>
+                          </div>
+                          <span className="text-lg font-bold text-blue-400">{avgScore}%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Filtros y búsqueda */}
+            {selectedJobSearch && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <Card className="border border-gray-200 shadow-sm">
+                  <CardContent className="p-3">
+                    <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="relative flex-1 max-w-md">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Buscar candidatos..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 h-12 bg-white border-gray-300 rounded-lg"
+                          />
+                        </div>
+                        <Button variant="outline" size="lg" className="rounded-lg border-gray-300">
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filtros
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="bg-white border-gray-300 px-3 py-1">
+                          {filteredCandidates.length} candidatos
+                        </Badge>
+                        <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 px-3 py-1">
+                          {selectedCandidates.length} seleccionados
+                        </Badge>
+                        {selectedCandidates.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedCandidates([])}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            Limpiar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Grid de candidatos */}
+            {selectedJobSearch && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                <Card className="border border-gray-200 shadow-sm">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-gray-900 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">Candidatos Disponibles</h3>
+                      {filteredCandidates.length > 0 && (
+                        <Badge variant="outline" className="ml-auto border-gray-300">
+                          Página {currentPage} de {totalPages}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {loadingPostulaciones ? (
+                          <p>Cargando candidatos...</p>
+                      ) : currentCandidates.length > 0 ? (
+                        currentCandidates.map((postulacion) => {
+                          const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`;
+                          const hasBeenAnalyzed = postulacion.hasBeenAnalyzed || false;
+                          const score = postulacion.score || 0;
+                          const matchesRequirements = cumpleRequisitosExcluyentes(postulacion);
+                          const perfilDetectado = postulacion.perfilDetectadoIA || "Perfil no detectado.";
+
+                          return (
+                            <motion.div
+                              key={postulacion.id}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.2 }}
+                              className={`
+                                relative rounded-xl border overflow-hidden transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1
+                                ${matchesRequirements ? "bg-green-100 border-green-300" : "bg-white border-gray-200"}
+                                ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-blue-500 ring-offset-2" : ""}
+                              `}
+                              onClick={() => toggleCandidateSelection(postulacion.id)}
+                            >
+                              <div className="absolute top-2 right-2 z-10">
+                                <Checkbox
+                                  checked={selectedCandidates.includes(postulacion.id)}
+                                  onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
+                                  className={`h-4 w-4 rounded-lg ${
+                                    selectedCandidates.includes(postulacion.id)
+                                      ? "bg-blue-600 text-white border-blue-600"
+                                      : "border-gray-300 bg-white"
+                                  }`}
+                                />
+                              </div>
+                              <div className="p-3">
+                                {hasBeenAnalyzed ? (
+                                  <>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-white ${ score >= 75 ? "bg-gray-900" : score >= 50 ? "bg-gray-600" : "bg-gray-400" }`}>
+                                        {score}
+                                      </div>
+                                      <div className="flex-1">
+                                        <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
+                                        <p className="text-sm text-gray-500 truncate">{perfilDetectado}</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="mb-2">
+                                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                        <span>Compatibilidad</span>
+                                        <span className={`font-semibold ${getScoreColor(score)}`}>{score}%</span>
+                                      </div>
+                                      <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full transition-all duration-500 ${ score < 50 ? "bg-red-500" : score < 75 ? "bg-amber-500" : "bg-green-500" }`} style={{ width: `${score}%` }} ></div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end">
+                                      {matchesRequirements ? (
+                                        <Badge className="bg-green-100 text-green-800 border-0 flex items-center gap-1 text-xs">
+                                          <CheckCircle2 className="h-3 w-3" /> Cumple
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-red-100 text-red-800 border-0 flex items-center gap-1 text-xs">
+                                          <XCircle className="h-3 w-3" /> No cumple
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">
+                                        <ImagenPerfil postulacionId={postulacion.id} nombre={postulacion.candidato?.nombre || ''} apellido={postulacion.candidato?.apellido || ''} size={32} />
+                                      </div>
+                                      <div className="flex-1">
+                                        <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
+                                        <p className="text-sm text-gray-500 truncate">{perfilDetectado}</p>
+                                      </div>
+                                    </div>
+                                    <div className="pt-2 border-t border-gray-100">
+                                      <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+                                        <Brain className="h-3 w-3" />
+                                        <span>Pendiente de análisis</span>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </motion.div>
+                          )
+                        })
+                      ) : (
+                        <div className="col-span-full text-center py-8 text-gray-500">
+                            <p>No se encontraron candidatos para esta búsqueda.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Paginación */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center mt-4 gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => paginate(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="h-8 w-8 rounded-xl border-gray-300"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {Array.from({ length: totalPages }).map((_, index) => (
+                          <Button
+                            key={index}
+                            variant={currentPage === index + 1 ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => paginate(index + 1)}
+                            className={`h-6 w-6 rounded-xl p-0 ${
+                              currentPage === index + 1 ? "bg-black hover:bg-gray-800 text-white" : "border-gray-300"
+                            }`}
+                          >
+                            {index + 1}
+                          </Button>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => paginate(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="h-8 w-8 rounded-xl border-gray-300"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
 
             {/* Botón de comparar */}
             {selectedCandidates.length > 0 && (
-              <div className="flex justify-center mb-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex justify-center"
+              >
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md"
+                  className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-xl text-lg font-semibold"
                   onClick={compareSelectedCandidates}
                   disabled={isComparing}
                 >
                   {isComparing ? (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Comparando candidatos...
+                      <RefreshCw className="h-5 w-5 mr-3 animate-spin" />
+                      Analizando candidatos...
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4 mr-2" />
+                      <Zap className="h-5 w-5 mr-3" />
                       Comparar {selectedCandidates.length} candidatos con IA
                     </>
                   )}
                 </Button>
-              </div>
+              </motion.div>
             )}
 
-            {/* Resultados de la comparación IA */}
-            {iaResultsFiltered.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  Resultados de la comparación IA
-                  <Badge className="bg-gradient-to-r from-indigo-500 to-purple-600">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    IA
-                  </Badge>
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {iaCurrentResults.map((resultado, index) => {
-                    const postulacion = resultado.postulacion;
-                    const apellido = postulacion?.candidato?.apellido || "";
-                    const isVerde = cumpleRequisitosExcluyentes(postulacion);
-                    const cardBg = isVerde ? "bg-green-50 border-green-200" : "bg-white border-slate-200";
-                    return (
-                      <Card key={index} className={`overflow-hidden ${getScoreBorderColor(resultado.score)} ${cardBg}`}>
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <h3 className="text-lg font-semibold">{resultado.nombre} {apellido}</h3>
-                            <div className={`flex items-center gap-1 ${getScoreColor(resultado.score)}`}>
-                              {getScoreIcon(resultado.score)}
-                              <span className="font-medium">{resultado.score}%</span>
-                            </div>
-                          </div>
-                          {/* Barra de progreso */}
-                          <div className="mb-4">
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full transition-all duration-500 ${getScoreBgColor(resultado.score)}`}
-                                style={{ width: `${resultado.score}%` }}
-                              />
-                            </div>
-                          </div>
-                          {/* Explicaciones */}
-                          <div className="space-y-2">
-                            {resultado.explicacion.map((exp: string, i: number) => (
-                              <div 
-                                key={i}
-                                className={`text-sm p-2 rounded-md ${
-                                  exp.toLowerCase().includes('no cumple') 
-                                    ? 'bg-red-50 text-red-700 border border-red-200'
-                                    : 'bg-green-50 text-green-700 border border-green-200'
-                                }`}
-                              >
-                                {exp}
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-                {/* Paginación IA */}
-                {iaTotalPages > 1 && (
-                  <div className="flex items-center justify-center mt-6 gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setIaCurrentPage(iaCurrentPage - 1)}
-                      disabled={iaCurrentPage === 1}
-                      className="h-8 w-8"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    {Array.from({ length: iaTotalPages }).map((_, index) => (
-                      <Button
-                        key={index}
-                        variant={iaCurrentPage === index + 1 ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setIaCurrentPage(index + 1)}
-                        className={`h-8 w-8 p-0 ${iaCurrentPage === index + 1 ? "bg-indigo-600" : ""}`}
-                      >
-                        {index + 1}
-                      </Button>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setIaCurrentPage(iaCurrentPage + 1)}
-                      disabled={iaCurrentPage === iaTotalPages}
-                      className="h-8 w-8"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+            {/* Resultados de la comparación */}
+            {comparisonResults && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-4"
+              >
+                <Card className="border border-gray-200 shadow-lg overflow-hidden">
+                  <div className="bg-gray-900 text-white p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center">
+                          <Award className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold">Resultados del Análisis</h3>
+                          <p className="text-gray-300 mt-1">Comparación inteligente completada</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 bg-blue-400 rounded-full animate-pulse"></div>
+                        <span className="text-gray-300 font-medium">
+                          {comparisonResults.candidates.length} candidatos analizados
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="h-[600px] overflow-hidden">
+                    <Tabs
+                      defaultValue="general"
+                      value={activeTab}
+                      onValueChange={setActiveTab}
+                      className="w-full h-full flex flex-col"
+                    >
+                      <div className="border-b bg-gray-50 flex-shrink-0">
+                        <TabsList className="w-full justify-start rounded-none bg-transparent p-0">
+                          <TabsTrigger
+                            value="general"
+                            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                          >
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            General
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="criteria"
+                            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                          >
+                            <Target className="h-4 w-4 mr-2" />
+                            Criterios
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="ponderacion"
+                            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                          >
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Ponderación
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="justificaciones"
+                            className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Justificaciones
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
+
+                      <div className="flex-1 overflow-hidden">
+                        <TabsContent value="general" className="h-full overflow-y-auto p-4 space-y-4 m-0">
+                          <div className="space-y-3">
+                            {comparisonResults.candidates.map((candidate: any, index: number) => {
+                              const postulacion = postulaciones.find(p => {
+                                const postulationName = `${p.candidato?.nombre?.trim().toLowerCase()} ${p.candidato?.apellido?.trim().toLowerCase()}`;
+                                return postulationName === candidate.nombre.trim().toLowerCase();
+                              });
+                              
+                              return (
+                              <motion.div
+                                key={candidate.id || index}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className={`p-3 rounded-xl border flex items-center gap-4 transition-all hover:shadow-lg bg-white border-gray-300 ${index === 0 ? "ring-2 ring-blue-500/20 shadow-lg" : ""}`}
+                              >
+                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-white text-lg ${ index === 0 ? "bg-gray-900" : index === 1 ? "bg-gray-700" : index === 2 ? "bg-gray-500" : "bg-gray-400" }`}>
+                                  {index + 1}
+                                </div>
+
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-semibold text-xl text-gray-900">{candidate.nombre}</h4>
+                                    {index === 0 && (
+                                      <Badge className="bg-blue-600 text-white border-0 text-xs">
+                                        <Award className="h-3 w-3 mr-1" />
+                                        Mejor candidato
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <TrendingUp className="h-4 w-4 text-gray-400" />
+                                    <span className={`font-semibold ${getScoreColor(candidate.score)}`}>{candidate.score}% de compatibilidad</span>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )})}
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="criteria" className="h-full overflow-y-auto p-4 m-0">
+                          <div className="space-y-6">
+                            <div className="text-center mb-4">
+                              <h4 className="text-xl font-semibold text-gray-900 mb-1">Criterios de Evaluación</h4>
+                              <p className="text-gray-500">
+                                Análisis detallado de los criterios evaluados por la IA
+                              </p>
+                            </div>
+                            
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                              <h5 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                <Target className="h-5 w-5" />
+                                Métricas de Evaluación
+                              </h5>
+                              <div className="text-sm text-blue-800 space-y-3">
+                                <p>
+                                  El sistema de IA evalúa a los candidatos basándose en múltiples criterios que incluyen:
+                                </p>
+                                <ul className="space-y-2 ml-4">
+                                  <li>• <strong>Requisitos técnicos:</strong> Evaluación de habilidades técnicas específicas</li>
+                                  <li>• <strong>Experiencia laboral:</strong> Años y relevancia de la experiencia</li>
+                                  <li>• <strong>Formación académica:</strong> Estudios y certificaciones</li>
+                                  <li>• <strong>Idiomas:</strong> Dominio de idiomas requeridos</li>
+                                  <li>• <strong>Soft skills:</strong> Habilidades blandas y competencias</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="ponderacion" className="h-full overflow-y-auto p-4 m-0">
+                          <div className="space-y-6">
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                              <h4 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5" />
+                                Sistema de Ponderación de Candidatos
+                              </h4>
+                              <div className="text-sm text-blue-800 space-y-3">
+                                <p>
+                                  Nuestro sistema de inteligencia artificial evalúa a los candidatos utilizando un modelo
+                                  de ponderación que asigna diferentes pesos a cada criterio según su importancia para el
+                                  puesto específico.
+                                </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                  <div className="bg-white rounded-lg p-3 border border-blue-100">
+                                    <h5 className="font-semibold text-blue-900 mb-2">Criterios Principales (70%)</h5>
+                                    <ul className="space-y-1 text-sm">
+                                      <li>
+                                        • <strong>Requisitos técnicos clave:</strong> 50%
+                                      </li>
+                                      <li>
+                                        • <strong>Experiencia laboral:</strong> 20%
+                                      </li>
+                                    </ul>
+                                  </div>
+
+                                  <div className="bg-white rounded-lg p-3 border border-blue-100">
+                                    <h5 className="font-semibold text-blue-900 mb-2">Criterios Secundarios (30%)</h5>
+                                    <ul className="space-y-1 text-sm">
+                                      <li>
+                                        • <strong>Formación académica:</strong> 10%
+                                      </li>
+                                      <li>
+                                        • <strong>Idiomas y soft skills:</strong> 10%
+                                      </li>
+                                      <li>
+                                        • <strong>Factores adicionales:</strong> 10%
+                                      </li>
+                                    </ul>
+                                  </div>
+                                </div>
+
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
+                                  <h5 className="font-semibold text-amber-800 mb-2">Factores de Penalización</h5>
+                                  <p className="text-sm text-amber-700">
+                                    Se aplican penalizaciones cuando el candidato no cumple con requisitos excluyentes o
+                                    carece de habilidades fundamentales para el puesto. Estas penalizaciones pueden
+                                    reducir significativamente la puntuación final.
+                                  </p>
+                                </div>
+
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-4">
+                                  <h5 className="font-semibold text-green-800 mb-2">Bonificaciones</h5>
+                                  <p className="text-sm text-green-700">
+                                    Los candidatos pueden recibir puntos adicionales por certificaciones relevantes,
+                                    proyectos destacados, experiencia en tecnologías emergentes o habilidades que excedan
+                                    los requisitos mínimos del puesto.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl p-4">
+                              <h4 className="text-lg font-semibold text-gray-900 mb-3">Interpretación de Puntuaciones</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-green-100 border border-green-300 rounded-lg p-3 text-center">
+                                  <div className="text-2xl font-bold text-green-700 mb-1">75-100</div>
+                                  <div className="text-sm font-medium text-green-800">Altamente Recomendado</div>
+                                  <div className="text-xs text-green-600 mt-1">Cumple o supera expectativas</div>
+                                </div>
+                                <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 text-center">
+                                  <div className="text-2xl font-bold text-amber-700 mb-1">50-74</div>
+                                  <div className="text-sm font-medium text-amber-800">Parcialmente Adecuado</div>
+                                  <div className="text-xs text-amber-600 mt-1">Requiere evaluación adicional</div>
+                                </div>
+                                <div className="bg-red-100 border border-red-300 rounded-lg p-3 text-center">
+                                  <div className="text-2xl font-bold text-red-700 mb-1">0-49</div>
+                                  <div className="text-sm font-medium text-red-800">No Recomendado</div>
+                                  <div className="text-xs text-red-600 mt-1">No cumple requisitos mínimos</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="justificaciones" className="h-full overflow-y-auto p-4 m-0">
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {iaCurrentResults.map((resultado, index) => {
+                              const postulacion = resultado.postulacion;
+                              const apellido = postulacion?.candidato?.apellido || "";
+                              const isVerde = cumpleRequisitosExcluyentes(postulacion);
+                              const cardBg = isVerde ? "bg-green-50 border-green-200" : "bg-white border-slate-200";
+                              return (
+                                <Card key={index} className={`overflow-hidden ${getScoreBorderColor(resultado.score)} ${cardBg}`}>
+                                  <CardContent className="p-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                      <h3 className="text-lg font-semibold">{resultado.nombre} {apellido}</h3>
+                                      <div className={`flex items-center gap-1 ${getScoreColor(resultado.score)}`}>
+                                        {getScoreIcon(resultado.score)}
+                                        <span className="font-medium">{resultado.score}%</span>
+                                      </div>
+                                    </div>
+                                    {/* Barra de progreso */}
+                                    <div className="mb-4">
+                                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div 
+                                          className={`h-full transition-all duration-500 ${getScoreBgColor(resultado.score)}`}
+                                          style={{ width: `${resultado.score}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                    {/* Explicaciones */}
+                                    <div className="space-y-2">
+                                      {resultado.explicacion.map((exp: string, i: number) => (
+                                        <div 
+                                          key={i}
+                                          className={`text-sm p-2 rounded-md ${
+                                            exp.toLowerCase().includes('no cumple') 
+                                              ? 'bg-red-50 text-red-700 border border-red-200'
+                                              : 'bg-green-50 text-green-700 border border-green-200'
+                                          }`}
+                                        >
+                                          {exp}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )
+                            })}
+                          </div>
+                        </TabsContent>
+                      </div>
+                    </Tabs>
+                  </div>
+                </Card>
+              </motion.div>
             )}
           </div>
-        </main>
+        </div>
       </DashboardLayout>
     </Sidebar>
   )
 } 
+ 

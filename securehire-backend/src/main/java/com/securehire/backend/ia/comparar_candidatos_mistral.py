@@ -1,87 +1,84 @@
 import sys
 import json
+import os
+import google.generativeai as genai
 
-def extraer_tags(texto):
-    tags = []
-    keywords = ["React", "Next.js", "JavaScript", "SSR", "accesibilidad", "idiomas", "Scrum", "Docker", "Git"]
-    for palabra in keywords:
-        if palabra.lower() in texto.lower():
-            tags.append(palabra)
-    return tags
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-def calcular_scoring(candidato, campos_excluyentes, tags_busqueda):
-    score = 0
-    explicacion = []
+def generar_prompt(busqueda, candidatos):
+    prompt = f"""
+Sos un asistente de selección de personal. A continuación te doy la descripción de un puesto de trabajo y una lista de candidatos. Tu tarea es:
 
-    for r in candidato.get("respuestas", []):
-        campo = r.get("campo", "").lower()
-        valor = r.get("respuesta", "").lower()
-        for excluyente in campos_excluyentes:
-            if excluyente["nombre"].lower() == campo:
-                if valor in [v.lower() for v in excluyente.get("valoresExcluyentes", [])]:
-                    score += 30
-                    explicacion.append(f"✔️ Cumple con campo excluyente: {campo}")
-                else:
-                    explicacion.append(f"❌ No cumple campo excluyente: {campo}")
+1. Leer la descripción del puesto y deducir los requisitos clave, conocimientos específicos, herramientas, idiomas o habilidades que realmente importan para el rol.
+2. Para cada candidato, evaluar si su CV (resumen) y sus respuestas cumplen esos requisitos.
+3. Indicar qué requisitos cumple o no, y asignar un puntaje de 0 a 100 basado en esa adecuación.
+4. Explicar brevemente por qué.
 
-    resumen = candidato.get("resumenCv", "").lower()
-    for tag in tags_busqueda:
-        if tag.lower() in resumen:
-            score += 10
-            explicacion.append(f"✅ Menciona '{tag}' en el CV")
+Descripción del puesto:
+Título: {busqueda.get('titulo')}
+Descripción: {busqueda.get('descripcion')}
 
-    return score, explicacion
+Campos excluyentes:
+{json.dumps(busqueda.get('camposAdicionales', []), indent=2)}
+
+Candidatos:
+"""
+
+    for i, c in enumerate(candidatos):
+        prompt += f"""
+Candidato {i + 1}:
+Nombre: {c.get('nombre')}
+Resumen CV: {c.get('resumenCv')}
+Respuestas:
+{json.dumps(c.get('respuestas', []), indent=2)}
+        """
+
+    prompt += "\nDevolvé los resultados como una lista JSON con este formato:\n\n"
+    prompt += json.dumps([
+        {
+            "index": 0,
+            "nombre": "Nombre del candidato",
+            "score": 80,
+            "explicacion": [
+                "✅ Cumple con conocimientos contables",
+                "❌ No menciona normativa IGJ",
+                "✅ Conoce AFIP"
+            ]
+        }
+    ], indent=2)
+
+    return prompt
+
 
 def main():
     try:
-        print("📥 Iniciando lectura de stdin...", file=sys.stderr)
         raw_input = sys.stdin.read()
-        print(f"📦 JSON recibido:\n{raw_input}", file=sys.stderr)
-
         datos = json.loads(raw_input)
-        print("✅ JSON parseado correctamente", file=sys.stderr)
 
         busqueda = datos["busqueda"]
         candidatos = datos["candidatos"]
 
-        campos_excluyentes = busqueda.get("camposAdicionales", [])
-        descripcion_puesto = busqueda.get("descripcion", "")
-        tags_busqueda = extraer_tags(descripcion_puesto)
+        prompt = generar_prompt(busqueda, candidatos)
 
-        resultados = []
-        for idx, candidato in enumerate(candidatos):
-            score, explicacion = calcular_scoring(candidato, campos_excluyentes, tags_busqueda)
-            resultados.append({
-                "index": idx,
-                "nombre": candidato.get("nombre", f"Candidato {idx + 1}"),
-                "score": score,
-                "explicacion": explicacion,
-            })
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
 
-        resultados.sort(key=lambda x: x["score"], reverse=True)
+        # Gemini a veces devuelve texto con formato, no siempre JSON puro
+        text = response.text.strip()
 
-        # ✅ Agregado: resumen corto por candidato (útil para mostrar texto plano)
+        # Buscamos el JSON dentro del texto (por si devuelve algo más)
+        inicio = text.find('[')
+        fin = text.rfind(']')
+        json_text = text[inicio:fin+1]
+
+        resultados = json.loads(json_text)
+
         parrafos = []
         for r in resultados:
             nombre = r["nombre"]
             score = r["score"]
             resumen = f"{nombre} tiene un {score}% de adecuación al puesto. "
-
-            explicacion_corta = []
-            for e in r["explicacion"]:
-                e_lower = e.lower()
-                if "cumple con campo excluyente" in e_lower:
-                    explicacion_corta.append("cumple requisitos excluyentes")
-                elif "no cumple campo excluyente" in e_lower:
-                    explicacion_corta.append("no cumple requisitos excluyentes")
-                elif "menciona" in e_lower:
-                    explicacion_corta.append(e.replace("✅ ", "").replace("Menciona", "menciona"))
-
-            if explicacion_corta:
-                resumen += ", ".join(set(explicacion_corta)) + "."
-            else:
-                resumen += "No se detectaron coincidencias relevantes."
-
+            resumen += ", ".join(e.replace("✅", "cumple").replace("❌", "no cumple") for e in r["explicacion"])
             parrafos.append(resumen)
 
         output = {
@@ -90,10 +87,10 @@ def main():
         }
 
         print(json.dumps(output, ensure_ascii=False))
-        print("✅ Fin del script sin errores", file=sys.stderr)
 
     except Exception as e:
-        print(f"❌ Error en el script: {str(e)}", file=sys.stderr)
+        print(f"❌ Error en el script IA: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
