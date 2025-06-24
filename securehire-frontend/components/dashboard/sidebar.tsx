@@ -177,11 +177,11 @@ export function Sidebar({ children, onToggle }: SidebarProps) {
                 isActive("/evaluar-candidatos") ? "bg-gray-100 font-medium text-gray-900" : "text-gray-500 hover:bg-gray-50"
               }`}
             >
-              <Brain className="h-5 w-5 text-purple-500" />
+              <Brain className="h-5 w-5 text-blue-500" />
               {!collapsed && (
                 <div className="flex items-center gap-2">
                   <span>Evaluar candidatos</span>
-                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
                     IA
                   </span>
                 </div>

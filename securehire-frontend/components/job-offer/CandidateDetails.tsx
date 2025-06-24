@@ -1073,6 +1073,9 @@ export function CandidateDetails({
         jobTitle="Puesto de trabajo"
         result={aiAnalysisResult}
         isLoading={aiAnalysisLoading}
+        postulacionId={candidate.postulacion.id}
+        nombre={candidate.name}
+        apellido={candidate.lastName}
       />
 
       {/* Botones sticky abajo a la derecha */}

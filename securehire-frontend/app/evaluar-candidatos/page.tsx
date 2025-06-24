@@ -23,7 +23,8 @@ import {
   Target,
   Zap,
   Filter,
-  Search
+  Search,
+  Star
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -45,6 +46,7 @@ import {
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { DashboardLayout } from "@/components/dashboard/layout"
 import { ImagenPerfil } from "@/components/job-offer/ImagenPerfil"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 // Función inline para quitar tildes
 function removeDiacritics(str: string): string {
@@ -105,6 +107,79 @@ export default function EvaluarCandidatosPage() {
   const iaIndexOfFirst = iaIndexOfLast - iaCandidatesPerPage;
   const iaCurrentResults = iaResultsFiltered.slice(iaIndexOfFirst, iaIndexOfLast);
 
+  // Filtros avanzados
+  const [showFilterModal, setShowFilterModal] = useState(false)
+  const [minAge, setMinAge] = useState("")
+  const [maxAge, setMaxAge] = useState("")
+  const [gender, setGender] = useState("todos")
+  const [requisitosFilter, setRequisitosFilter] = useState("todos")
+  const [tempMinAge, setTempMinAge] = useState("")
+  const [tempMaxAge, setTempMaxAge] = useState("")
+  const [tempGender, setTempGender] = useState("todos")
+  const [tempRequisitosFilter, setTempRequisitosFilter] = useState("todos")
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [favoriteCandidates, setFavoriteCandidates] = useState<any[]>([])
+  const [originalCandidates, setOriginalCandidates] = useState<any[]>([])
+
+  // Actualizar originalCandidates cuando cambia postulaciones
+  useEffect(() => {
+    if (!showOnlyFavorites) {
+      setOriginalCandidates(postulaciones)
+    }
+  }, [postulaciones, showOnlyFavorites])
+
+  // Lógica para favoritos
+  const handleToggleFavorites = async () => {
+    if (!selectedJobSearch) return;
+    try {
+      if (!showOnlyFavorites) {
+        // Mostrar favoritos
+        const response = await fetch(`http://localhost:8080/api/postulaciones/busqueda/${selectedJobSearch}/favoritos`, {
+          credentials: "include",
+          headers: { 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+          const postulacionesData = await response.json();
+          // Mapear a formato de postulaciones con candidato
+          const candidates = await Promise.all(
+            (Array.isArray(postulacionesData) ? postulacionesData : []).map(async (p: any) => {
+              try {
+                const candidatoRes = await fetch(`http://localhost:8080/api/candidatos/${p.candidatoId}`, {
+                  credentials: "include",
+                  headers: { 'Accept': 'application/json' }
+                });
+                if (!candidatoRes.ok) return null;
+                const candidato = await candidatoRes.json();
+                return { ...p, candidato };
+              } catch {
+                return null;
+              }
+            })
+          );
+          const validCandidates = candidates.filter((c): c is any => c !== null);
+          setFavoriteCandidates(validCandidates);
+        }
+      }
+      setShowOnlyFavorites(!showOnlyFavorites);
+    } catch (error) {
+      // Silenciar error
+    }
+  };
+
+  // Calcular edad desde fechaNacimiento
+  function calcularEdad(fechaNacimiento: string): number {
+    if (!fechaNacimiento) return 0;
+    const hoy = new Date();
+    const fechaNac = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+    const mesActual = hoy.getMonth();
+    const mesNacimiento = fechaNac.getMonth();
+    if (mesActual < mesNacimiento || (mesActual === mesNacimiento && hoy.getDate() < fechaNac.getDate())) {
+      edad--;
+    }
+    return edad;
+  }
+
   // Fetch de búsquedas del usuario
   useEffect(() => {
     setLoadingBusquedas(true)
@@ -157,10 +232,28 @@ export default function EvaluarCandidatosPage() {
       .catch(() => setBusquedaData(null))
   }, [selectedJobSearch])
 
-  // Filtrar candidatos por término de búsqueda
-  const filteredCandidates = postulaciones.filter((postulacion) =>
-    `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // Filtrar candidatos por término de búsqueda y filtros avanzados
+  const baseCandidates = showOnlyFavorites ? favoriteCandidates : postulaciones;
+  const filteredCandidates = baseCandidates.filter((postulacion) => {
+    const nombre = postulacion.candidato?.nombre || ''
+    const apellido = postulacion.candidato?.apellido || ''
+    const fullName = `${nombre} ${apellido}`.toLowerCase()
+    const nameMatch = fullName.includes(searchTerm.toLowerCase())
+    // Edad
+    const edad = calcularEdad(postulacion.candidato?.fechaNacimiento)
+    const ageMatch = (!minAge || edad >= parseInt(minAge)) && (!maxAge || edad <= parseInt(maxAge))
+    // Género
+    const genero = (postulacion.candidato?.genero || '').toLowerCase()
+    const genderMatch = gender === "todos" || genero === gender
+    // Requisitos excluyentes
+    let requisitosMatch = true
+    if (requisitosFilter === "cumplen") {
+      requisitosMatch = !(postulacion.requisitosExcluyentes && postulacion.requisitosExcluyentes.length > 0)
+    } else if (requisitosFilter === "nocumplen") {
+      requisitosMatch = !!(postulacion.requisitosExcluyentes && postulacion.requisitosExcluyentes.length > 0)
+    }
+    return nameMatch && ageMatch && genderMatch && requisitosMatch
+  })
 
   // Paginación de candidatos
   const indexOfLastCandidate = currentPage * candidatesPerPage
@@ -335,6 +428,15 @@ export default function EvaluarCandidatosPage() {
       ? Math.round(analyzedCandidates.reduce((sum, c) => sum + (c.score || 0), 0) / analyzedCandidates.length)
       : 0
 
+  // Reinicio visual al salir de la página
+  useEffect(() => {
+    return () => {
+      setIaResults([])
+      setComparisonResults(null)
+      setPostulaciones((prev) => prev.map(p => ({ ...p, hasBeenAnalyzed: false, score: undefined })))
+    }
+  }, [])
+
   return (
     <Sidebar>
       <DashboardLayout customHeader={<CompararCandidatosHeader />}>
@@ -370,24 +472,27 @@ export default function EvaluarCandidatosPage() {
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Búsquedas disponibles</SelectLabel>
-                        {busquedas.map((job) => (
-                          <SelectItem key={job.id} value={job.id}>
-                            <div className="flex items-center gap-3 py-2">
-                              <div className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                                <Briefcase className="h-4 w-4 text-gray-600" />
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{job.titulo || job.title}</div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500">
-                                  <span className="flex items-center gap-1">
-                                    <Users className="h-3 w-3" />
-                                    {getConteoForBusqueda(job.id)} candidatos
-                                  </span>
+                        {busquedas
+                          .slice() // Copia para no mutar el estado
+                          .sort((a, b) => getConteoForBusqueda(b.id) - getConteoForBusqueda(a.id))
+                          .map((job) => (
+                            <SelectItem key={job.id} value={job.id}>
+                              <div className="flex items-center gap-3 py-2">
+                                <div className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                                  <Briefcase className="h-4 w-4 text-gray-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{job.titulo || job.title}</div>
+                                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" />
+                                      {getConteoForBusqueda(job.id)} candidatos
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </SelectItem>
-                        ))}
+                            </SelectItem>
+                          ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -443,9 +548,23 @@ export default function EvaluarCandidatosPage() {
                             className="pl-10 h-12 bg-white border-gray-300 rounded-lg"
                           />
                         </div>
-                        <Button variant="outline" size="lg" className="rounded-lg border-gray-300">
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className="rounded-lg border-gray-300"
+                          onClick={() => setShowFilterModal(true)}
+                        >
                           <Filter className="h-4 w-4 mr-2" />
                           Filtros
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className={`h-10 w-10 flex-shrink-0 ml-2 border-gray-300 ${showOnlyFavorites ? 'text-yellow-400' : 'text-gray-500'}`}
+                          onClick={handleToggleFavorites}
+                          title={showOnlyFavorites ? "Mostrar todos" : "Mostrar favoritos"}
+                        >
+                          <Star className="h-5 w-5" fill={showOnlyFavorites ? "currentColor" : "none"} />
                         </Button>
                       </div>
 
@@ -470,6 +589,69 @@ export default function EvaluarCandidatosPage() {
                     </div>
                   </CardContent>
                 </Card>
+                {/* Modal de filtros avanzados */}
+                <Dialog open={showFilterModal} onOpenChange={setShowFilterModal}>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-bold text-gray-900">
+                        Filtrar Candidatos
+                      </DialogTitle>
+                      <DialogDescription className="text-sm text-gray-500">
+                        Selecciona los criterios para filtrar los candidatos
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Rango de edad</label>
+                        <div className="flex gap-2">
+                          <Input type="number" placeholder="Mín" className="w-24" value={tempMinAge} onChange={e => setTempMinAge(e.target.value)} />
+                          <Input type="number" placeholder="Máx" className="w-24" value={tempMaxAge} onChange={e => setTempMaxAge(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Género</label>
+                        <Select value={tempGender} onValueChange={setTempGender}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar género" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Todos</SelectItem>
+                            <SelectItem value="masculino">Masculino</SelectItem>
+                            <SelectItem value="femenino">Femenino</SelectItem>
+                            <SelectItem value="otro">Otro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Requisitos excluyentes</label>
+                        <Select value={tempRequisitosFilter} onValueChange={setTempRequisitosFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Filtrar por requisitos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Todos</SelectItem>
+                            <SelectItem value="cumplen">Solo los que cumplen</SelectItem>
+                            <SelectItem value="nocumplen">Solo los que NO cumplen</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setShowFilterModal(false)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={() => {
+                        setMinAge(tempMinAge)
+                        setMaxAge(tempMaxAge)
+                        setGender(tempGender)
+                        setRequisitosFilter(tempRequisitosFilter)
+                        setShowFilterModal(false)
+                      }}>
+                        Aplicar filtros
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </motion.div>
             )}
 
@@ -494,12 +676,22 @@ export default function EvaluarCandidatosPage() {
                       {loadingPostulaciones ? (
                           <p>Cargando candidatos...</p>
                       ) : currentCandidates.length > 0 ? (
-                        currentCandidates.map((postulacion) => {
+                        currentCandidates.map((postulacion: any) => {
                           const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`;
                           const hasBeenAnalyzed = postulacion.hasBeenAnalyzed || false;
                           const score = postulacion.score || 0;
                           const matchesRequirements = cumpleRequisitosExcluyentes(postulacion);
                           const perfilDetectado = postulacion.perfilDetectadoIA || "Perfil no detectado.";
+
+                          // Si fue analizado, buscar el resultado IA para mostrar barra y requisitos
+                          let iaResultado = null;
+                          if (hasBeenAnalyzed && iaResults.length > 0) {
+                            iaResultado = iaResults.find((res: any) => {
+                              const postulationName = `${postulacion.candidato?.nombre?.trim().toLowerCase()} ${postulacion.candidato?.apellido?.trim().toLowerCase()}`;
+                              const resultName = res.nombre.trim().toLowerCase();
+                              return postulationName === resultName;
+                            });
+                          }
 
                           return (
                             <motion.div
@@ -526,41 +718,44 @@ export default function EvaluarCandidatosPage() {
                                 />
                               </div>
                               <div className="p-3">
-                                {hasBeenAnalyzed ? (
+                                {/* Mostrar barra y requisitos SOLO si fue analizado y es uno de los seleccionados */}
+                                {hasBeenAnalyzed && iaResultado && selectedCandidates.includes(postulacion.id) ? (
                                   <>
                                     <div className="flex items-center gap-2 mb-2">
-                                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-white ${ score >= 75 ? "bg-gray-900" : score >= 50 ? "bg-gray-600" : "bg-gray-400" }`}>
-                                        {score}
+                                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-white text-lg ${ iaResultado.score >= 75 ? "bg-gray-900" : iaResultado.score >= 50 ? "bg-gray-600" : "bg-gray-400" }`}>
+                                        {iaResultado.score}
                                       </div>
                                       <div className="flex-1">
                                         <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
-                                        <p className="text-sm text-gray-500 truncate">{perfilDetectado}</p>
                                       </div>
                                     </div>
-
+                                    {/* Barra de compatibilidad IA */}
                                     <div className="mb-2">
-                                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                      <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
                                         <span>Compatibilidad</span>
-                                        <span className={`font-semibold ${getScoreColor(score)}`}>{score}%</span>
+                                        <span className={`font-semibold ${getScoreColor(iaResultado.score)}`}>{iaResultado.score}%</span>
                                       </div>
-                                      <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-                                        <div className={`h-full rounded-full transition-all duration-500 ${ score < 50 ? "bg-red-500" : score < 75 ? "bg-amber-500" : "bg-green-500" }`} style={{ width: `${score}%` }} ></div>
+                                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full transition-all duration-500 ${iaResultado.score < 50 ? "bg-red-500" : iaResultado.score < 75 ? "bg-amber-500" : "bg-green-500"}`}
+                                          style={{ width: `${iaResultado.score}%` }}
+                                        ></div>
                                       </div>
                                     </div>
-
-                                    <div className="flex items-center justify-end">
+                                    {/* Estado de requisitos excluyentes */}
+                                    <div className="flex items-center gap-2 mt-2">
                                       {matchesRequirements ? (
-                                        <Badge className="bg-green-100 text-green-800 border-0 flex items-center gap-1 text-xs">
-                                          <CheckCircle2 className="h-3 w-3" /> Cumple
+                                        <Badge className="bg-green-100 text-green-800 border-0 flex items-center gap-1 text-sm font-semibold px-3 py-1">
+                                          <CheckCircle2 className="h-4 w-4" /> Cumple
                                         </Badge>
                                       ) : (
-                                        <Badge className="bg-red-100 text-red-800 border-0 flex items-center gap-1 text-xs">
-                                          <XCircle className="h-3 w-3" /> No cumple
+                                        <Badge className="bg-red-100 text-red-800 border-0 flex items-center gap-1 text-sm font-semibold px-3 py-1">
+                                          <XCircle className="h-4 w-4" /> No cumple
                                         </Badge>
                                       )}
                                     </div>
                                   </>
                                 ) : (
+                                  // Card original antes de análisis o si no está seleccionada
                                   <>
                                     <div className="flex items-center gap-2 mb-2">
                                       <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">

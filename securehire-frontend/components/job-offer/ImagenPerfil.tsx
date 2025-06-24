@@ -15,6 +15,10 @@ export function ImagenPerfil({ postulacionId, nombre, apellido, size = 64 }: Ima
       credentials: "include"
     })
       .then(res => {
+        if (res.status === 204 || res.status === 404) {
+          setFotoPerfil(null);
+          return "";
+        }
         if (!res.ok) throw new Error("No se pudo obtener la imagen");
         return res.text();
       })
@@ -26,8 +30,10 @@ export function ImagenPerfil({ postulacionId, nombre, apellido, size = 64 }: Ima
         }
       })
       .catch(err => {
+        if (err.message !== "No se pudo obtener la imagen") {
+          console.error(err);
+        }
         setFotoPerfil(null);
-        console.error(err);
       });
   }, [postulacionId]);
 

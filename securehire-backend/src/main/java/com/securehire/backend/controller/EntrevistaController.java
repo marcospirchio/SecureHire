@@ -9,8 +9,8 @@ import com.securehire.backend.repository.BusquedaRepository;
 import com.securehire.backend.service.CandidatoService; 
 import com.securehire.backend.service.EntrevistaService;
 import com.securehire.backend.service.PostulacionService;      
-import com.securehire.backend.service.SendGridEmailService;
 import com.securehire.backend.service.UsuarioService;
+import com.securehire.backend.service.SendGridEmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -324,43 +324,42 @@ public ResponseEntity<?> crearEntrevista(
 
     @GetMapping("/publica/{id}")
     public ResponseEntity<?> verEntrevistaPublica(@PathVariable String id) {
-    Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
-    if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
-
-    Entrevista entrevista = entrevistaOpt.get();
-
-    // Obtener búsqueda asociada
-    Optional<Busqueda> busquedaOpt = busquedaRepository.findById(entrevista.getBusquedaId());
-    if (busquedaOpt.isEmpty()) {
-        return ResponseEntity.status(404).body("No se encontró la búsqueda asociada.");
+        Optional<Entrevista> entrevistaOpt = entrevistaService.obtenerEntrevistaPorId(id);
+        if (entrevistaOpt.isEmpty()) return ResponseEntity.notFound().build();
+    
+        Entrevista entrevista = entrevistaOpt.get();
+    
+        // Obtener búsqueda asociada
+        Optional<Busqueda> busquedaOpt = busquedaRepository.findById(entrevista.getBusquedaId());
+        if (busquedaOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("No se encontró la búsqueda asociada.");
+        }
+    
+        Busqueda busqueda = busquedaOpt.get();
+    
+        // Obtener reclutador (usuario)
+        Optional<Usuario> usuarioOpt = candidatoService.obtenerUsuarioPorId(busqueda.getUsuarioId());
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("No se encontró el reclutador.");
+        }
+    
+        Usuario reclutador = usuarioOpt.get();
+    
+        return ResponseEntity.ok(Map.of(
+            "fecha", entrevista.getFechaProgramada(),
+            "hora", entrevista.getHoraProgramada(),
+            "estado", entrevista.getEstado(),
+            "candidatoId", entrevista.getCandidatoId(),
+            "busquedaId", busqueda.getId(),
+            "titulo", busqueda.getTitulo(),
+            "empresa", busqueda.getEmpresa(), // asegúrate de que tenga el campo empresa
+            "reclutador", Map.of(
+                "id", reclutador.getId(),
+                "nombre", reclutador.getNombre(),
+                "apellido", reclutador.getApellido()
+            )
+        ));
     }
-
-    Busqueda busqueda = busquedaOpt.get();
-
-    // CORREGIDO: Usar usuarioService en lugar de candidatoService
-    Optional<Usuario> usuarioOpt = usuarioService.obtenerUsuarioPorId(busqueda.getUsuarioId());
-    if (usuarioOpt.isEmpty()) {
-        return ResponseEntity.status(404).body("No se encontró el reclutador.");
-    }
-
-    Usuario reclutador = usuarioOpt.get();
-
-    return ResponseEntity.ok(Map.of(
-        "fecha", entrevista.getFechaProgramada(),
-        "hora", entrevista.getHoraProgramada(),
-        "estado", entrevista.getEstado(),
-        "candidatoId", entrevista.getCandidatoId(),
-        "busquedaId", busqueda.getId(),
-        "titulo", busqueda.getTitulo(),
-        "empresa", busqueda.getEmpresa(),
-        "reclutador", Map.of(
-            "id", reclutador.getId(),
-            "nombre", reclutador.getNombre(),
-            "apellido", reclutador.getApellido()
-        )
-    ));
-}
-
     
 
     @PostMapping("/publica/{id}/cancelar")
