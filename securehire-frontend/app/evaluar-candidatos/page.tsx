@@ -202,24 +202,59 @@ export default function EvaluarCandidatosPage() {
   useEffect(() => {
     if (!selectedJobSearch) return;
     setLoadingPostulaciones(true)
+    console.log('=== INICIANDO FETCH DE POSTULACIONES ===');
+    console.log('Busqueda seleccionada:', selectedJobSearch);
+    
     fetch(`http://localhost:8080/api/postulaciones/busqueda/${selectedJobSearch}?estado=pendiente`, { credentials: "include" })
-      .then(res => res.json())
+      .then(res => {
+        console.log('Respuesta del fetch:', res.status, res.statusText);
+        return res.json();
+      })
       .then(async (data) => {
+        console.log('=== DATOS CRUDOS DEL BACKEND ===');
+        console.log('Datos recibidos:', data);
+        console.log('Tipo de datos:', typeof data);
+        console.log('Es array:', Array.isArray(data));
+        console.log('Cantidad de postulaciones:', data.length);
+        
         // Para cada postulacion, obtener datos del candidato
         const postulacionesConCandidato = await Promise.all(
-          data.map(async (postulacion: any) => {
+          data.map(async (postulacion: any, index: number) => {
+            console.log(`=== POSTULACIÓN ${index + 1} ===`);
+            console.log('Postulación cruda:', postulacion);
+            console.log('ID:', postulacion.id);
+            console.log('CandidatoID:', postulacion.candidatoId);
+            console.log('PuntajeGeneral:', postulacion.puntajeGeneral);
+            console.log('PuntajeIA:', postulacion.puntajeIA);
+            console.log('MotivosIA:', postulacion.motivosIA);
+            console.log('Score:', postulacion.score);
+            console.log('HasBeenAnalyzed:', postulacion.hasBeenAnalyzed);
+            
             try {
               const candidatoRes = await fetch(`http://localhost:8080/api/candidatos/${postulacion.candidatoId}`, { credentials: "include" })
               const candidato = await candidatoRes.json()
-              return { ...postulacion, candidato }
-            } catch {
+              console.log('Datos del candidato:', candidato);
+              
+              const postulacionCompleta = { ...postulacion, candidato };
+              console.log('Postulación completa con candidato:', postulacionCompleta);
+              
+              return postulacionCompleta;
+            } catch (error) {
+              console.error('Error obteniendo candidato:', error);
               return { ...postulacion, candidato: { nombre: "Error", apellido: "" } }
             }
           })
         )
+        
+        console.log('=== POSTULACIONES FINALES ===');
+        console.log('Postulaciones con candidatos:', postulacionesConCandidato);
+        
         setPostulaciones(postulacionesConCandidato)
       })
-      .catch(() => setPostulaciones([]))
+      .catch((error) => {
+        console.error('Error en fetch de postulaciones:', error);
+        setPostulaciones([])
+      })
       .finally(() => setLoadingPostulaciones(false))
   }, [selectedJobSearch])
 
@@ -341,6 +376,9 @@ export default function EvaluarCandidatosPage() {
     setIaResult(null)
     setComparisonResults(null)
     try {
+      console.log('=== INICIANDO COMPARACIÓN REAL ===');
+      console.log('Candidatos seleccionados:', selectedCandidates);
+      
       // Delay de 4 segundos para simular procesamiento
       await new Promise(resolve => setTimeout(resolve, 4000));
       
@@ -349,6 +387,7 @@ export default function EvaluarCandidatosPage() {
         const postulacion = postulaciones.find(p => p.id === postulacionId);
         if (!postulacion) throw new Error("No se encontró la postulación seleccionada");
         if (!postulacion.resumenCv) {
+          console.log(`Generando resumen CV para postulación ${postulacionId}`);
           // Obtener el CV
           const cvResponse = await fetch(`http://localhost:8080/api/postulaciones/${postulacion.id}/cv`, {
             credentials: "include",
@@ -375,45 +414,103 @@ export default function EvaluarCandidatosPage() {
             const errorText = await iaRes.text();
             throw new Error(`Error al generar resumen IA: ${iaRes.status} ${errorText}`);
           }
-          // Opcional: podrías refrescar la postulación aquí si quieres el resumen actualizado en el frontend
+          console.log(`Resumen CV generado para postulación ${postulacionId}`);
         }
       }
+      
       // 2. Ejecutar la comparación IA
+      console.log('Ejecutando comparación IA...');
       const response = await fetch("http://localhost:8080/api/ia/comparar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ postulacionIds: selectedCandidates })
       })
-      if (!response.ok) throw new Error("Error al comparar candidatos")
-      const data = await response.json()
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error en respuesta del endpoint:', response.status, errorText);
+        throw new Error(`Error al comparar candidatos: ${response.status} ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Respuesta del endpoint de comparación:', data);
+      
+      // Verificar estructura de datos
+      if (!data || !data.resultados) {
+        console.error('Estructura de datos inesperada:', data);
+        throw new Error('Estructura de datos inesperada en la respuesta');
+      }
+      
       // Ordenar por puntaje descendente
       const resultados = (data.resultados || []).sort((a: any, b: any) => b.score - a.score)
+      console.log('Resultados ordenados:', resultados);
+      
       setIaResults(resultados)
       setComparisonResults({ candidates: resultados }) // Para compatibilidad con nuevo diseño
 
       // 3. Actualizar estado de postulaciones para marcarlas como analizadas
-      setPostulaciones(prevPostulaciones =>
-        prevPostulaciones.map(p => {
+      setPostulaciones(prevPostulaciones => {
+        console.log('=== ACTUALIZANDO POSTULACIONES ===');
+        console.log('Resultados IA recibidos:', resultados);
+        console.log('Postulaciones actuales:', prevPostulaciones.map(p => ({
+          id: p.id,
+          nombre: `${p.candidato?.nombre} ${p.candidato?.apellido}`,
+          candidatoId: p.candidatoId
+        })));
+        
+        const updated = prevPostulaciones.map(p => {
+            // Normalizar nombres para mejor matching
+            const postulationName = `${p.candidato?.nombre || ''} ${p.candidato?.apellido || ''}`.trim().toLowerCase();
+            console.log(`Buscando match para postulación: "${postulationName}" (ID: ${p.id})`);
+            
             const resultado = resultados.find((res: any) => {
-                const postulationName = `${p.candidato?.nombre?.trim().toLowerCase()} ${p.candidato?.apellido?.trim().toLowerCase()}`;
-                const resultName = res.nombre.trim().toLowerCase();
-                return postulationName === resultName;
+                const resultName = (res.nombre || '').trim().toLowerCase();
+                console.log(`Comparando con resultado: "${resultName}"`);
+                
+                // Intentar diferentes estrategias de matching
+                const exactMatch = postulationName === resultName;
+                const containsMatch = postulationName.includes(resultName) || resultName.includes(postulationName);
+                const match = exactMatch || containsMatch;
+                
+                if (match) {
+                    console.log(`¡MATCH ENCONTRADO! para ${postulationName} con score ${res.score}`);
+                }
+                return match;
             });
 
             if (resultado) {
+                console.log(`Actualizando postulación ${p.id} con score ${resultado.score}`);
                 return {
                     ...p,
                     hasBeenAnalyzed: true,
                     score: resultado.score,
                 };
+            } else {
+                // Si no encontramos match, pero la postulación está seleccionada, marcarla como analizada con score 0
+                if (selectedCandidates.includes(p.id)) {
+                    console.log(`Postulación ${p.id} seleccionada pero sin resultado, marcando como analizada con score 0`);
+                    return {
+                        ...p,
+                        hasBeenAnalyzed: true,
+                        score: 0,
+                    };
+                }
             }
             return p;
-        })
-      )
+        });
+        
+        const analyzedCount = updated.filter(p => p.hasBeenAnalyzed).length;
+        console.log(`Total de postulaciones analizadas: ${analyzedCount}`);
+        console.log('Postulaciones actualizadas:', updated.filter(p => p.hasBeenAnalyzed));
+        console.log('=== FIN ACTUALIZACIÓN ===');
+        
+        return updated;
+      })
 
-    } catch (e) {
-      setIaResult("Error al comparar candidatos")
+    } catch (e: any) {
+      console.error('Error en comparación:', e);
+      setIaResult(`Error al comparar candidatos: ${e.message}`)
     } finally {
       setIsComparing(false)
       setIaLoading(false)
@@ -422,10 +519,10 @@ export default function EvaluarCandidatosPage() {
 
   // Estadísticas de candidatos
   const analyzedCandidates = postulaciones.filter((c) => c.hasBeenAnalyzed)
-  const highScoreCandidates = analyzedCandidates.filter((c) => (c.score || 0) >= 75)
+  const highScoreCandidates = analyzedCandidates.filter((c) => (c.puntajeGeneral || c.puntajeIA || c.score || 0) >= 75)
   const avgScore =
     analyzedCandidates.length > 0
-      ? Math.round(analyzedCandidates.reduce((sum, c) => sum + (c.score || 0), 0) / analyzedCandidates.length)
+      ? Math.round(analyzedCandidates.reduce((sum, c) => sum + (c.puntajeGeneral || c.puntajeIA || c.score || 0), 0) / analyzedCandidates.length)
       : 0
 
   // Reinicio visual al salir de la página
@@ -436,6 +533,26 @@ export default function EvaluarCandidatosPage() {
       setPostulaciones((prev) => prev.map(p => ({ ...p, hasBeenAnalyzed: false, score: undefined })))
     }
   }, [])
+
+  // Debug: Monitorear cambios en postulaciones
+  useEffect(() => {
+    const analyzedCount = postulaciones.filter(p => p.hasBeenAnalyzed).length;
+    if (analyzedCount > 0) {
+      console.log(`=== ESTADO ACTUALIZADO ===`);
+      console.log(`Total postulaciones: ${postulaciones.length}`);
+      console.log(`Postulaciones analizadas: ${analyzedCount}`);
+      console.log('Postulaciones con análisis:', postulaciones.filter(p => p.hasBeenAnalyzed).map(p => ({
+        id: p.id,
+        nombre: `${p.candidato?.nombre} ${p.candidato?.apellido}`,
+        puntajeGeneral: p.puntajeGeneral,
+        puntajeIA: p.puntajeIA,
+        score: p.score,
+        hasBeenAnalyzed: p.hasBeenAnalyzed,
+        motivosIA: p.motivosIA
+      })));
+      console.log(`=== FIN ESTADO ===`);
+    }
+  }, [postulaciones])
 
   return (
     <Sidebar>
@@ -615,7 +732,7 @@ export default function EvaluarCandidatosPage() {
                             <SelectValue placeholder="Seleccionar género" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="todos">Todos</SelectItem>
+                           <SelectItem value="todos">Todos</SelectItem>
                             <SelectItem value="masculino">Masculino</SelectItem>
                             <SelectItem value="femenino">Femenino</SelectItem>
                             <SelectItem value="otro">Otro</SelectItem>
@@ -674,109 +791,111 @@ export default function EvaluarCandidatosPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {loadingPostulaciones ? (
-                          <p>Cargando candidatos...</p>
+                        <p>Cargando candidatos...</p>
                       ) : currentCandidates.length > 0 ? (
                         currentCandidates.map((postulacion: any) => {
                           const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`;
                           const hasBeenAnalyzed = postulacion.hasBeenAnalyzed || false;
-                          const score = postulacion.score || 0;
+                          const score = postulacion.puntajeGeneral || postulacion.puntajeIA || postulacion.score || 0;
                           const matchesRequirements = cumpleRequisitosExcluyentes(postulacion);
                           const perfilDetectado = postulacion.perfilDetectadoIA || "Perfil no detectado.";
 
-                          // Si fue analizado, buscar el resultado IA para mostrar barra y requisitos
-                          let iaResultado = null;
-                          if (hasBeenAnalyzed && iaResults.length > 0) {
-                            iaResultado = iaResults.find((res: any) => {
-                              const postulationName = `${postulacion.candidato?.nombre?.trim().toLowerCase()} ${postulacion.candidato?.apellido?.trim().toLowerCase()}`;
-                              const resultName = res.nombre.trim().toLowerCase();
-                              return postulationName === resultName;
-                            });
-                          }
+                          console.log(`Card ${candidateName}: hasBeenAnalyzed=${hasBeenAnalyzed}, score=${score}, postulacionId=${postulacion.id}, matchesRequirements=${matchesRequirements}`);
 
-                          return (
-                            <motion.div
-                              key={postulacion.id}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.2 }}
-                              className={`
-                                relative rounded-xl border overflow-hidden transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1
-                                ${matchesRequirements ? "bg-green-100 border-green-300" : "bg-white border-gray-200"}
-                                ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-blue-500 ring-offset-2" : ""}
-                              `}
-                              onClick={() => toggleCandidateSelection(postulacion.id)}
-                            >
-                              <div className="absolute top-2 right-2 z-10">
-                                <Checkbox
-                                  checked={selectedCandidates.includes(postulacion.id)}
-                                  onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
-                                  className={`h-4 w-4 rounded-lg ${
-                                    selectedCandidates.includes(postulacion.id)
-                                      ? "bg-blue-600 text-white border-blue-600"
-                                      : "border-gray-300 bg-white"
-                                  }`}
-                                />
+                          try {
+                            return (
+                              <motion.div
+                                key={postulacion.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className={`
+                                  relative rounded-xl border overflow-hidden transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1
+                                  ${matchesRequirements ? "bg-green-100 border-green-300" : "bg-white border-gray-200"}
+                                  ${selectedCandidates.includes(postulacion.id) ? "ring-2 ring-blue-500 ring-offset-2" : ""}
+                                `}
+                                onClick={() => toggleCandidateSelection(postulacion.id)}
+                              >
+                                <div className="absolute top-2 right-2 z-10">
+                                  <Checkbox
+                                    checked={selectedCandidates.includes(postulacion.id)}
+                                    onCheckedChange={() => toggleCandidateSelection(postulacion.id)}
+                                    className={`h-4 w-4 rounded-lg ${
+                                      selectedCandidates.includes(postulacion.id)
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "border-gray-300 bg-white"
+                                    }`}
+                                  />
+                                </div>
+                                <div className="p-3">
+                                  {/* Mostrar barra y requisitos SOLO si fue analizado */}
+                                  {hasBeenAnalyzed ? (
+                                    <>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">
+                                          <ImagenPerfil postulacionId={postulacion.id} nombre={postulacion.candidato?.nombre || ''} apellido={postulacion.candidato?.apellido || ''} size={32} />
+                                        </div>
+                                        <div className="flex-1">
+                                          <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
+                                          <p className="text-xs text-gray-500 truncate">{perfilDetectado}</p>
+                                        </div>
+                                      </div>
+                                      {/* Barra de compatibilidad IA */}
+                                      <div className="mb-2">
+                                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                          <span>Compatibilidad</span>
+                                          <span className={`font-semibold ${getScoreColor(score)}`}>{score}%</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                          <div className={`h-full rounded-full transition-all duration-500 ${score < 50 ? "bg-red-500" : score < 75 ? "bg-amber-500" : "bg-green-500"}`}
+                                            style={{ width: `${score}%` }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                      {/* Estado de requisitos excluyentes */}
+                                      <div className="flex items-center gap-2 mt-2">
+                                        {matchesRequirements ? (
+                                          <Badge className="bg-green-100 text-green-800 border border-gray-300 flex items-center gap-1 text-xs font-semibold px-2 py-0.5 hover:bg-green-100">
+                                            <CheckCircle2 className="h-4 w-4" /> Requisitos Excluyentes
+                                          </Badge>
+                                        ) : (
+                                          <Badge className="bg-red-100 text-red-800 border border-gray-300 flex items-center gap-1 text-xs font-semibold px-2 py-0.5 hover:bg-red-100">
+                                            <XCircle className="h-4 w-4" /> Requisitos Excluyentes
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    // Card original antes de análisis
+                                    <>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">
+                                          <ImagenPerfil postulacionId={postulacion.id} nombre={postulacion.candidato?.nombre || ''} apellido={postulacion.candidato?.apellido || ''} size={32} />
+                                        </div>
+                                        <div className="flex-1">
+                                          <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
+                                          <p className="text-sm text-gray-500 truncate">{perfilDetectado}</p>
+                                        </div>
+                                      </div>
+                                      <div className="pt-2 border-t border-gray-100">
+                                        <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+                                          <Brain className="h-3 w-3" />
+                                          <span>Pendiente de análisis</span>
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )
+                          } catch (error) {
+                            console.error('Error renderizando card:', error);
+                            return (
+                              <div key={postulacion.id} className="p-3 border border-red-200 bg-red-50 rounded-xl">
+                                <p className="text-red-600 text-sm">Error al mostrar candidato</p>
                               </div>
-                              <div className="p-3">
-                                {/* Mostrar barra y requisitos SOLO si fue analizado y es uno de los seleccionados */}
-                                {hasBeenAnalyzed && iaResultado && selectedCandidates.includes(postulacion.id) ? (
-                                  <>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-white text-lg ${ iaResultado.score >= 75 ? "bg-gray-900" : iaResultado.score >= 50 ? "bg-gray-600" : "bg-gray-400" }`}>
-                                        {iaResultado.score}
-                                      </div>
-                                      <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
-                                      </div>
-                                    </div>
-                                    {/* Barra de compatibilidad IA */}
-                                    <div className="mb-2">
-                                      <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
-                                        <span>Compatibilidad</span>
-                                        <span className={`font-semibold ${getScoreColor(iaResultado.score)}`}>{iaResultado.score}%</span>
-                                      </div>
-                                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                        <div className={`h-full rounded-full transition-all duration-500 ${iaResultado.score < 50 ? "bg-red-500" : iaResultado.score < 75 ? "bg-amber-500" : "bg-green-500"}`}
-                                          style={{ width: `${iaResultado.score}%` }}
-                                        ></div>
-                                      </div>
-                                    </div>
-                                    {/* Estado de requisitos excluyentes */}
-                                    <div className="flex items-center gap-2 mt-2">
-                                      {matchesRequirements ? (
-                                        <Badge className="bg-green-100 text-green-800 border-0 flex items-center gap-1 text-sm font-semibold px-3 py-1">
-                                          <CheckCircle2 className="h-4 w-4" /> Cumple
-                                        </Badge>
-                                      ) : (
-                                        <Badge className="bg-red-100 text-red-800 border-0 flex items-center gap-1 text-sm font-semibold px-3 py-1">
-                                          <XCircle className="h-4 w-4" /> No cumple
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </>
-                                ) : (
-                                  // Card original antes de análisis o si no está seleccionada
-                                  <>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">
-                                        <ImagenPerfil postulacionId={postulacion.id} nombre={postulacion.candidato?.nombre || ''} apellido={postulacion.candidato?.apellido || ''} size={32} />
-                                      </div>
-                                      <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900 text-base">{candidateName}</h4>
-                                        <p className="text-sm text-gray-500 truncate">{perfilDetectado}</p>
-                                      </div>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-100">
-                                      <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
-                                        <Brain className="h-3 w-3" />
-                                        <span>Pendiente de análisis</span>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </motion.div>
-                          )
+                            );
+                          }
                         })
                       ) : (
                         <div className="col-span-full text-center py-8 text-gray-500">
@@ -927,15 +1046,38 @@ export default function EvaluarCandidatosPage() {
                       <div className="flex-1 overflow-hidden">
                         <TabsContent value="general" className="h-full overflow-y-auto p-4 space-y-4 m-0">
                           <div className="space-y-3">
-                            {comparisonResults.candidates.map((candidate: any, index: number) => {
-                              const postulacion = postulaciones.find(p => {
-                                const postulationName = `${p.candidato?.nombre?.trim().toLowerCase()} ${p.candidato?.apellido?.trim().toLowerCase()}`;
-                                return postulationName === candidate.nombre.trim().toLowerCase();
-                              });
+                            {/* Usar directamente las postulaciones seleccionadas */}
+                            {postulaciones
+                              .filter(p => selectedCandidates.includes(p.id))
+                              .sort((a, b) => {
+                                const puntajeA = a.puntajeGeneral || a.puntajeIA || a.score || 0;
+                                const puntajeB = b.puntajeGeneral || b.puntajeIA || b.score || 0;
+                                return puntajeB - puntajeA; // Orden descendente (mayor a menor)
+                              })
+                              .map((postulacion: any, index: number) => {
+                              console.log(`=== RENDERIZANDO GENERAL PARA ${postulacion.candidato?.nombre} ===`);
+                              console.log('Postulación completa:', postulacion);
+                              console.log('PuntajeGeneral:', postulacion.puntajeGeneral);
+                              console.log('PuntajeIA:', postulacion.puntajeIA);
+                              console.log('MotivosIA:', postulacion.motivosIA);
                               
+                              // Obtener puntaje real de la postulación usando puntajeGeneral
+                              const puntajeReal = postulacion.puntajeGeneral || postulacion.puntajeIA || 
+                                (postulacion.motivosIA ? 
+                                  (postulacion.motivosIA.puntajeRequisitosClave || 0) +
+                                  (postulacion.motivosIA.puntajeExperienciaLaboral || 0) +
+                                  (postulacion.motivosIA.puntajeFormacionAcademica || 0) +
+                                  (postulacion.motivosIA.puntajeIdiomasYSoftSkills || 0) +
+                                  (postulacion.motivosIA.puntajeOtros || 0)
+                                : 0);
+                              
+                              console.log(`Puntaje real calculado: ${puntajeReal}`);
+                              
+                              const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`.trim();
+
                               return (
                               <motion.div
-                                key={candidate.id || index}
+                                key={`general-${postulacion.id}`}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
@@ -947,7 +1089,7 @@ export default function EvaluarCandidatosPage() {
 
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="font-semibold text-xl text-gray-900">{candidate.nombre}</h4>
+                                    <h4 className="font-semibold text-xl text-gray-900">{candidateName}</h4>
                                     {index === 0 && (
                                       <Badge className="bg-blue-600 text-white border-0 text-xs">
                                         <Award className="h-3 w-3 mr-1" />
@@ -957,7 +1099,20 @@ export default function EvaluarCandidatosPage() {
                                   </div>
                                   <div className="flex items-center gap-2 text-sm">
                                     <TrendingUp className="h-4 w-4 text-gray-400" />
-                                    <span className={`font-semibold ${getScoreColor(candidate.score)}`}>{candidate.score}% de compatibilidad</span>
+                                    <span className={`font-semibold ${getScoreColor(puntajeReal)}`}>{puntajeReal}% de compatibilidad</span>
+                                  </div>
+                                  
+                                  {/* Barra de puntuación general */}
+                                  <div className="mt-2">
+                                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                      <span>Puntuación general</span>
+                                      <span className="font-semibold text-gray-900">{puntajeReal}/100</span>
+                                    </div>
+                                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                      <div className={`h-full rounded-full transition-all duration-500 ${puntajeReal < 50 ? "bg-red-500" : puntajeReal < 75 ? "bg-amber-500" : "bg-green-500"}`}
+                                        style={{ width: `${puntajeReal}%` }}
+                                      ></div>
+                                    </div>
                                   </div>
                                 </div>
                               </motion.div>
@@ -967,31 +1122,126 @@ export default function EvaluarCandidatosPage() {
 
                         <TabsContent value="criteria" className="h-full overflow-y-auto p-4 m-0">
                           <div className="space-y-6">
-                            <div className="text-center mb-4">
-                              <h4 className="text-xl font-semibold text-gray-900 mb-1">Criterios de Evaluación</h4>
-                              <p className="text-gray-500">
-                                Análisis detallado de los criterios evaluados por la IA
-                              </p>
-                            </div>
-                            
-                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                              <h5 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                                <Target className="h-5 w-5" />
-                                Métricas de Evaluación
-                              </h5>
-                              <div className="text-sm text-blue-800 space-y-3">
-                                <p>
-                                  El sistema de IA evalúa a los candidatos basándose en múltiples criterios que incluyen:
-                                </p>
-                                <ul className="space-y-2 ml-4">
-                                  <li>• <strong>Requisitos técnicos:</strong> Evaluación de habilidades técnicas específicas</li>
-                                  <li>• <strong>Experiencia laboral:</strong> Años y relevancia de la experiencia</li>
-                                  <li>• <strong>Formación académica:</strong> Estudios y certificaciones</li>
-                                  <li>• <strong>Idiomas:</strong> Dominio de idiomas requeridos</li>
-                                  <li>• <strong>Soft skills:</strong> Habilidades blandas y competencias</li>
-                                </ul>
-                              </div>
-                            </div>
+                            {/* Usar directamente las postulaciones seleccionadas */}
+                            {postulaciones
+                              .filter(p => selectedCandidates.includes(p.id))
+                              .sort((a, b) => {
+                                const puntajeA = a.puntajeGeneral || a.puntajeIA || a.score || 0;
+                                const puntajeB = b.puntajeGeneral || b.puntajeIA || b.score || 0;
+                                return puntajeB - puntajeA; // Orden descendente (mayor a menor)
+                              })
+                              .map((postulacion: any, index: number) => {
+                              console.log(`=== RENDERIZANDO CRITERIA PARA ${postulacion.candidato?.nombre} ===`);
+                              console.log('Postulación completa:', postulacion);
+                              console.log('MotivosIA completo:', postulacion.motivosIA);
+                              console.log('Tipo de motivosIA:', typeof postulacion.motivosIA);
+                              console.log('Es null/undefined:', postulacion.motivosIA === null || postulacion.motivosIA === undefined);
+                              
+                              // Los puntajes están directamente en el objeto postulación, NO en motivosIA
+                              console.log('Puntajes directos de la postulación:');
+                              console.log('- puntajeRequisitosClave:', postulacion.puntajeRequisitosClave);
+                              console.log('- puntajeExperienciaLaboral:', postulacion.puntajeExperienciaLaboral);
+                              console.log('- puntajeFormacionAcademica:', postulacion.puntajeFormacionAcademica);
+                              console.log('- puntajeIdiomasYSoftSkills:', postulacion.puntajeIdiomasYSoftSkills);
+                              console.log('- puntajeOtros:', postulacion.puntajeOtros);
+                              
+                              // Extraer datos directamente de la postulación
+                              const puntajeRequisitos = postulacion.puntajeRequisitosClave || 0;
+                              const puntajeExperiencia = postulacion.puntajeExperienciaLaboral || 0;
+                              const puntajeFormacion = postulacion.puntajeFormacionAcademica || 0;
+                              const puntajeIdiomas = postulacion.puntajeIdiomasYSoftSkills || 0;
+                              const puntajeOtros = postulacion.puntajeOtros || 0;
+
+                              console.log(`=== PUNTAJES EXTRAÍDOS ===`);
+                              console.log(`- Requisitos: ${puntajeRequisitos}/50 (${(puntajeRequisitos / 50) * 100}%)`);
+                              console.log(`- Experiencia: ${puntajeExperiencia}/20 (${(puntajeExperiencia / 20) * 100}%)`);
+                              console.log(`- Formación: ${puntajeFormacion}/10 (${(puntajeFormacion / 10) * 100}%)`);
+                              console.log(`- Idiomas: ${puntajeIdiomas}/10 (${(puntajeIdiomas / 10) * 100}%)`);
+                              console.log(`- Otros: ${puntajeOtros}/10 (${(puntajeOtros / 10) * 100}%)`);
+
+                              const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`.trim();
+                              const score = postulacion.puntajeGeneral || postulacion.puntajeIA || postulacion.score || 0;
+
+                              return (
+                                <div key={`criteria-${postulacion.id}`} className="space-y-3">
+                                  <div className="flex items-center gap-3">
+                                    <div
+                                      className={`h-8 w-8 rounded-xl flex items-center justify-center ${getScoreBgColor(score)}`}
+                                    >
+                                      {getScoreIcon(score)}
+                                    </div>
+                                    <h4 className="font-semibold text-lg text-gray-900">{candidateName}</h4>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="bg-gray-50 rounded-xl p-3">
+                                      <div className="flex items-center justify-between text-sm mb-2">
+                                        <span className="font-medium text-gray-900">Requisitos técnicos</span>
+                                        <span className="font-bold text-gray-900">
+                                          {puntajeRequisitos}/50
+                                        </span>
+                                      </div>
+                                      <Progress
+                                        value={(puntajeRequisitos / 50) * 100}
+                                        className="h-2"
+                                      />
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 rounded-xl p-3">
+                                      <div className="flex items-center justify-between text-sm mb-2">
+                                        <span className="font-medium text-gray-900">Experiencia laboral</span>
+                                        <span className="font-bold text-gray-900">
+                                          {puntajeExperiencia}/20
+                                        </span>
+                                      </div>
+                                      <Progress
+                                        value={(puntajeExperiencia / 20) * 100}
+                                        className="h-2"
+                                      />
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 rounded-xl p-3">
+                                      <div className="flex items-center justify-between text-sm mb-2">
+                                        <span className="font-medium text-gray-900">Formación académica</span>
+                                        <span className="font-bold text-gray-900">
+                                          {puntajeFormacion}/10
+                                        </span>
+                                      </div>
+                                      <Progress
+                                        value={(puntajeFormacion / 10) * 100}
+                                        className="h-2"
+                                      />
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 rounded-xl p-3">
+                                      <div className="flex items-center justify-between text-sm mb-2">
+                                        <span className="font-medium text-gray-900">Idiomas y soft skills</span>
+                                        <span className="font-bold text-gray-900">
+                                          {puntajeIdiomas}/10
+                                        </span>
+                                      </div>
+                                      <Progress
+                                        value={(puntajeIdiomas / 10) * 100}
+                                        className="h-2"
+                                      />
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 rounded-xl p-3">
+                                      <div className="flex items-center justify-between text-sm mb-2">
+                                        <span className="font-medium text-gray-900">Otros criterios</span>
+                                        <span className="font-bold text-gray-900">
+                                          {puntajeOtros}/10
+                                        </span>
+                                      </div>
+                                      <Progress
+                                        value={(puntajeOtros / 10) * 100}
+                                        className="h-2"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </TabsContent>
 
@@ -1082,49 +1332,147 @@ export default function EvaluarCandidatosPage() {
                         </TabsContent>
 
                         <TabsContent value="justificaciones" className="h-full overflow-y-auto p-4 m-0">
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {iaCurrentResults.map((resultado, index) => {
-                              const postulacion = resultado.postulacion;
-                              const apellido = postulacion?.candidato?.apellido || "";
-                              const isVerde = cumpleRequisitosExcluyentes(postulacion);
-                              const cardBg = isVerde ? "bg-green-50 border-green-200" : "bg-white border-slate-200";
+                          <div className="space-y-4">
+                            <div className="text-center mb-4">
+                              <h4 className="text-xl font-semibold text-gray-900 mb-1">Justificaciones del Ranking</h4>
+                              <p className="text-gray-500">
+                                Criterios evaluados para determinar el orden de los candidatos
+                              </p>
+                            </div>
+
+                            {comparisonResults.candidates.map((candidate: any, index: number) => {
+                              const postulacion = postulaciones.find(p => {
+                                const postulationName = `${p.candidato?.nombre?.trim().toLowerCase()} ${p.candidato?.apellido?.trim().toLowerCase()}`;
+                                return postulationName === candidate.nombre.trim().toLowerCase();
+                              });
+
                               return (
-                                <Card key={index} className={`overflow-hidden ${getScoreBorderColor(resultado.score)} ${cardBg}`}>
-                                  <CardContent className="p-6">
-                                    <div className="flex items-start justify-between mb-4">
-                                      <h3 className="text-lg font-semibold">{resultado.nombre} {apellido}</h3>
-                                      <div className={`flex items-center gap-1 ${getScoreColor(resultado.score)}`}>
-                                        {getScoreIcon(resultado.score)}
-                                        <span className="font-medium">{resultado.score}%</span>
+                                <div
+                                  key={`justificacion-${candidate.id || index}`}
+                                  className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
+                                >
+                                  <div className="bg-[#007fff] px-3 py-2 border-b border-blue-300">
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className={`
+                                          h-8 w-8 rounded-xl flex items-center justify-center font-bold text-white
+                                          ${
+                                            index === 0
+                                              ? "bg-white/20"
+                                              : index === 1
+                                                ? "bg-white/15"
+                                                : index === 2
+                                                  ? "bg-white/10"
+                                                  : "bg-white/5"
+                                          }
+                                        `}
+                                      >
+                                        {index + 1}
                                       </div>
-                                    </div>
-                                    {/* Barra de progreso */}
-                                    <div className="mb-4">
-                                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div 
-                                          className={`h-full transition-all duration-500 ${getScoreBgColor(resultado.score)}`}
-                                          style={{ width: `${resultado.score}%` }}
-                                        />
+                                      <div>
+                                        <h5 className="font-semibold text-white">{candidate.nombre}</h5>
+                                        <p className="text-sm text-blue-100">Puntuación: {candidate.score}%</p>
                                       </div>
+                                      {index === 0 && (
+                                        <Badge className="ml-auto bg-white/20 text-white border-white/30 text-xs">
+                                          <Award className="h-3 w-3 mr-1" />
+                                          Mejor candidato
+                                        </Badge>
+                                      )}
                                     </div>
-                                    {/* Explicaciones */}
-                                    <div className="space-y-2">
-                                      {resultado.explicacion.map((exp: string, i: number) => (
-                                        <div 
-                                          key={i}
-                                          className={`text-sm p-2 rounded-md ${
-                                            exp.toLowerCase().includes('no cumple') 
-                                              ? 'bg-red-50 text-red-700 border border-red-200'
-                                              : 'bg-green-50 text-green-700 border border-green-200'
-                                          }`}
-                                        >
-                                          {exp}
+                                  </div>
+
+                                  <div className="p-3">
+                                    <div className="space-y-3">
+                                      {/* Campos excluyentes */}
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-red-500 rounded-full"></div>
+                                          Campos excluyentes
+                                        </h6>
+                                        <div className="space-y-1 ml-4">
+                                          {postulacion?.respuestas?.map((respuesta: any, i: number) => (
+                                            <div key={i} className="flex items-start gap-2">
+                                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                              <span className="text-sm text-gray-700">
+                                                Cumple con campo excluyente: {respuesta.campo}
+                                              </span>
+                                            </div>
+                                          ))}
                                         </div>
-                                      ))}
+                                      </div>
+
+                                      {/* Requisitos técnicos */}
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                                          Requisitos técnicos
+                                        </h6>
+                                        <div className="space-y-1 ml-4">
+                                          <div className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                            <span className="text-sm text-gray-700">
+                                              Puntaje en requisitos técnicos: {postulacion?.puntajeRequisitosClave || 0}/50
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Experiencia y formación */}
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                                          Experiencia y formación
+                                        </h6>
+                                        <div className="space-y-1 ml-4">
+                                          <div className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                            <span className="text-sm text-gray-700">
+                                              Experiencia laboral: {postulacion?.puntajeExperienciaLaboral || 0}/20
+                                            </span>
+                                          </div>
+                                          <div className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                            <span className="text-sm text-gray-700">
+                                              Formación académica: {postulacion?.puntajeFormacionAcademica || 0}/10
+                                            </span>
+                                          </div>
+                                          <div className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                            <span className="text-sm text-gray-700">
+                                              Idiomas y soft skills: {postulacion?.puntajeIdiomasYSoftSkills || 0}/10
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Puntos adicionales */}
+                                      {index === 0 && (
+                                        <div>
+                                          <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                            <div className="h-2 w-2 bg-amber-500 rounded-full"></div>
+                                            Ventajas competitivas
+                                          </h6>
+                                          <div className="space-y-1 ml-4">
+                                            <div className="flex items-start gap-2">
+                                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                              <span className="text-sm text-gray-700">
+                                                Mayor puntaje general ({candidate.score}%)
+                                              </span>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                              <span className="text-sm text-gray-700">
+                                                Cumple con todos los requisitos clave
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  </CardContent>
-                                </Card>
-                              )
+                                  </div>
+                                </div>
+                              );
                             })}
                           </div>
                         </TabsContent>
