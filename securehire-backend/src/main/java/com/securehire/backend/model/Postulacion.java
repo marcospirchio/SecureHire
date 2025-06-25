@@ -51,6 +51,9 @@ public class Postulacion {
     private Integer puntajeIdiomasYSoftSkills;
     private Integer puntajeOtros;
     private Integer puntajeGeneral;
+    private Integer aniosExperiencia;
+    private String motivosPositivos;
+    private String motivosNegativos;
 
     @Data
     @Builder

@@ -376,13 +376,53 @@ export default function EvaluarCandidatosPage() {
     setIaResult(null)
     setComparisonResults(null)
     try {
-      console.log('=== INICIANDO COMPARACIÓN REAL ===');
+      console.log('=== INICIANDO COMPARACIÓN ===');
       console.log('Candidatos seleccionados:', selectedCandidates);
-      
+
+      // 1. Verificar si todos los seleccionados ya tienen puntajes y motivos guardados
+      const yaAnalizados = selectedCandidates.every(postulacionId => {
+        const postulacion = postulaciones.find(p => p.id === postulacionId);
+        return postulacion && (
+          postulacion.puntajeGeneral || postulacion.puntajeIA || postulacion.score
+        );
+      });
+
+      // Siempre mostrar animación de cargando al menos 2 segundos
+      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      await sleep(3500);
+
+      if (yaAnalizados) {
+        // Simular análisis: solo mostrar los datos guardados
+        console.log('Todos los candidatos ya fueron analizados. Mostrando datos guardados.');
+        const resultados = postulaciones
+          .filter(p => selectedCandidates.includes(p.id))
+          .map(p => ({
+            nombre: `${p.candidato?.nombre || ''} ${p.candidato?.apellido || ''}`.trim(),
+            score: p.puntajeGeneral || p.puntajeIA || p.score || 0,
+            puntajeRequisitosClave: p.puntajeRequisitosClave || 0,
+            puntajeExperienciaLaboral: p.puntajeExperienciaLaboral || 0,
+            puntajeFormacionAcademica: p.puntajeFormacionAcademica || 0,
+            puntajeIdiomasYSoftSkills: p.puntajeIdiomasYSoftSkills || 0,
+            puntajeOtros: p.puntajeOtros || 0,
+            motivosIA: p.motivosIA || null,
+            id: p.id
+          }))
+          .sort((a, b) => b.score - a.score);
+        setIaResults(resultados);
+        setComparisonResults({ candidates: resultados });
+        setPostulaciones(prevPostulaciones => prevPostulaciones.map(p =>
+          selectedCandidates.includes(p.id)
+            ? { ...p, hasBeenAnalyzed: true }
+            : p
+        ));
+        return;
+      }
+
+      // Si al menos uno no fue analizado, proceder con el flujo normal
       // Delay de 4 segundos para simular procesamiento
       await new Promise(resolve => setTimeout(resolve, 4000));
-      
-      // 1. Verificar si todos los seleccionados tienen resumenCv
+
+      // 2. Verificar si todos los seleccionados tienen resumenCv
       for (const postulacionId of selectedCandidates) {
         const postulacion = postulaciones.find(p => p.id === postulacionId);
         if (!postulacion) throw new Error("No se encontró la postulación seleccionada");
@@ -417,8 +457,8 @@ export default function EvaluarCandidatosPage() {
           console.log(`Resumen CV generado para postulación ${postulacionId}`);
         }
       }
-      
-      // 2. Ejecutar la comparación IA
+
+      // 3. Ejecutar la comparación IA
       console.log('Ejecutando comparación IA...');
       const response = await fetch("http://localhost:8080/api/ia/comparar", {
         method: "POST",
@@ -426,85 +466,59 @@ export default function EvaluarCandidatosPage() {
         credentials: "include",
         body: JSON.stringify({ postulacionIds: selectedCandidates })
       })
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Error en respuesta del endpoint:', response.status, errorText);
         throw new Error(`Error al comparar candidatos: ${response.status} ${errorText}`);
       }
-      
+
       const data = await response.json();
       console.log('Respuesta del endpoint de comparación:', data);
-      
+
       // Verificar estructura de datos
       if (!data || !data.resultados) {
         console.error('Estructura de datos inesperada:', data);
         throw new Error('Estructura de datos inesperada en la respuesta');
       }
-      
+
       // Ordenar por puntaje descendente
       const resultados = (data.resultados || []).sort((a: any, b: any) => b.score - a.score)
       console.log('Resultados ordenados:', resultados);
-      
+
       setIaResults(resultados)
       setComparisonResults({ candidates: resultados }) // Para compatibilidad con nuevo diseño
 
-      // 3. Actualizar estado de postulaciones para marcarlas como analizadas
+      // 4. Actualizar estado de postulaciones para marcarlas como analizadas y guardar puntajes/motivos
       setPostulaciones(prevPostulaciones => {
-        console.log('=== ACTUALIZANDO POSTULACIONES ===');
-        console.log('Resultados IA recibidos:', resultados);
-        console.log('Postulaciones actuales:', prevPostulaciones.map(p => ({
-          id: p.id,
-          nombre: `${p.candidato?.nombre} ${p.candidato?.apellido}`,
-          candidatoId: p.candidatoId
-        })));
-        
         const updated = prevPostulaciones.map(p => {
-            // Normalizar nombres para mejor matching
-            const postulationName = `${p.candidato?.nombre || ''} ${p.candidato?.apellido || ''}`.trim().toLowerCase();
-            console.log(`Buscando match para postulación: "${postulationName}" (ID: ${p.id})`);
-            
-            const resultado = resultados.find((res: any) => {
-                const resultName = (res.nombre || '').trim().toLowerCase();
-                console.log(`Comparando con resultado: "${resultName}"`);
-                
-                // Intentar diferentes estrategias de matching
-                const exactMatch = postulationName === resultName;
-                const containsMatch = postulationName.includes(resultName) || resultName.includes(postulationName);
-                const match = exactMatch || containsMatch;
-                
-                if (match) {
-                    console.log(`¡MATCH ENCONTRADO! para ${postulationName} con score ${res.score}`);
-                }
-                return match;
-            });
-
-            if (resultado) {
-                console.log(`Actualizando postulación ${p.id} con score ${resultado.score}`);
-                return {
-                    ...p,
-                    hasBeenAnalyzed: true,
-                    score: resultado.score,
-                };
-            } else {
-                // Si no encontramos match, pero la postulación está seleccionada, marcarla como analizada con score 0
-                if (selectedCandidates.includes(p.id)) {
-                    console.log(`Postulación ${p.id} seleccionada pero sin resultado, marcando como analizada con score 0`);
-                    return {
-                        ...p,
-                        hasBeenAnalyzed: true,
-                        score: 0,
-                    };
-                }
-            }
-            return p;
+          const postulationName = `${p.candidato?.nombre || ''} ${p.candidato?.apellido || ''}`.trim().toLowerCase();
+          const resultado = resultados.find((res: any) => {
+            const resultName = (res.nombre || '').trim().toLowerCase();
+            return postulationName === resultName || postulationName.includes(resultName) || resultName.includes(postulationName);
+          });
+          if (resultado) {
+            return {
+              ...p,
+              hasBeenAnalyzed: true,
+              score: resultado.score,
+              puntajeGeneral: resultado.score,
+              puntajeRequisitosClave: resultado.puntajeRequisitosClave,
+              puntajeExperienciaLaboral: resultado.puntajeExperienciaLaboral,
+              puntajeFormacionAcademica: resultado.puntajeFormacionAcademica,
+              puntajeIdiomasYSoftSkills: resultado.puntajeIdiomasYSoftSkills,
+              puntajeOtros: resultado.puntajeOtros,
+              motivosIA: resultado.motivosIA || null
+            };
+          } else if (selectedCandidates.includes(p.id)) {
+            return {
+              ...p,
+              hasBeenAnalyzed: true,
+              score: 0
+            };
+          }
+          return p;
         });
-        
-        const analyzedCount = updated.filter(p => p.hasBeenAnalyzed).length;
-        console.log(`Total de postulaciones analizadas: ${analyzedCount}`);
-        console.log('Postulaciones actualizadas:', updated.filter(p => p.hasBeenAnalyzed));
-        console.log('=== FIN ACTUALIZACIÓN ===');
-        
         return updated;
       })
 
@@ -796,7 +810,7 @@ export default function EvaluarCandidatosPage() {
                         currentCandidates.map((postulacion: any) => {
                           const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`;
                           const hasBeenAnalyzed = postulacion.hasBeenAnalyzed || false;
-                          const score = postulacion.puntajeGeneral || postulacion.puntajeIA || postulacion.score || 0;
+                          const score = postulacion.puntajeGeneral || 0;
                           const matchesRequirements = cumpleRequisitosExcluyentes(postulacion);
                           const perfilDetectado = postulacion.perfilDetectadoIA || "Perfil no detectado.";
 
@@ -1062,14 +1076,7 @@ export default function EvaluarCandidatosPage() {
                               console.log('MotivosIA:', postulacion.motivosIA);
                               
                               // Obtener puntaje real de la postulación usando puntajeGeneral
-                              const puntajeReal = postulacion.puntajeGeneral || postulacion.puntajeIA || 
-                                (postulacion.motivosIA ? 
-                                  (postulacion.motivosIA.puntajeRequisitosClave || 0) +
-                                  (postulacion.motivosIA.puntajeExperienciaLaboral || 0) +
-                                  (postulacion.motivosIA.puntajeFormacionAcademica || 0) +
-                                  (postulacion.motivosIA.puntajeIdiomasYSoftSkills || 0) +
-                                  (postulacion.motivosIA.puntajeOtros || 0)
-                                : 0);
+                              const puntajeReal = postulacion.puntajeGeneral || 0;
                               
                               console.log(`Puntaje real calculado: ${puntajeReal}`);
                               
@@ -1137,30 +1144,22 @@ export default function EvaluarCandidatosPage() {
                               console.log('Tipo de motivosIA:', typeof postulacion.motivosIA);
                               console.log('Es null/undefined:', postulacion.motivosIA === null || postulacion.motivosIA === undefined);
                               
-                              // Los puntajes están directamente en el objeto postulación, NO en motivosIA
-                              console.log('Puntajes directos de la postulación:');
-                              console.log('- puntajeRequisitosClave:', postulacion.puntajeRequisitosClave);
-                              console.log('- puntajeExperienciaLaboral:', postulacion.puntajeExperienciaLaboral);
-                              console.log('- puntajeFormacionAcademica:', postulacion.puntajeFormacionAcademica);
-                              console.log('- puntajeIdiomasYSoftSkills:', postulacion.puntajeIdiomasYSoftSkills);
-                              console.log('- puntajeOtros:', postulacion.puntajeOtros);
-                              
                               // Extraer datos directamente de la postulación
-                              const puntajeRequisitos = postulacion.puntajeRequisitosClave || 0;
-                              const puntajeExperiencia = postulacion.puntajeExperienciaLaboral || 0;
-                              const puntajeFormacion = postulacion.puntajeFormacionAcademica || 0;
-                              const puntajeIdiomas = postulacion.puntajeIdiomasYSoftSkills || 0;
-                              const puntajeOtros = postulacion.puntajeOtros || 0;
+                              const puntajeRequisitos = postulacion.puntajeRequisitosClave ?? 0;
+                              const puntajeExperiencia = postulacion.puntajeExperienciaLaboral ?? 0;
+                              const puntajeFormacion = postulacion.puntajeFormacionAcademica ?? 0;
+                              const puntajeIdiomas = postulacion.puntajeIdiomasYSoftSkills ?? 0;
+                              const puntajeOtros = postulacion.puntajeOtros ?? 0;
 
                               console.log(`=== PUNTAJES EXTRAÍDOS ===`);
                               console.log(`- Requisitos: ${puntajeRequisitos}/50 (${(puntajeRequisitos / 50) * 100}%)`);
                               console.log(`- Experiencia: ${puntajeExperiencia}/20 (${(puntajeExperiencia / 20) * 100}%)`);
-                              console.log(`- Formación: ${puntajeFormacion}/10 (${(puntajeFormacion / 10) * 100}%)`);
+                              console.log(`- Formación: ${puntajeFormacion}/15 (${(puntajeFormacion / 15) * 100}%)`);
                               console.log(`- Idiomas: ${puntajeIdiomas}/10 (${(puntajeIdiomas / 10) * 100}%)`);
                               console.log(`- Otros: ${puntajeOtros}/10 (${(puntajeOtros / 10) * 100}%)`);
 
                               const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`.trim();
-                              const score = postulacion.puntajeGeneral || postulacion.puntajeIA || postulacion.score || 0;
+                              const score = postulacion.puntajeGeneral ?? 0;
 
                               return (
                                 <div key={`criteria-${postulacion.id}`} className="space-y-3">
@@ -1204,11 +1203,11 @@ export default function EvaluarCandidatosPage() {
                                       <div className="flex items-center justify-between text-sm mb-2">
                                         <span className="font-medium text-gray-900">Formación académica</span>
                                         <span className="font-bold text-gray-900">
-                                          {puntajeFormacion}/10
+                                          {puntajeFormacion}/15
                                         </span>
                                       </div>
                                       <Progress
-                                        value={(puntajeFormacion / 10) * 100}
+                                        value={(puntajeFormacion / 15) * 100}
                                         className="h-2"
                                       />
                                     </div>
@@ -1391,14 +1390,32 @@ export default function EvaluarCandidatosPage() {
                                           Campos excluyentes
                                         </h6>
                                         <div className="space-y-1 ml-4">
-                                          {postulacion?.respuestas?.map((respuesta: any, i: number) => (
-                                            <div key={i} className="flex items-start gap-2">
-                                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                              <span className="text-sm text-gray-700">
-                                                Cumple con campo excluyente: {respuesta.campo}
-                                              </span>
-                                            </div>
-                                          ))}
+                                          {busquedaData?.camposAdicionales?.filter((campo: any) => campo.valoresExcluyentes && campo.valoresExcluyentes.length > 0).map((campo: any, i: number) => {
+                                            const respuesta = postulacion?.respuestas?.find((r: any) => r.campo === campo.nombre);
+                                            let cumple = false;
+                                            if (respuesta) {
+                                              if (campo.tipo === "checkbox") {
+                                                const respuestasCandidato = Array.isArray(respuesta.respuesta) ? respuesta.respuesta : [respuesta.respuesta];
+                                                const valoresExcluyentes = campo.valoresExcluyentes || [];
+                                                cumple = valoresExcluyentes.every((valor: string) => respuestasCandidato.includes(valor));
+                                              } else {
+                                                const valoresExcluyentes = campo.valoresExcluyentes || [];
+                                                cumple = valoresExcluyentes.includes(respuesta.respuesta);
+                                              }
+                                            }
+                                            return (
+                                              <div key={i} className="flex items-start gap-2">
+                                                {cumple ? (
+                                                  <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                                ) : (
+                                                  <XCircle className="h-3 w-3 text-red-500 flex-shrink-0 mt-0.5" />
+                                                )}
+                                                <span className="text-sm text-gray-700">
+                                                  {cumple ? 'Cumple' : 'No cumple'} con campo excluyente: {campo.nombre}
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
                                         </div>
                                       </div>
 
@@ -1434,7 +1451,7 @@ export default function EvaluarCandidatosPage() {
                                           <div className="flex items-start gap-2">
                                             <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
                                             <span className="text-sm text-gray-700">
-                                              Formación académica: {postulacion?.puntajeFormacionAcademica || 0}/10
+                                              Formación académica: {postulacion?.puntajeFormacionAcademica || 0}/15
                                             </span>
                                           </div>
                                           <div className="flex items-start gap-2">
