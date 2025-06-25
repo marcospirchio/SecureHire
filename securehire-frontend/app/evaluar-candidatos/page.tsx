@@ -1359,15 +1359,20 @@ export default function EvaluarCandidatosPage() {
                               </p>
                             </div>
 
-                            {comparisonResults.candidates.map((candidate: any, index: number) => {
-                              const postulacion = postulaciones.find(p => {
-                                const postulationName = `${p.candidato?.nombre?.trim().toLowerCase()} ${p.candidato?.apellido?.trim().toLowerCase()}`;
-                                return postulationName === candidate.nombre.trim().toLowerCase();
-                              });
+                            {/* Usar directamente las postulaciones seleccionadas ordenadas por puntaje */}
+                            {postulaciones
+                              .filter(p => selectedCandidates.includes(p.id))
+                              .sort((a, b) => {
+                                const puntajeA = a.puntajeGeneral || a.score || 0;
+                                const puntajeB = b.puntajeGeneral || b.score || 0;
+                                return puntajeB - puntajeA; // Orden descendente (mayor a menor)
+                              })
+                              .map((postulacion: any, index: number) => {
+                              const candidateName = `${postulacion.candidato?.nombre || ''} ${postulacion.candidato?.apellido || ''}`.trim();
 
                               return (
                                 <div
-                                  key={`justificacion-${candidate.id || index}`}
+                                  key={`justificacion-${postulacion.id}`}
                                   className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
                                 >
                                   <div className="bg-[#007fff] px-3 py-2 border-b border-blue-300">
@@ -1389,7 +1394,7 @@ export default function EvaluarCandidatosPage() {
                                         {index + 1}
                                       </div>
                                       <div>
-                                        <h5 className="font-semibold text-white">{candidate.nombre}</h5>
+                                        <h5 className="font-semibold text-white">{candidateName}</h5>
                                         <p className="text-sm text-blue-100">Puntuación: {postulacion?.puntajeGeneral || 0}%</p>
                                       </div>
                                       {index === 0 && (
