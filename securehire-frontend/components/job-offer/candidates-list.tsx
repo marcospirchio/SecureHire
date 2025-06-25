@@ -269,13 +269,27 @@ export function CandidatesList({
               </Select>
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleCancelFilters}>
-              Cancelar
+          <div className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setTempMinAge("")
+                setTempMaxAge("")
+                setTempGender("todos")
+                setTempRequisitosFilter("todos")
+              }}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              Limpiar filtros
             </Button>
-            <Button onClick={handleApplyFilters}>
-              Aplicar filtros
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCancelFilters}>
+                Cancelar
+              </Button>
+              <Button onClick={handleApplyFilters}>
+                Aplicar filtros
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -675,7 +675,7 @@ export function CandidateDetails({
   return (
     
     <div className="w-3/4 bg-white rounded-lg border p-3 relative h-[90vh] flex flex-col">
-      <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
+      <button onClick={onClose} className="absolute top-1 left-1 text-gray-400 hover:text-gray-600">
         <X className="h-4 w-4" />
       </button>
       <div className="flex-1 overflow-y-auto pr-2">
@@ -772,12 +772,12 @@ export function CandidateDetails({
                   <Button
                     onClick={handleAnalyzeCV}
                     disabled={aiAnalysisLoading}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg shadow border border-purple-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow border border-blue-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     style={{ minWidth: '170px', minHeight: '38px' }}
                   >
                     <Sparkles className="h-5 w-5 mr-1" />
-                    {aiAnalysisResult ? 'Ver análisis CV' : 'Analizar CV con IA'}
-                    <span className="ml-1 bg-white text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-300">IA</span>
+                    Analizar CV con IA
+                    <span className="ml-1 bg-white text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-blue-300">IA</span>
                   </Button>
                 </div>
               </div>
@@ -877,11 +877,11 @@ export function CandidateDetails({
                         }
                       }}
                       disabled={iaCommentsLoading}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg shadow border border-purple-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow border border-blue-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     >
                       <Sparkles className="h-5 w-5 mr-1" />
                       {iaCommentsLoading ? 'Generando...' : opinionIA ? 'Actualizar resumen' : 'Resumir comentarios'}
-                      <span className="ml-1 bg-white text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-purple-300">IA</span>
+                      <span className="ml-1 bg-white text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-blue-300">IA</span>
                     </Button>
                   </div>
                   <p className="text-xs text-gray-600 whitespace-pre-line">

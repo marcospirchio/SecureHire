@@ -51,9 +51,11 @@ public class Postulacion {
     private Integer puntajeIdiomasYSoftSkills;
     private Integer puntajeOtros;
     private Integer puntajeGeneral;
+    
+    private List<String> motivosPositivos;
+    private List<String> motivosNegativos;
     private Integer aniosExperiencia;
-    private String motivosPositivos;
-    private String motivosNegativos;
+    private List<String> explicacionesPorCriterio; // explicación corta por cada criterio
 
     @Data
     @Builder

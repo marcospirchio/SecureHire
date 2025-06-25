@@ -225,7 +225,6 @@ export default function EvaluarCandidatosPage() {
             console.log('ID:', postulacion.id);
             console.log('CandidatoID:', postulacion.candidatoId);
             console.log('PuntajeGeneral:', postulacion.puntajeGeneral);
-            console.log('PuntajeIA:', postulacion.puntajeIA);
             console.log('MotivosIA:', postulacion.motivosIA);
             console.log('Score:', postulacion.score);
             console.log('HasBeenAnalyzed:', postulacion.hasBeenAnalyzed);
@@ -371,6 +370,10 @@ export default function EvaluarCandidatosPage() {
 
   // Comparar candidatos usando el endpoint real de IA
   const compareSelectedCandidates = async () => {
+    console.log('🚀 === FUNCIÓN COMPARAR EJECUTÁNDOSE ===');
+    console.log('Candidatos seleccionados:', selectedCandidates);
+    console.log('Cantidad de candidatos:', selectedCandidates.length);
+    
     setIsComparing(true)
     setIaLoading(true)
     setIaResult(null)
@@ -379,48 +382,29 @@ export default function EvaluarCandidatosPage() {
       console.log('=== INICIANDO COMPARACIÓN ===');
       console.log('Candidatos seleccionados:', selectedCandidates);
 
-      // 1. Verificar si todos los seleccionados ya tienen puntajes y motivos guardados
-      const yaAnalizados = selectedCandidates.every(postulacionId => {
-        const postulacion = postulaciones.find(p => p.id === postulacionId);
-        return postulacion && (
-          postulacion.puntajeGeneral || postulacion.puntajeIA || postulacion.score
-        );
-      });
-
+      // Siempre hacer la comparación real, pero preservar datos existentes
+      console.log('Iniciando comparación real con preservación de datos existentes...');
+      
       // Siempre mostrar animación de cargando al menos 2 segundos
       const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      await sleep(3500);
+      await sleep(2000);
 
-      if (yaAnalizados) {
-        // Simular análisis: solo mostrar los datos guardados
-        console.log('Todos los candidatos ya fueron analizados. Mostrando datos guardados.');
-        const resultados = postulaciones
-          .filter(p => selectedCandidates.includes(p.id))
-          .map(p => ({
-            nombre: `${p.candidato?.nombre || ''} ${p.candidato?.apellido || ''}`.trim(),
-            score: p.puntajeGeneral || p.puntajeIA || p.score || 0,
-            puntajeRequisitosClave: p.puntajeRequisitosClave || 0,
-            puntajeExperienciaLaboral: p.puntajeExperienciaLaboral || 0,
-            puntajeFormacionAcademica: p.puntajeFormacionAcademica || 0,
-            puntajeIdiomasYSoftSkills: p.puntajeIdiomasYSoftSkills || 0,
-            puntajeOtros: p.puntajeOtros || 0,
-            motivosIA: p.motivosIA || null,
-            id: p.id
-          }))
-          .sort((a, b) => b.score - a.score);
-        setIaResults(resultados);
-        setComparisonResults({ candidates: resultados });
-        setPostulaciones(prevPostulaciones => prevPostulaciones.map(p =>
-          selectedCandidates.includes(p.id)
-            ? { ...p, hasBeenAnalyzed: true }
-            : p
-        ));
-        return;
-      }
-
-      // Si al menos uno no fue analizado, proceder con el flujo normal
-      // Delay de 4 segundos para simular procesamiento
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      // Verificar si el candidato ya tiene todos los atributos necesarios
+      const candidatosCompletos = selectedCandidates.every(postulacionId => {
+        const postulacion = postulaciones.find(p => p.id === postulacionId);
+        return postulacion && 
+          postulacion.puntajeGeneral && 
+          postulacion.puntajeRequisitosClave !== null && 
+          postulacion.puntajeExperienciaLaboral !== null && 
+          postulacion.puntajeFormacionAcademica !== null && 
+          postulacion.puntajeIdiomasYSoftSkills !== null && 
+          postulacion.puntajeOtros !== null &&
+          postulacion.motivosPositivos &&
+          postulacion.motivosNegativos &&
+          postulacion.aniosExperiencia !== null;
+      });
+      
+      console.log(`Candidatos con análisis completo: ${candidatosCompletos ? 'SÍ' : 'NO'}`);
 
       // 2. Verificar si todos los seleccionados tienen resumenCv
       for (const postulacionId of selectedCandidates) {
@@ -498,17 +482,40 @@ export default function EvaluarCandidatosPage() {
             return postulationName === resultName || postulationName.includes(resultName) || resultName.includes(postulationName);
           });
           if (resultado) {
+            console.log(`🔄 Actualizando postulación ${p.id} para ${postulationName}`);
+            console.log(`  - Datos existentes: puntajeGeneral=${p.puntajeGeneral}`);
+            console.log(`  - Nuevos datos: puntajeGeneral=${resultado.puntajeGeneral}`);
+            
+            // Preservar datos existentes y solo agregar los que faltan
             return {
               ...p,
               hasBeenAnalyzed: true,
-              score: resultado.score,
-              puntajeGeneral: resultado.score,
-              puntajeRequisitosClave: resultado.puntajeRequisitosClave,
-              puntajeExperienciaLaboral: resultado.puntajeExperienciaLaboral,
-              puntajeFormacionAcademica: resultado.puntajeFormacionAcademica,
-              puntajeIdiomasYSoftSkills: resultado.puntajeIdiomasYSoftSkills,
-              puntajeOtros: resultado.puntajeOtros,
-              motivosIA: resultado.motivosIA || null
+              // Solo actualizar puntajeGeneral si no existe
+              puntajeGeneral: p.puntajeGeneral || resultado.puntajeGeneral,
+              // Solo actualizar puntajes específicos si no existen
+              puntajeRequisitosClave: p.puntajeRequisitosClave || resultado.puntajeRequisitosClave,
+              puntajeExperienciaLaboral: p.puntajeExperienciaLaboral || resultado.puntajeExperienciaLaboral,
+              puntajeFormacionAcademica: p.puntajeFormacionAcademica || resultado.puntajeFormacionAcademica,
+              puntajeIdiomasYSoftSkills: p.puntajeIdiomasYSoftSkills || resultado.puntajeIdiomasYSoftSkills,
+              puntajeOtros: p.puntajeOtros || resultado.puntajeOtros,
+              // Solo actualizar motivos si no existen
+              motivosPositivos: p.motivosPositivos || resultado.motivosPositivos,
+              motivosNegativos: p.motivosNegativos || resultado.motivosNegativos,
+              
+              // Solo actualizar años de experiencia si no existe
+              aniosExperiencia: p.aniosExperiencia || resultado.aniosExperiencia,
+              
+              // Siempre actualizar explicaciones (se sobrescriben)
+              explicacionesPorCriterio: resultado.explicacionesPorCriterio ? 
+                Object.entries(resultado.explicacionesPorCriterio).map(([key, value]) => value) : null,
+              
+              // Mantener compatibilidad con motivosIA (solo si no existe)
+              motivosIA: p.motivosIA || (() => {
+                const motivosCombinados = [];
+                if (resultado.motivosPositivos) motivosCombinados.push(...resultado.motivosPositivos);
+                if (resultado.motivosNegativos) motivosCombinados.push(...resultado.motivosNegativos);
+                return motivosCombinados.length > 0 ? motivosCombinados : null;
+              })()
             };
           } else if (selectedCandidates.includes(p.id)) {
             return {
@@ -533,11 +540,11 @@ export default function EvaluarCandidatosPage() {
 
   // Estadísticas de candidatos
   const analyzedCandidates = postulaciones.filter((c) => c.hasBeenAnalyzed)
-  const highScoreCandidates = analyzedCandidates.filter((c) => (c.puntajeGeneral || c.puntajeIA || c.score || 0) >= 75)
-  const avgScore =
-    analyzedCandidates.length > 0
-      ? Math.round(analyzedCandidates.reduce((sum, c) => sum + (c.puntajeGeneral || c.puntajeIA || c.score || 0), 0) / analyzedCandidates.length)
-      : 0
+  const highScoreCandidates = analyzedCandidates.filter((c) => (c.puntajeGeneral || c.score || 0) >= 75)
+    .length;
+  const averageScore = analyzedCandidates.length > 0
+    ? Math.round(analyzedCandidates.reduce((sum, c) => sum + (c.puntajeGeneral || c.score || 0), 0) / analyzedCandidates.length)
+    : 0;
 
   // Reinicio visual al salir de la página
   useEffect(() => {
@@ -559,7 +566,6 @@ export default function EvaluarCandidatosPage() {
         id: p.id,
         nombre: `${p.candidato?.nombre} ${p.candidato?.apellido}`,
         puntajeGeneral: p.puntajeGeneral,
-        puntajeIA: p.puntajeIA,
         score: p.score,
         hasBeenAnalyzed: p.hasBeenAnalyzed,
         motivosIA: p.motivosIA
@@ -641,20 +647,20 @@ export default function EvaluarCandidatosPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-300">Candidatos de alto nivel</span>
-                      <span className="text-2xl font-bold text-blue-400">{highScoreCandidates.length}</span>
+                      <span className="text-2xl font-bold text-blue-400">{highScoreCandidates}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-300">Seleccionados</span>
                       <span className="text-2xl font-bold">{selectedCandidates.length}</span>
                     </div>
-                    {avgScore > 0 && (
+                    {averageScore > 0 && (
                       <div className="pt-2 border-t border-gray-700">
                         <div className="text-sm text-gray-300 mb-1">Puntuación promedio</div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${avgScore}%` }}></div>
+                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${averageScore}%` }}></div>
                           </div>
-                          <span className="text-lg font-bold text-blue-400">{avgScore}%</span>
+                          <span className="text-lg font-bold text-blue-400">{averageScore}%</span>
                         </div>
                       </div>
                     )}
@@ -767,19 +773,33 @@ export default function EvaluarCandidatosPage() {
                         </Select>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setShowFilterModal(false)}>
-                        Cancelar
+                    <div className="flex justify-between">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setTempMinAge("")
+                          setTempMaxAge("")
+                          setTempGender("todos")
+                          setTempRequisitosFilter("todos")
+                        }}
+                        className="text-gray-600 hover:text-gray-800"
+                      >
+                        Limpiar filtros
                       </Button>
-                      <Button onClick={() => {
-                        setMinAge(tempMinAge)
-                        setMaxAge(tempMaxAge)
-                        setGender(tempGender)
-                        setRequisitosFilter(tempRequisitosFilter)
-                        setShowFilterModal(false)
-                      }}>
-                        Aplicar filtros
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setShowFilterModal(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={() => {
+                          setMinAge(tempMinAge)
+                          setMaxAge(tempMaxAge)
+                          setGender(tempGender)
+                          setRequisitosFilter(tempRequisitosFilter)
+                          setShowFilterModal(false)
+                        }}>
+                          Aplicar filtros
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -965,7 +985,7 @@ export default function EvaluarCandidatosPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="flex justify-center"
+                className="flex justify-center gap-4"
               >
                 <Button
                   size="lg"
@@ -1064,16 +1084,16 @@ export default function EvaluarCandidatosPage() {
                             {postulaciones
                               .filter(p => selectedCandidates.includes(p.id))
                               .sort((a, b) => {
-                                const puntajeA = a.puntajeGeneral || a.puntajeIA || a.score || 0;
-                                const puntajeB = b.puntajeGeneral || b.puntajeIA || b.score || 0;
+                                const puntajeA = a.puntajeGeneral || a.score || 0;
+                                const puntajeB = b.puntajeGeneral || b.score || 0;
                                 return puntajeB - puntajeA; // Orden descendente (mayor a menor)
                               })
                               .map((postulacion: any, index: number) => {
                               console.log(`=== RENDERIZANDO GENERAL PARA ${postulacion.candidato?.nombre} ===`);
                               console.log('Postulación completa:', postulacion);
                               console.log('PuntajeGeneral:', postulacion.puntajeGeneral);
-                              console.log('PuntajeIA:', postulacion.puntajeIA);
                               console.log('MotivosIA:', postulacion.motivosIA);
+                              console.log('Score:', postulacion.score);
                               
                               // Obtener puntaje real de la postulación usando puntajeGeneral
                               const puntajeReal = postulacion.puntajeGeneral || 0;
@@ -1133,8 +1153,8 @@ export default function EvaluarCandidatosPage() {
                             {postulaciones
                               .filter(p => selectedCandidates.includes(p.id))
                               .sort((a, b) => {
-                                const puntajeA = a.puntajeGeneral || a.puntajeIA || a.score || 0;
-                                const puntajeB = b.puntajeGeneral || b.puntajeIA || b.score || 0;
+                                const puntajeA = a.puntajeGeneral || a.score || 0;
+                                const puntajeB = b.puntajeGeneral || b.score || 0;
                                 return puntajeB - puntajeA; // Orden descendente (mayor a menor)
                               })
                               .map((postulacion: any, index: number) => {
@@ -1177,7 +1197,7 @@ export default function EvaluarCandidatosPage() {
                                       <div className="flex items-center justify-between text-sm mb-2">
                                         <span className="font-medium text-gray-900">Requisitos técnicos</span>
                                         <span className="font-bold text-gray-900">
-                                          {puntajeRequisitos}/50
+                                          {puntajeRequisitos}/45
                                         </span>
                                       </div>
                                       <Progress
@@ -1260,10 +1280,10 @@ export default function EvaluarCandidatosPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                   <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                    <h5 className="font-semibold text-blue-900 mb-2">Criterios Principales (70%)</h5>
+                                    <h5 className="font-semibold text-blue-900 mb-2">Criterios Principales (65%)</h5>
                                     <ul className="space-y-1 text-sm">
                                       <li>
-                                        • <strong>Requisitos técnicos clave:</strong> 50%
+                                        • <strong>Requisitos técnicos clave:</strong> 45%
                                       </li>
                                       <li>
                                         • <strong>Experiencia laboral:</strong> 20%
@@ -1272,10 +1292,10 @@ export default function EvaluarCandidatosPage() {
                                   </div>
 
                                   <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                    <h5 className="font-semibold text-blue-900 mb-2">Criterios Secundarios (30%)</h5>
+                                    <h5 className="font-semibold text-blue-900 mb-2">Criterios Secundarios (35%)</h5>
                                     <ul className="space-y-1 text-sm">
                                       <li>
-                                        • <strong>Formación académica:</strong> 10%
+                                        • <strong>Formación académica:</strong> 15%
                                       </li>
                                       <li>
                                         • <strong>Idiomas y soft skills:</strong> 10%
@@ -1370,7 +1390,7 @@ export default function EvaluarCandidatosPage() {
                                       </div>
                                       <div>
                                         <h5 className="font-semibold text-white">{candidate.nombre}</h5>
-                                        <p className="text-sm text-blue-100">Puntuación: {candidate.score}%</p>
+                                        <p className="text-sm text-blue-100">Puntuación: {postulacion?.puntajeGeneral || 0}%</p>
                                       </div>
                                       {index === 0 && (
                                         <Badge className="ml-auto bg-white/20 text-white border-white/30 text-xs">
@@ -1385,8 +1405,8 @@ export default function EvaluarCandidatosPage() {
                                     <div className="space-y-3">
                                       {/* Campos excluyentes */}
                                       <div>
-                                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                          <div className="h-2 w-2 bg-red-500 rounded-full"></div>
+                                        <h6 className="text-sm font-semibold text-black mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-[#007fff] rounded-full"></div>
                                           Campos excluyentes
                                         </h6>
                                         <div className="space-y-1 ml-4">
@@ -1421,71 +1441,98 @@ export default function EvaluarCandidatosPage() {
 
                                       {/* Requisitos técnicos */}
                                       <div>
-                                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                          <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                                          Requisitos técnicos
+                                        <h6 className="text-sm font-semibold text-black mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-[#007fff] rounded-full"></div>
+                                          Requisitos técnicos ({postulacion?.puntajeRequisitosClave || 0}/45)
                                         </h6>
                                         <div className="space-y-1 ml-4">
-                                          <div className="flex items-start gap-2">
-                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-gray-700">
-                                              Puntaje en requisitos técnicos: {postulacion?.puntajeRequisitosClave || 0}/50
-                                            </span>
-                                          </div>
+                                          {/* Mostrar explicación de requisitos técnicos */}
+                                          {postulacion?.explicacionesPorCriterio && postulacion.explicacionesPorCriterio[0] && (
+                                            <div className="flex items-start gap-2 mt-1">
+                                              <span className="text-[#007fff] text-xs font-bold">-</span>
+                                              <span className="text-sm text-gray-600 italic">
+                                                {postulacion.explicacionesPorCriterio[0]}
+                                              </span>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
 
-                                      {/* Experiencia y formación */}
+                                      {/* Experiencia laboral */}
                                       <div>
-                                        <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                          <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                                          Experiencia y formación
+                                        <h6 className="text-sm font-semibold text-black mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-[#007fff] rounded-full"></div>
+                                          Experiencia laboral ({postulacion?.puntajeExperienciaLaboral || 0}/20)
                                         </h6>
                                         <div className="space-y-1 ml-4">
-                                          <div className="flex items-start gap-2">
-                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-gray-700">
-                                              Experiencia laboral: {postulacion?.puntajeExperienciaLaboral || 0}/20
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-gray-700">
-                                              Formación académica: {postulacion?.puntajeFormacionAcademica || 0}/15
-                                            </span>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-gray-700">
-                                              Idiomas y soft skills: {postulacion?.puntajeIdiomasYSoftSkills || 0}/10
-                                            </span>
-                                          </div>
+                                          {/* Mostrar explicación de experiencia laboral */}
+                                          {postulacion?.explicacionesPorCriterio && postulacion.explicacionesPorCriterio[1] && (
+                                            <div className="flex items-start gap-2 mt-1">
+                                              <span className="text-[#007fff] text-xs font-bold ">-</span>
+                                              <span className="text-sm text-gray-600 italic">
+                                                {postulacion.explicacionesPorCriterio[1]}
+                                              </span>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
 
-                                      {/* Puntos adicionales */}
-                                      {index === 0 && (
-                                        <div>
-                                          <h6 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                            <div className="h-2 w-2 bg-amber-500 rounded-full"></div>
-                                            Ventajas competitivas
-                                          </h6>
-                                          <div className="space-y-1 ml-4">
-                                            <div className="flex items-start gap-2">
-                                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                              <span className="text-sm text-gray-700">
-                                                Mayor puntaje general ({candidate.score}%)
+                                      {/* Formación académica */}
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-black mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-[#007fff] rounded-full"></div>
+                                          Formación académica ({postulacion?.puntajeFormacionAcademica || 0}/15)
+                                        </h6>
+                                        <div className="space-y-1 ml-4">
+                                          {/* Mostrar explicación de formación académica */}
+                                          {postulacion?.explicacionesPorCriterio && postulacion.explicacionesPorCriterio[2] && (
+                                            <div className="flex items-start gap-2 mt-1">
+                                              <span className="text-[#007fff] text-xs font-bold ">-</span>
+                                              <span className="text-sm text-gray-600 italic">
+                                                {postulacion.explicacionesPorCriterio[2]}
                                               </span>
                                             </div>
-                                            <div className="flex items-start gap-2">
-                                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-                                              <span className="text-sm text-gray-700">
-                                                Cumple con todos los requisitos clave
-                                              </span>
-                                            </div>
-                                          </div>
+                                          )}
                                         </div>
-                                      )}
+                                      </div>
+
+                                      {/* Idiomas y soft skills */}
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-black mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-[#007fff] rounded-full"></div>
+                                          Idiomas y soft skills ({postulacion?.puntajeIdiomasYSoftSkills || 0}/10)
+                                        </h6>
+                                        <div className="space-y-1 ml-4">
+                                          {/* Mostrar explicación de idiomas y soft skills */}
+                                          {postulacion?.explicacionesPorCriterio && postulacion.explicacionesPorCriterio[3] && (
+                                            <div className="flex items-start gap-2 mt-1">
+                                              <span className="text-[#007fff] text-xs font-bold ">-</span>
+                                              <span className="text-sm text-gray-600 italic">
+                                                {postulacion.explicacionesPorCriterio[3]}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Otros aspectos */}
+                                      <div>
+                                        <h6 className="text-sm font-semibold text-black mb-2 flex items-center gap-2">
+                                          <div className="h-2 w-2 bg-[#007fff] rounded-full"></div>
+                                          Otros aspectos ({postulacion?.puntajeOtros || 0}/10)
+                                        </h6>
+                                        <div className="space-y-1 ml-4">
+                                          {/* Mostrar explicación de otros aspectos */}
+                                          {postulacion?.explicacionesPorCriterio && postulacion.explicacionesPorCriterio[4] && (
+                                            <div className="flex items-start gap-2 mt-1">
+                                              <span className="text-[#007fff] text-xs font-bold ">-</span>
+                                              <span className="text-sm text-gray-600 italic">
+                                                {postulacion.explicacionesPorCriterio[4]}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>

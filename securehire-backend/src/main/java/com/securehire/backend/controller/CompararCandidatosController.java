@@ -156,11 +156,19 @@ public class CompararCandidatosController {
             // Guardar los puntajes en las postulaciones
             if (dto.getResultados() != null) {
                 System.out.println("===== PROCESANDO RESULTADOS =====");
+                System.out.println("Total de resultados de IA: " + dto.getResultados().size());
+                System.out.println("Total de postulaciones a procesar: " + postulacionIds.size());
+                
                 for (ResultadoComparacionIA.CandidatoComparado resultado : dto.getResultados()) {
                     System.out.println("Procesando candidato: " + resultado.getNombre());
                     System.out.println("Puntaje general: " + resultado.getPuntajeGeneral());
+                    System.out.println("Score: " + resultado.getScore());
+                    System.out.println("Años experiencia: " + resultado.getAniosExperiencia());
+                    System.out.println("Motivos positivos: " + (resultado.getMotivosPositivos() != null ? resultado.getMotivosPositivos().size() : 0));
+                    System.out.println("Motivos negativos: " + (resultado.getMotivosNegativos() != null ? resultado.getMotivosNegativos().size() : 0));
                     
                     // Buscar la postulación correspondiente por nombre del candidato
+                    boolean encontrado = false;
                     for (String postulacionId : postulacionIds) {
                         Optional<Postulacion> postOpt = postulacionService.obtenerPostulacionSiPerteneceAUsuario(postulacionId, usuario.getId());
                         if (postOpt.isPresent()) {
@@ -178,42 +186,92 @@ public class CompararCandidatosController {
                                 String nombreCandidato = nombreCompleto.trim().toLowerCase();
                                 String soloNombre = candidato.getNombre().trim().toLowerCase();
                                 
+                                System.out.println("  - Nombre resultado (lowercase): '" + nombreResultado + "'");
+                                System.out.println("  - Nombre candidato (lowercase): '" + nombreCandidato + "'");
+                                System.out.println("  - Solo nombre (lowercase): '" + soloNombre + "'");
+                                
                                 if (nombreCandidato.equals(nombreResultado) || 
                                     soloNombre.equals(nombreResultado) ||
                                     nombreCandidato.contains(nombreResultado) ||
                                     nombreResultado.contains(soloNombre)) {
                                     
                                     System.out.println("✅ Coincidencia encontrada! Actualizando postulación...");
+                                    encontrado = true;
                                     
-                                    // Actualizar la postulación con los puntajes
-                                    postulacion.setPuntajeRequisitosClave(resultado.getPuntajeRequisitosClave());
-                                    postulacion.setPuntajeExperienciaLaboral(resultado.getPuntajeExperienciaLaboral());
-                                    postulacion.setPuntajeFormacionAcademica(resultado.getPuntajeFormacionAcademica());
-                                    postulacion.setPuntajeIdiomasYSoftSkills(resultado.getPuntajeIdiomasYSoftSkills());
-                                    postulacion.setPuntajeOtros(resultado.getPuntajeOtros());
-                                    postulacion.setPuntajeGeneral(resultado.getPuntajeGeneral());
-                                    postulacion.setPuntajeIA(resultado.getScore()); // Mantener compatibilidad
-                                    
-                                    // Combinar motivos positivos y negativos
-                                    List<String> motivosCombinados = new ArrayList<>();
-                                    if (resultado.getMotivosPositivos() != null) {
-                                        motivosCombinados.addAll(resultado.getMotivosPositivos());
+                                    // Actualizar la postulación con los puntajes (solo si no existen)
+                                    if (postulacion.getPuntajeRequisitosClave() == null) {
+                                        postulacion.setPuntajeRequisitosClave(resultado.getPuntajeRequisitosClave());
                                     }
-                                    if (resultado.getMotivosNegativos() != null) {
-                                        motivosCombinados.addAll(resultado.getMotivosNegativos());
+                                    if (postulacion.getPuntajeExperienciaLaboral() == null) {
+                                        postulacion.setPuntajeExperienciaLaboral(resultado.getPuntajeExperienciaLaboral());
                                     }
-                                    postulacion.setMotivosIA(motivosCombinados);
+                                    if (postulacion.getPuntajeFormacionAcademica() == null) {
+                                        postulacion.setPuntajeFormacionAcademica(resultado.getPuntajeFormacionAcademica());
+                                    }
+                                    if (postulacion.getPuntajeIdiomasYSoftSkills() == null) {
+                                        postulacion.setPuntajeIdiomasYSoftSkills(resultado.getPuntajeIdiomasYSoftSkills());
+                                    }
+                                    if (postulacion.getPuntajeOtros() == null) {
+                                        postulacion.setPuntajeOtros(resultado.getPuntajeOtros());
+                                    }
+                                    if (postulacion.getPuntajeGeneral() == null) {
+                                        postulacion.setPuntajeGeneral(resultado.getPuntajeGeneral());
+                                    }
                                     
+                                    // Guardar motivos positivos y negativos por separado (solo si no existen)
+                                    if (postulacion.getMotivosPositivos() == null) {
+                                        postulacion.setMotivosPositivos(resultado.getMotivosPositivos());
+                                    }
+                                    if (postulacion.getMotivosNegativos() == null) {
+                                        postulacion.setMotivosNegativos(resultado.getMotivosNegativos());
+                                    }
+                                    
+                                    // Guardar años de experiencia (solo si no existe)
+                                    if (postulacion.getAniosExperiencia() == null) {
+                                        postulacion.setAniosExperiencia(resultado.getAniosExperiencia());
+                                    }
+                                    
+                                    // Siempre actualizar explicaciones por criterio (se sobrescriben)
+                                    if (resultado.getExplicacionesPorCriterio() != null) {
+                                        List<String> explicaciones = new ArrayList<>();
+                                        for (Map.Entry<String, String> entry : resultado.getExplicacionesPorCriterio().entrySet()) {
+                                            explicaciones.add(entry.getValue());
+                                        }
+                                        postulacion.setExplicacionesPorCriterio(explicaciones);
+                                    }
+                                    
+                                    // Mantener compatibilidad con motivosIA (solo si no existe)
+                                    if (postulacion.getMotivosIA() == null) {
+                                        List<String> motivosCombinados = new ArrayList<>();
+                                        if (resultado.getMotivosPositivos() != null) {
+                                            motivosCombinados.addAll(resultado.getMotivosPositivos());
+                                        }
+                                        if (resultado.getMotivosNegativos() != null) {
+                                            motivosCombinados.addAll(resultado.getMotivosNegativos());
+                                        }
+                                        postulacion.setMotivosIA(motivosCombinados);
+                                    }
+                                    
+                                    System.out.println("  - Intentando guardar postulación ID: " + postulacion.getId());
                                     // Guardar en la base de datos
                                     Postulacion postulacionGuardada = postulacionService.actualizarPostulacion(postulacion);
                                     System.out.println("✅ Postulación guardada con ID: " + postulacionGuardada.getId());
                                     System.out.println("Puntaje general guardado: " + postulacionGuardada.getPuntajeGeneral());
+                                    System.out.println("Años de experiencia guardados: " + postulacionGuardada.getAniosExperiencia());
+                                    System.out.println("Motivos positivos guardados: " + (postulacionGuardada.getMotivosPositivos() != null ? postulacionGuardada.getMotivosPositivos().size() : 0));
+                                    System.out.println("Motivos negativos guardados: " + (postulacionGuardada.getMotivosNegativos() != null ? postulacionGuardada.getMotivosNegativos().size() : 0));
                                     break;
+                                } else {
+                                    System.out.println("  ❌ No coincide");
                                 }
                             }
                         }
                     }
+                    if (!encontrado) {
+                        System.out.println("❌ NO SE ENCONTRÓ COINCIDENCIA para: " + resultado.getNombre());
+                    }
                 }
+                System.out.println("===== FIN PROCESAMIENTO =====");
             }
             
             return ResponseEntity.ok(dto);

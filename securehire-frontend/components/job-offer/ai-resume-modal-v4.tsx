@@ -348,7 +348,7 @@ export default function AIResumeModalV4({
               </div>
             </div>
             
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm mx-6 mt-6 pt-4">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm mx-6 mt-6">
               <div className="p-4 border-b border-slate-100">
                 <h3 className="text-base font-medium text-slate-800 flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-slate-500" />
@@ -539,18 +539,11 @@ export default function AIResumeModalV4({
                 </TabsContent>
               </Tabs>
             </div>
-            <div className="flex justify-end mt-6">
-              <Button variant="outline" size="sm" onClick={onClose} className="border-slate-200 text-slate-700">
-                Cerrar
-              </Button>
-            </div>
+            <div className="pb-6"></div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10">
             <p className="text-slate-500">No se pudo cargar el análisis</p>
-            <Button onClick={onClose} className="mt-4" variant="outline" size="sm">
-              Cerrar
-            </Button>
           </div>
         )}
       </DialogContent>

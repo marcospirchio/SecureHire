@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -18,7 +19,7 @@ public class ResultadoComparacionIA {
         private int score;
         private List<String> explicacion;
 
-        // Nuevos campos esperados por el script Python
+        // Puntajes por criterio
         private int puntajeRequisitosClave;
         private int puntajeExperienciaLaboral;
         private int puntajeFormacionAcademica;
@@ -26,8 +27,12 @@ public class ResultadoComparacionIA {
         private int puntajeOtros;
         private int puntajeGeneral;
 
+        // Detalles adicionales
+        private int aniosExperiencia;
         private List<String> motivosPositivos;
         private List<String> motivosNegativos;
-        private int aniosExperiencia;
+
+        // Nueva propiedad para explicaciones por criterio
+        private Map<String, String> explicacionesPorCriterio;
     }
 }
